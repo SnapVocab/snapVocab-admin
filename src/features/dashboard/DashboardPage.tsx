@@ -4,13 +4,14 @@ import { projectDashboardViewModel } from '../../domains/dashboard/selectors';
 import { INITIAL_VOCABULARY } from '../../domains/vocabulary/mock-data';
 import { MOCK_AI_SCAN_HEALTH } from '../../domains/ai-scan/mock-data';
 import { MOCK_ECONOMY_STATE } from '../../domains/economy/mock-data';
+import { ActionCenterWidget } from './components/ActionCenterWidget';
 import { MetricRibbon } from './components/MetricRibbon';
 import { ContentPipelineWidget } from './components/ContentPipelineWidget';
 import { AIScanMonitorWidget } from './components/AIScanMonitorWidget';
 import { LearnerActivityWidget } from './components/LearnerActivityWidget';
 import { LiveOpsEconomyWidget } from './components/LiveOpsEconomyWidget';
 import { AuditActivityWidget } from './components/AuditActivityWidget';
-import { RotateCw } from 'lucide-react';
+import { RotateCw, Database } from 'lucide-react';
 
 interface DashboardPageProps {
   onNavigate?: (navId: string) => void;
@@ -18,65 +19,90 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const [timeRange, setTimeRange] = useState<DashboardTimeRange>('7d');
+  const [refreshedAt, setRefreshedAt] = useState<string>('10:35 AM');
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [refreshCount, setRefreshCount] = useState<number>(0);
 
-  // Compute clean projection ViewModel from raw domain states
-  const viewModel = projectDashboardViewModel(
+  // Pure projection ViewModel: refreshedAt is provided from outside
+  const viewModel = projectDashboardViewModel({
     timeRange,
-    INITIAL_VOCABULARY,
-    MOCK_AI_SCAN_HEALTH,
-    MOCK_ECONOMY_STATE
-  );
+    refreshedAt,
+    vocabularyList: INITIAL_VOCABULARY,
+    aiHealth: MOCK_AI_SCAN_HEALTH,
+    economyState: MOCK_ECONOMY_STATE,
+  });
 
-  const handleRefresh = () => {
+  const handleCreateSnapshot = () => {
     setIsRefreshing(true);
     setTimeout(() => {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      setRefreshedAt(timeStr);
+      setRefreshCount((prev) => prev + 1);
       setIsRefreshing(false);
-      setRefreshKey((prev) => prev + 1);
-    }, 450);
+    }, 550);
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-background p-4 space-y-4">
+    <div className="h-full w-full overflow-y-auto bg-background p-3 sm:p-4 md:p-6 space-y-4">
       {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-border/60">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-extrabold text-text tracking-tight">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-base sm:text-lg font-extrabold text-text tracking-tight">
               Dashboard Quản Trị & Vận Hành Hệ Thống
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-primary-light text-primary text-[10px] font-bold border border-primary/20">
-              LiveOps Console
+            <span className="px-2.5 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold border border-border flex items-center gap-1 select-none">
+              <Database size={11} className="text-primary" />
+              <span>Snapshot mô phỏng (Demo v1.2)</span>
             </span>
           </div>
-          <p className="text-xs text-text-muted mt-0.5">
-            Hình chiếu tổng hợp từ Content Studio, AI Scan Engine và Hệ sinh thái Gamification
+          <p className="text-xs text-text-muted mt-1">
+            Tổng hợp dữ liệu tác nghiệp từ Content Studio, AI Scan Engine và Hệ thống Gamification
           </p>
         </div>
 
-        {/* Status controls */}
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-xs text-text-muted shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-medium font-mono">{viewModel.lastUpdated}</span>
+        {/* Snapshot Controls */}
+        <div className="flex items-center gap-2 self-start sm:self-auto select-none">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-border text-xs text-text-muted shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-[11px] font-mono text-text">Đã cập nhật: {refreshedAt}</span>
           </div>
 
           <button
             type="button"
-            onClick={handleRefresh}
-            className={`p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text-muted hover:text-text transition-all shadow-xs ${
-              isRefreshing ? 'animate-spin text-primary' : ''
-            }`}
-            title="Làm mới dữ liệu thống kê"
+            onClick={handleCreateSnapshot}
+            disabled={isRefreshing}
+            aria-label="Tạo snapshot dữ liệu mới"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text text-xs font-semibold transition-all shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none disabled:opacity-60"
           >
-            <RotateCw size={14} />
+            <RotateCw
+              size={13}
+              className={`${
+                isRefreshing ? 'animate-spin motion-reduce:animate-none text-primary' : 'text-text-muted'
+              }`}
+            />
+            <span>{isRefreshing ? 'Đang cập nhật...' : 'Tạo snapshot mới'}</span>
           </button>
+
+          {/* Screen reader live region */}
+          <div className="sr-only" aria-live="polite">
+            {isRefreshing
+              ? 'Đang cập nhật snapshot dữ liệu...'
+              : `Dữ liệu snapshot đã được cập nhật lúc ${refreshedAt}`}
+          </div>
         </div>
-      </div>
+      </header>
+
+      {/* Layer 0: High Priority Operational Action Center */}
+      <ActionCenterWidget items={viewModel.actionItems} onNavigate={onNavigate} />
 
       {/* Layer 1: High-Density Metric Ribbon */}
-      <section>
+      <section aria-label="Chỉ số tổng quan hệ thống">
         <MetricRibbon cards={viewModel.metrics} onNavigate={onNavigate} />
       </section>
 
@@ -118,6 +144,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <AuditActivityWidget
           auditTrail={viewModel.auditTrail}
           infraServices={viewModel.infraServices}
+          infraHealthSummary={viewModel.infraHealthSummary}
           r2Storage={viewModel.r2Storage}
           onNavigate={onNavigate}
         />

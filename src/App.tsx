@@ -1,20 +1,67 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { AdminLayout } from './components/layout/AdminLayout';
-import { ContentStudioPage } from './features/content-studio/ContentStudioPage';
-import { DashboardPage } from './features/dashboard/DashboardPage';
-import { AnalyticsPage } from './features/analytics/AnalyticsPage';
-import { TopicsDecksPage } from './features/topics/TopicsDecksPage';
-import { TemplatesPage } from './features/templates/TemplatesPage';
-import { AIScanMonitorPage } from './features/ai-scan/AIScanMonitorPage';
-import { ShopEconomyPage } from './features/shop/ShopEconomyPage';
-import { MissionsPage } from './features/missions/MissionsPage';
-import { BadgesPage } from './features/badges/BadgesPage';
-import { LeaderboardSeasonsPage } from './features/seasons/LeaderboardSeasonsPage';
-import { LearnersPage } from './features/people/LearnersPage';
-import { IssueReportsPage } from './features/reports/IssueReportsPage';
-import { AuditActivityLogPage } from './features/audit/AuditActivityLogPage';
-import { SettingsPage } from './features/settings/SettingsPage';
-import { ArrowLeft, Sparkles, ShoppingBag, Users } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+
+// Code-split all feature pages with React.lazy
+const DashboardPage = lazy(() =>
+  import('./features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const ContentStudioPage = lazy(() =>
+  import('./features/content-studio/ContentStudioPage').then((m) => ({ default: m.ContentStudioPage }))
+);
+const AnalyticsPage = lazy(() =>
+  import('./features/analytics/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage }))
+);
+const TopicsDecksPage = lazy(() =>
+  import('./features/topics/TopicsDecksPage').then((m) => ({ default: m.TopicsDecksPage }))
+);
+const TemplatesPage = lazy(() =>
+  import('./features/templates/TemplatesPage').then((m) => ({ default: m.TemplatesPage }))
+);
+const AIScanMonitorPage = lazy(() =>
+  import('./features/ai-scan/AIScanMonitorPage').then((m) => ({ default: m.AIScanMonitorPage }))
+);
+const ShopEconomyPage = lazy(() =>
+  import('./features/shop/ShopEconomyPage').then((m) => ({ default: m.ShopEconomyPage }))
+);
+const MissionsPage = lazy(() =>
+  import('./features/missions/MissionsPage').then((m) => ({ default: m.MissionsPage }))
+);
+const BadgesPage = lazy(() =>
+  import('./features/badges/BadgesPage').then((m) => ({ default: m.BadgesPage }))
+);
+const LeaderboardSeasonsPage = lazy(() =>
+  import('./features/seasons/LeaderboardSeasonsPage').then((m) => ({
+    default: m.LeaderboardSeasonsPage,
+  }))
+);
+const LearnersPage = lazy(() =>
+  import('./features/people/LearnersPage').then((m) => ({ default: m.LearnersPage }))
+);
+const IssueReportsPage = lazy(() =>
+  import('./features/reports/IssueReportsPage').then((m) => ({ default: m.IssueReportsPage }))
+);
+const AuditActivityLogPage = lazy(() =>
+  import('./features/audit/AuditActivityLogPage').then((m) => ({
+    default: m.AuditActivityLogPage,
+  }))
+);
+const SettingsPage = lazy(() =>
+  import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
+
+function PageLoadingFallback() {
+  return (
+    <div
+      className="h-full w-full flex flex-col items-center justify-center p-8 text-center text-text-muted select-none"
+      role="status"
+      aria-label="Đang tải dữ liệu màn hình tác nghiệp"
+    >
+      <Loader2 size={28} className="animate-spin text-primary mb-3 motion-reduce:animate-none" />
+      <span className="text-xs font-semibold">Đang tải phân hệ...</span>
+    </div>
+  );
+}
 
 export function App() {
   const [activeNav, setActiveNav] = useState<string>('dashboard');
@@ -137,9 +184,10 @@ export function App() {
       activeNav={activeNav}
       onNavigate={setActiveNav}
     >
-      {renderCurrentView()}
+      <Suspense fallback={<PageLoadingFallback />}>{renderCurrentView()}</Suspense>
     </AdminLayout>
   );
 }
 
 export default App;
+

@@ -11,20 +11,86 @@ import {
   LiveOpsProjection,
   AuditEventProjection,
   InfraServiceHealth,
+  OperationalActionItem,
+  InfraHealthSummary,
 } from './types';
+
+export const DEFAULT_INFRA_SERVICES: InfraServiceHealth[] = [
+  {
+    name: 'Spring Boot Backend (SS-17)',
+    status: 'online',
+    latencyMs: 38,
+    detail: 'API Gateway & DB Postgres Pool Healthy',
+  },
+  {
+    name: 'Gemini Vision AI Engine',
+    status: 'online',
+    latencyMs: 420,
+    detail: 'Camera Object Recognition v2.4 (Active Feedback Loop)',
+  },
+  {
+    name: 'Cloudflare R2 Asset Storage',
+    status: 'online',
+    latencyMs: 62,
+    detail: '42.6 GB / 100 GB (Audio Cache & Media)',
+  },
+  {
+    name: 'Web Speech TTS Synthesizer',
+    status: 'online',
+    latencyMs: 15,
+    detail: 'en-US & en-GB Native Engine Ready',
+  },
+];
+
+export interface ProjectDashboardParams {
+  timeRange: DashboardTimeRange;
+  refreshedAt: string;
+  vocabularyList?: CardViewModel[];
+  aiHealth?: AIScanEngineHealth;
+  economyState?: LiveOpsEconomyState;
+  infraServices?: InfraServiceHealth[];
+}
 
 /**
  * Pure projection selector: converts raw domain entities into a data-dense Dashboard ViewModel.
- * Does NOT alter or own any business logic.
+ * Does NOT generate random data or impure timestamps (new Date()) inside.
  */
 export function projectDashboardViewModel(
-  timeRange: DashboardTimeRange,
-  vocabularyList: CardViewModel[],
-  aiHealth: AIScanEngineHealth,
-  economyState: LiveOpsEconomyState
+  paramsOrTimeRange: ProjectDashboardParams | DashboardTimeRange,
+  legacyVocab?: CardViewModel[],
+  legacyAiHealth?: AIScanEngineHealth,
+  legacyEconomyState?: LiveOpsEconomyState,
+  legacyRefreshedAt?: string,
+  legacyInfraServices?: InfraServiceHealth[]
 ): DashboardViewModel {
+  const isObjectParam = typeof paramsOrTimeRange === 'object' && paramsOrTimeRange !== null;
+  const timeRange: DashboardTimeRange = isObjectParam
+    ? paramsOrTimeRange.timeRange
+    : (paramsOrTimeRange as DashboardTimeRange);
+  const refreshedAt = isObjectParam
+    ? paramsOrTimeRange.refreshedAt
+    : legacyRefreshedAt || '10:35 AM';
+  const vocabularyList = isObjectParam ? paramsOrTimeRange.vocabularyList : legacyVocab;
+  const aiHealth = isObjectParam
+    ? paramsOrTimeRange.aiHealth || { todayScansCount: 12450, avgLatencyMs: 420, confidenceRate: 94.2, pendingQueueCount: 18, urgentReportCount: 3 }
+    : legacyAiHealth || { todayScansCount: 12450, avgLatencyMs: 420, confidenceRate: 94.2, pendingQueueCount: 18, urgentReportCount: 3 };
+  const economyState = isObjectParam
+    ? paramsOrTimeRange.economyState || {
+        coins: { faucet: 1280000, sink: 892000 },
+        streakMetrics: { avgStreakDays: 14.2, streaksOver7Days: 8420, streaksOver30Days: 1920, pendingRecoveryRequests: 12 },
+        guardrails: { status: 'healthy' as const, violationsDetected: 0 },
+      }
+    : legacyEconomyState || {
+        coins: { faucet: 1280000, sink: 892000 },
+        streakMetrics: { avgStreakDays: 14.2, streaksOver7Days: 8420, streaksOver30Days: 1920, pendingRecoveryRequests: 12 },
+        guardrails: { status: 'healthy' as const, violationsDetected: 0 },
+      };
+  const infraServices = isObjectParam
+    ? paramsOrTimeRange.infraServices || DEFAULT_INFRA_SERVICES
+    : legacyInfraServices || DEFAULT_INFRA_SERVICES;
+
   // 1. Metric Ribbon Calculations
-  const totalCatalogWords = 3420; // Expanded catalog count
+  const totalCatalogWords = vocabularyList && vocabularyList.length > 0 ? vocabularyList.length : 3420;
   const publishedCount = 2840;
   const inReviewCount = 380;
   const draftCount = 160;
@@ -71,13 +137,13 @@ export function projectDashboardViewModel(
       id: 'metric-economy',
       title: 'LIVEOPS COINS',
       value: '+1.28M / -892k',
-      subValue: 'Gems: +42.5k',
-      changeText: 'Healthy Faucet/Sink',
+      subValue: 'Lưu thông ròng: +388k',
+      changeText: 'Tỷ lệ F/S: 1.43x (Cân bằng)',
       changePositive: true,
       statusTheme: 'reward',
       sparkline: [1.1, 1.15, 1.2, 1.18, 1.24, 1.26, 1.28],
       deepLinkNav: 'shop',
-      deepLinkTip: 'Kiểm tra cân đối kinh tế ảo & Shop',
+      deepLinkTip: 'Kiểm tra cân đối kinh tế Coins & Shop',
     },
     {
       id: 'metric-storage',
@@ -175,16 +241,20 @@ export function projectDashboardViewModel(
     trendSeries,
   };
 
-  // 5. LiveOps Projection
+  // 5. LiveOps Projection (Coins-only Economy)
+  const faucetVal = economyState.coins?.faucet || 1280000;
+  const sinkVal = economyState.coins?.sink || 892000;
+  const netCirculation = faucetVal - sinkVal;
+  const faucetSinkRatio = Number((faucetVal / (sinkVal || 1)).toFixed(2));
+  const absorptionRate = Number(((sinkVal / (faucetVal || 1)) * 100).toFixed(1));
+
   const liveops: LiveOpsProjection = {
     coins: {
-      faucet: economyState.coins.faucet,
-      sink: economyState.coins.sink,
-      netCirculation: economyState.coins.faucet - economyState.coins.sink,
-    },
-    gems: {
-      faucet: economyState.gems.faucet,
-      sink: economyState.gems.sink,
+      faucet: faucetVal,
+      sink: sinkVal,
+      netCirculation,
+      faucetSinkRatio,
+      absorptionRate,
     },
     streak: {
       avgDays: economyState.streakMetrics.avgStreakDays,
@@ -238,37 +308,135 @@ export function projectDashboardViewModel(
     },
   ];
 
-  // 7. Infrastructure Services Health
-  const infraServices: InfraServiceHealth[] = [
-    {
-      name: 'Spring Boot Backend (SS-17)',
-      status: 'online',
-      latencyMs: 38,
-      detail: 'API Gateway & DB Postgres Pool Healthy',
-    },
-    {
-      name: 'Gemini Vision AI Engine',
-      status: 'online',
-      latencyMs: 420,
-      detail: 'Camera Object Recognition v2.4 (94.2% OK)',
-    },
-    {
-      name: 'Cloudflare R2 Asset Storage',
-      status: 'online',
-      latencyMs: 62,
-      detail: '42.6 GB / 100 GB (Audio Cache & Media)',
-    },
-    {
-      name: 'Web Speech TTS Synthesizer',
-      status: 'online',
-      latencyMs: 15,
-      detail: 'en-US & en-GB Native Engine Ready',
-    },
-  ];
+  // 7. Structured Infrastructure Health Calculation
+  const onlineCount = infraServices.filter((s) => s.status === 'online').length;
+  const degradedCount = infraServices.filter((s) => s.status === 'degraded').length;
+  const offlineCount = infraServices.filter((s) => s.status === 'offline').length;
+
+  let overallStatus: 'healthy' | 'degraded' | 'outage' = 'healthy';
+  if (offlineCount > 0) {
+    overallStatus = 'outage';
+  } else if (degradedCount > 0) {
+    overallStatus = 'degraded';
+  }
+
+  const detailText =
+    overallStatus === 'healthy'
+      ? `${onlineCount}/${infraServices.length} dịch vụ trực tuyến ổn định`
+      : overallStatus === 'degraded'
+      ? `${onlineCount} trực tuyến · ${degradedCount} chậm (degraded)`
+      : `${offlineCount} dịch vụ gặp sự cố gián đoạn (outage)`;
+
+  const infraHealthSummary: InfraHealthSummary = {
+    overallStatus,
+    onlineCount,
+    degradedCount,
+    offlineCount,
+    detailText,
+  };
+
+  // 8. Structured Operational Action Items (Sorted by Severity & SLA)
+  const actionItems: OperationalActionItem[] = [];
+
+  // P1: Urgent AI Scan False Detection Reports
+  if (aiHealth.urgentReportCount > 0) {
+    actionItems.push({
+      id: 'act-p1-scan',
+      priority: 'P1',
+      severity: 'critical',
+      title: `${aiHealth.urgentReportCount} Báo cáo Lỗi Scan (P1)`,
+      description: 'Người học báo cáo sai nhãn camera scan vật thể, cần kiểm tra và cập nhật nhãn',
+      count: aiHealth.urgentReportCount,
+      oldestItemAt: '10:15',
+      slaDeadlineAt: '12:00 (SLA < 2h)',
+      slaState: 'breached',
+      targetNav: 'reports',
+      actionLabel: 'Xử lý báo cáo',
+    });
+  }
+
+  // P2: Pending AI Scan Review Queue (Low confidence)
+  if (aiHealth.pendingQueueCount > 0) {
+    actionItems.push({
+      id: 'act-queue-review',
+      priority: 'P2',
+      severity: 'warning',
+      title: `${aiHealth.pendingQueueCount} Ảnh Chờ Duyệt (Review Queue)`,
+      description: 'Ảnh camera nhận diện dưới ngưỡng tự động (< 85%) cần operator xác nhận nhãn',
+      count: aiHealth.pendingQueueCount,
+      oldestItemAt: '09:30',
+      slaDeadlineAt: '14:00 (SLA < 4h)',
+      slaState: 'at-risk',
+      targetNav: 'ai-queue',
+      actionLabel: 'Kiểm tra hàng đợi',
+    });
+  }
+
+  // Content Review Backlog
+  if (inReviewCount > 0) {
+    actionItems.push({
+      id: 'act-content-review',
+      severity: 'info',
+      title: `${inReviewCount} Từ Vựng Chờ Xuất Bản`,
+      description: 'Từ vựng mới từ Content Studio chờ kiểm tra phiên âm IPA và audio TTS',
+      count: inReviewCount,
+      slaState: 'within',
+      targetNav: 'content-studio',
+      actionLabel: 'Duyệt từ vựng',
+    });
+  }
+
+  // Economy Guardrail Alerts (if any)
+  if (economyState.guardrails.violationsDetected > 0 || economyState.guardrails.status !== 'healthy') {
+    actionItems.push({
+      id: 'act-guardrail-alert',
+      severity: economyState.guardrails.status === 'breached' ? 'critical' : 'warning',
+      title: `${economyState.guardrails.violationsDetected} Vi Phạm Guardrail Kinh Tế`,
+      description: 'Dòng lưu thông Coins hoặc yêu cầu khôi phục Streak vượt ngưỡng an toàn',
+      count: economyState.guardrails.violationsDetected,
+      slaState: economyState.guardrails.status === 'breached' ? 'breached' : 'at-risk',
+      targetNav: 'shop',
+      actionLabel: 'Kiểm tra kinh tế',
+    });
+  }
+
+  // Infra outage / degraded alert
+  if (overallStatus !== 'healthy') {
+    actionItems.push({
+      id: 'act-infra-status',
+      severity: overallStatus === 'outage' ? 'critical' : 'warning',
+      title: overallStatus === 'outage' ? 'Sự Cố Dịch Vụ Hạ Tầng (Outage)' : 'Cảnh Báo Hạ Tầng Chậm (Degraded)',
+      description: detailText,
+      count: offlineCount || degradedCount,
+      slaState: overallStatus === 'outage' ? 'breached' : 'at-risk',
+      targetNav: 'activity-log',
+      actionLabel: 'Xem nhật ký hạ tầng',
+    });
+  }
+
+  // Priority sorting: critical > warning > info, breached > at-risk > within
+  const severityRank: Record<OperationalActionItem['severity'], number> = {
+    critical: 0,
+    warning: 1,
+    info: 2,
+  };
+  const slaRank: Record<OperationalActionItem['slaState'], number> = {
+    breached: 0,
+    'at-risk': 1,
+    within: 2,
+  };
+
+  actionItems.sort((a, b) => {
+    const sevDiff = severityRank[a.severity] - severityRank[b.severity];
+    if (sevDiff !== 0) return sevDiff;
+    return slaRank[a.slaState] - slaRank[b.slaState];
+  });
 
   return {
     timeRange,
-    lastUpdated: '10:35 AM (Live Sync)',
+    lastUpdated: refreshedAt,
+    actionItems,
+    infraHealthSummary,
     metrics: ribbonCards,
     contentPipeline,
     aiScan,

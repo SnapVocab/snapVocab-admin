@@ -65,10 +65,8 @@ export interface LiveOpsProjection {
     faucet: number;
     sink: number;
     netCirculation: number;
-  };
-  gems: {
-    faucet: number;
-    sink: number;
+    faucetSinkRatio: number;
+    absorptionRate: number;
   };
   streak: {
     avgDays: number;
@@ -99,9 +97,33 @@ export interface InfraServiceHealth {
   detail: string;
 }
 
+export interface OperationalActionItem {
+  id: string;
+  priority?: 'P1' | 'P2';
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  count: number;
+  oldestItemAt?: string;
+  slaDeadlineAt?: string;
+  slaState: 'within' | 'at-risk' | 'breached';
+  targetNav: string;
+  actionLabel: string;
+}
+
+export interface InfraHealthSummary {
+  overallStatus: 'healthy' | 'degraded' | 'outage';
+  onlineCount: number;
+  degradedCount: number;
+  offlineCount: number;
+  detailText: string;
+}
+
 export interface DashboardViewModel {
   timeRange: DashboardTimeRange;
   lastUpdated: string;
+  actionItems: OperationalActionItem[];
+  infraHealthSummary: InfraHealthSummary;
   metrics: MetricRibbonCard[];
   contentPipeline: ContentPipelineProjection;
   aiScan: AIScanProjection;

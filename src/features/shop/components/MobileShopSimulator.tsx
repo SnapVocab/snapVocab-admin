@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShopItem, SimulatorViewMode, ShopItemCategory } from '../../../domains/economy/types';
+import { AvatarFrame } from '../../../components/AvatarFrame';
 import {
   Smartphone,
   Sparkles,
@@ -32,7 +33,7 @@ export const MobileShopSimulator: React.FC<MobileShopSimulatorProps> = ({
   // Simulator interactive state
   const [simCoins, setSimCoins] = useState<number>(1450);
   const [simGems, setSimGems] = useState<number>(95);
-  const [equippedFrame, setEquippedFrame] = useState<string>('frame_cyberpunk_neon');
+  const [equippedFrame, setEquippedFrame] = useState<string>('frame_golden_wordsmith');
   const [equippedTheme, setEquippedTheme] = useState<string>('theme_palette_synthwave');
   const [hasBoosterActive, setHasBoosterActive] = useState<boolean>(true);
   const [freezeShieldCount, setFreezeShieldCount] = useState<number>(1);
@@ -332,20 +333,13 @@ export const MobileShopSimulator: React.FC<MobileShopSimulatorProps> = ({
               >
                 <div className="relative inline-block mx-auto mb-2">
                   {/* Avatar Frame Simulation */}
-                  <div className="relative w-18 h-18 mx-auto flex items-center justify-center">
-                    {/* Frame image overlay */}
-                    <img
-                      src={
-                        equippedFrame === 'frame_cyberpunk_neon'
-                          ? '/images/shop/badge10_clean.png'
-                          : '/images/shop/badge11_clean.png'
-                      }
-                      alt="Avatar Frame"
-                      className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10 drop-shadow-md scale-110"
+                  <div className="relative mx-auto flex items-center justify-center">
+                    <AvatarFrame
+                      frameId={equippedFrame}
+                      size={76}
+                      animated={true}
+                      initials="🦊"
                     />
-                    <div className="w-13 h-13 rounded-full bg-amber-100 flex items-center justify-center text-2xl border border-amber-300">
-                      <span>🦊</span>
-                    </div>
                   </div>
                   <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white z-20" />
                 </div>

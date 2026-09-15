@@ -241,7 +241,7 @@ export const MobileMissionSimulator: React.FC<MobileMissionSimulatorProps> = ({
 
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-amber-900/80">
-                        Thưởng: +{dailyConfig.dailyChestReward.coins}🪙 · +{dailyConfig.dailyChestReward.gems}💎
+                        Thưởng: +{dailyConfig.dailyChestReward.coins}🪙 · +{dailyConfig.dailyChestReward.xp} XP
                       </span>
 
                       <button
@@ -307,11 +307,6 @@ export const MobileMissionSimulator: React.FC<MobileMissionSimulatorProps> = ({
                                   <span className="text-emerald-600">
                                     +{mission.reward.xp} XP
                                   </span>
-                                  {mission.reward.gems ? (
-                                    <span className="text-info">
-                                      +{mission.reward.gems}💎
-                                    </span>
-                                  ) : null}
                                 </div>
                               </div>
                             </div>
@@ -332,9 +327,14 @@ export const MobileMissionSimulator: React.FC<MobileMissionSimulatorProps> = ({
                             ) : (
                               <button
                                 type="button"
-                                className="px-2.5 py-1 text-[10px] font-bold rounded-lg border border-border bg-surface text-text-muted hover:text-text hover:bg-surface-subtle"
+                                onClick={() => {
+                                  setClaimToast(`Điều hướng: ${mission.navigationParams?.targetScreen || 'HOME_HUB'}`);
+                                  setTimeout(() => setClaimToast(null), 2000);
+                                }}
+                                title={`Route: ${mission.navigationParams?.targetScreen || 'HOME_HUB'} (BF-12B)`}
+                                className="px-2.5 py-1 text-[10px] font-bold rounded-lg border border-primary/30 bg-primary-light text-primary hover:bg-primary hover:text-white transition-all"
                               >
-                                Làm
+                                {mission.navigationParams?.ctaLabel || 'Làm'}
                               </button>
                             )}
                           </div>
@@ -396,7 +396,7 @@ export const MobileMissionSimulator: React.FC<MobileMissionSimulatorProps> = ({
                               {ms.chestName} ({ms.stampsRequired} Stamps)
                             </div>
                             <div className="text-[10px] text-[#9A7000] font-mono font-semibold">
-                              +{ms.reward.coins}🪙 · +{ms.reward.gems}💎
+                              +{ms.reward.coins}🪙 · +{ms.reward.xp} XP
                             </div>
                           </div>
                         </div>

@@ -204,14 +204,15 @@ export const LearnerActivityTab: React.FC<LearnerActivityTabProps> = ({
                   </span>
                 </td>
 
-                {/* Manual Action */}
+                {/* Ops / Incident Action (Tuân thủ No-Backfill BF-12G) */}
                 <td className="p-3 text-right whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => onManualGrant(l)}
-                    className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-border hover:bg-surface-subtle text-text transition-all"
+                    className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-border hover:bg-surface-subtle text-text-muted hover:text-text transition-all"
+                    title="Ghi nhận sự cố kỹ thuật cho Ops (Không claim bù rương hồi tố theo BF-12G)"
                   >
-                    Hỗ Trợ Claim
+                    Báo Sự Cố Ops
                   </button>
                 </td>
               </tr>

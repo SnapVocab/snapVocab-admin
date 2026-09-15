@@ -14,81 +14,95 @@ export const MetricRibbon: React.FC<MetricRibbonProps> = ({ cards, onNavigate })
         return {
           badge: 'bg-primary-light text-primary border-primary/20',
           accent: 'border-l-primary',
-          hover: 'hover:border-primary/40',
+          hover: 'hover:border-primary/50',
+          ring: 'focus-visible:ring-primary',
         };
       case 'snapy':
         return {
           badge: 'bg-snapy-light text-snapy border-snapy/20',
           accent: 'border-l-snapy',
-          hover: 'hover:border-snapy/40',
+          hover: 'hover:border-snapy/50',
+          ring: 'focus-visible:ring-snapy',
         };
       case 'reward':
         return {
           badge: 'bg-reward-light text-[#9A7000] border-reward/30',
           accent: 'border-l-reward',
-          hover: 'hover:border-reward/40',
+          hover: 'hover:border-reward/50',
+          ring: 'focus-visible:ring-amber-500',
         };
       case 'info':
         return {
           badge: 'bg-info-light text-info border-info/20',
           accent: 'border-l-info',
-          hover: 'hover:border-info/40',
+          hover: 'hover:border-info/50',
+          ring: 'focus-visible:ring-info',
         };
       case 'danger':
         return {
           badge: 'bg-danger-light text-danger border-danger/20',
           accent: 'border-l-danger',
-          hover: 'hover:border-danger/40',
+          hover: 'hover:border-danger/50',
+          ring: 'focus-visible:ring-danger',
         };
     }
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 select-none">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
       {cards.map((card) => {
         const theme = getThemeStyles(card.statusTheme);
+        const hasLink = Boolean(card.deepLinkNav);
 
         return (
-          <div
+          <button
             key={card.id}
+            type="button"
             onClick={() => card.deepLinkNav && onNavigate?.(card.deepLinkNav)}
-            className={`bg-surface border border-border border-l-[3.5px] ${theme.accent} rounded-xl p-3.5 shadow-card transition-all cursor-pointer group ${theme.hover} hover:shadow-elevated`}
-            title={card.deepLinkTip}
+            disabled={!hasLink}
+            aria-label={`${card.title}: ${card.value}${card.subValue ? ` (${card.subValue})` : ''}. ${card.changeText}. ${card.deepLinkTip || ''}`}
+            className={`w-full text-left bg-surface border border-border border-l-[4px] ${theme.accent} rounded-xl p-3.5 shadow-card transition-all group ${theme.hover} hover:shadow-elevated focus-visible:ring-2 ${theme.ring} focus-visible:outline-none ${
+              hasLink ? 'cursor-pointer' : 'cursor-default'
+            }`}
           >
             {/* Header: Title & Deep Link Arrow */}
-            <div className="flex items-center justify-between gap-1 mb-1.5">
-              <span className="text-[10px] font-bold tracking-wider text-text-muted uppercase">
+            <div className="flex items-center justify-between gap-1 mb-2 select-none">
+              <span className="text-xs font-bold tracking-wider text-text-muted uppercase">
                 {card.title}
               </span>
-              {card.deepLinkNav && (
+              {hasLink && (
                 <ArrowUpRight
-                  size={13}
-                  className="text-text-light opacity-0 group-hover:opacity-100 transition-opacity text-text-muted group-hover:text-primary"
+                  size={14}
+                  className="text-text-muted opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all"
                 />
               )}
             </div>
 
             {/* Main Value & SubValue */}
             <div className="flex items-baseline justify-between gap-2">
-              <div className="text-xl font-extrabold text-text font-mono tracking-tight">
+              <div className="text-2xl font-extrabold text-text font-mono tracking-tight select-text">
                 {card.value}
               </div>
               {card.subValue && (
-                <span className="text-[11px] font-medium text-text-muted font-mono truncate">
+                <span className="text-xs font-semibold text-text-muted font-mono truncate select-text">
                   {card.subValue}
                 </span>
               )}
             </div>
 
             {/* Footer: Trend badge & Sparkline */}
-            <div className="mt-2.5 pt-2 border-t border-border flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-1 font-medium text-text-muted truncate">
-                <TrendingUp size={12} className="text-primary shrink-0" />
+            <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1 font-medium text-text-muted truncate select-text">
+                <TrendingUp size={13} className="text-primary shrink-0 select-none" />
                 <span className="truncate">{card.changeText}</span>
               </div>
 
               {/* Micro Sparkline Preview */}
-              <div className="w-12 h-4 shrink-0 flex items-end gap-[2px]">
+              <div
+                className="w-14 h-4 shrink-0 flex items-end gap-[2px] select-none"
+                role="img"
+                aria-label={`Biểu đồ xu hướng: ${card.sparkline.join(' → ')}`}
+              >
                 {card.sparkline.map((val, i) => {
                   const max = Math.max(...card.sparkline);
                   const min = Math.min(...card.sparkline);
@@ -103,9 +117,10 @@ export const MetricRibbon: React.FC<MetricRibbonProps> = ({ cards, onNavigate })
                 })}
               </div>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
   );
 };
+

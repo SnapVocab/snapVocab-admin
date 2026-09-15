@@ -124,34 +124,6 @@ export const MissionGuardrailsTab: React.FC<MissionGuardrailsTabProps> = ({
 
             <div>
               <label className="block font-semibold text-text mb-1">
-                Trần Gems Tối Đa / Nhiệm Vụ <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="5"
-                  max="500"
-                  step="5"
-                  value={configForm.maxGemsCapPerQuest}
-                  onChange={(e) =>
-                    setConfigForm({
-                      ...configForm,
-                      maxGemsCapPerQuest: Number(e.target.value),
-                    })
-                  }
-                  className="w-full p-2 pl-3 pr-12 rounded-lg border border-border bg-surface text-text font-mono font-bold focus:ring-1 focus:ring-primary"
-                />
-                <span className="absolute right-3 top-2 text-[11px] text-info font-bold font-mono">
-                  Gems
-                </span>
-              </div>
-              <span className="text-[10px] text-text-muted mt-0.5 block">
-                Mặc định: 100 Gems (Tiền tệ cao cấp)
-              </span>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-text mb-1">
                 Trần Faucet Ngày / Người Học
               </label>
               <div className="relative">

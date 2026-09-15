@@ -1,18 +1,43 @@
 // ====================================================
 // SNAPVOCAB MISSIONS & QUESTS DOMAIN CONTRACTS
-// Source of Truth: docs/design/design.md & docs/spec/
+// Source of Truth: docs/spec/buss_mainflow.md (§BF-12, §BF-15A)
 // ====================================================
 
-export type MissionType = 'daily' | 'weekly' | 'achievement' | 'special_event';
+export type MissionType = 'daily' | 'achievement' | 'special_event';
+
+// 5 Slot Categories bắt buộc cho Daily Pool chuẩn (BF-12A)
+export type MissionCategory =
+  | 'SCAN_CAPTURE'             // Slot 1: Scan & Capture (AI Camera)
+  | 'VOCAB_BUILDING'           // Slot 2: Vocabulary Building (Topics, Decks)
+  | 'FLASHCARD_SRS'            // Slot 3: Flashcard & SRS Review
+  | 'QUIZ_ACCURACY'            // Slot 4: Quiz & Accuracy Testing
+  | 'RETENTION_GAMIFICATION';  // Slot 5: Streak, XP, Shop, Personal Gamification
 
 export type MissionActionType =
   | 'SCAN_OBJECT'       // Quét đồ vật bằng AI Camera (kèm điều kiện lưu từ - F-GAME-11)
   | 'REVIEW_SRS'         // Ôn tập flashcard đến hạn SRS
   | 'LEARN_NEW_WORDS'    // Học từ mới trong Deck/Topic
-  | 'QUIZ_PERFECT'       // Hoàn thành Quiz đạt 100%
+  | 'QUIZ_PERFECT'       // Hoàn thành Quiz đạt điểm hoặc chuỗi đúng
   | 'MAINTAIN_STREAK'    // Duy trì chuỗi Streak
   | 'EXPLORE_TOPIC'      // Hoàn thành 1 chủ đề từ vựng
   | 'LISTEN_AUDIO';      // Nghe phát âm từ vựng qua TTS/Audio
+
+export type MissionTriggerEvent =
+  | 'WORD_SCANNED_AND_SAVED'   // Producer từ AI Scan (BF-06)
+  | 'FLASHCARD_REVIEWED'       // Producer từ Flashcard study (BF-08)
+  | 'SRS_REVIEW_COMPLETED'     // Producer từ SRS commit (BF-10)
+  | 'QUIZ_COMPLETED'           // Producer từ Quiz submit (BF-09)
+  | 'STREAK_MAINTAINED'        // Producer từ daily study action (BF-11)
+  | 'TOPIC_COMPLETED'          // Producer từ Topic item mastery (BF-07)
+  | 'AUDIO_LISTENED';          // Producer từ Audio TTS player (BF-05)
+
+export type MissionAggregationType =
+  | 'COUNT'         // Đếm số lần phát sinh event
+  | 'SUM'           // Cộng tổng giá trị payload (ví dụ XP, số từ)
+  | 'MAX'           // Lấy giá trị lớn nhất đạt được
+  | 'STREAK'        // Chuỗi đạt liên tiếp (ví dụ 5 câu trả lời đúng liên tục)
+  | 'UNIQUE_COUNT'  // Đếm các phần tử không trùng (ví dụ từ vựng khác nhau)
+  | 'PERCENTAGE';   // Đạt tỷ lệ phần trăm (ví dụ accuracy >= 80%)
 
 export type MissionStatus = 'active' | 'draft' | 'scheduled' | 'archived';
 
@@ -28,18 +53,63 @@ export type MissionTargetAudience =
 export interface MissionReward {
   xp: number;
   coins: number;
-  gems?: number;
   badgeId?: string;
+}
+
+export interface CompletionRule {
+  minAccuracyPercent?: number;          // Tối thiểu % chính xác (Quiz)
+  requireConsecutiveStreak?: number;    // Chuỗi đúng liên tiếp
+  requireSavedWord?: boolean;           // Bắt buộc lưu từ hợp lệ (F-GAME-11 cho Scan)
+  clearSnapshotOnly?: boolean;          // Chỉ tính item thuộc SRS Snapshot đầu ngày (BF-12A step 10)
+  uniqueWordOnly?: boolean;             // Chỉ tính từ vựng không trùng
+  requiredTopicId?: string;             // Giới hạn trong chủ đề cụ thể
+  customFilterJson?: string;            // Cấu hình mở rộng dạng JSON
+}
+
+export interface EligibilityRule {
+  minLevel?: number;
+  requireDueSrs?: boolean;              // Bắt buộc Review Queue > 0 lúc cấp
+  requireFeatureUnlocked?: string;      // Tính năng yêu cầu mở khóa (Shop, Booster...)
+  excludeIfCompletedYesterday?: boolean;// Không cấp template trùng ngày hôm trước (AF-12A.5)
+}
+
+export interface NavigationParams {
+  targetScreen:
+    | 'CAMERA_SCAN'
+    | 'SRS_REVIEW'
+    | 'FLASHCARD_STUDY'
+    | 'QUIZ_SETUP'
+    | 'TOPIC_EXPLORE'
+    | 'STREAK_DETAIL'
+    | 'HOME_HUB';
+  routeParams?: Record<string, string | number | boolean>;
+  fallbackScreen?: string;
+  ctaLabel?: string;
+}
+
+export interface MissionVersionSnapshot {
+  version: number;
+  updatedAt: string;
+  updatedBy: string;
+  auditReason: string;
+  changesSummary: string;
 }
 
 export interface Mission {
   id: string;
-  code: string;                  // e.g. "MS-D-01", "MS-W-03"
+  code: string;                  // e.g. "MS-D-01"
   title: string;
   description: string;
   type: MissionType;
+  category: MissionCategory;     // 1 trong 5 slot nhóm hoặc Slot bonus
   actionType: MissionActionType;
-  targetCount: number;           // Số lượng mục tiêu (e.g. 3 đồ vật, 15 thẻ, 100% quiz)
+  triggerEvent: MissionTriggerEvent;
+  aggregationType: MissionAggregationType;
+  completionRule: CompletionRule;
+  eligibilityRule?: EligibilityRule;
+  navigationParams: NavigationParams;
+  minimumSupportedClientVersion?: string; // e.g. "v1.0.0"
+  targetCount: number;           // Số lượng mục tiêu
   unit: string;                  // "từ", "lượt scan", "thẻ SRS", "ngày", "điểm"
   difficulty: MissionDifficulty;
   reward: MissionReward;
@@ -49,13 +119,15 @@ export interface Mission {
   isBonus?: boolean;             // Nhiệm vụ thưởng thêm (+1 bonus ngoài 5 mandatory)
   validFrom?: string;
   validTo?: string;
+  version: number;               // Template versioning (BF-15A)
+  auditNotes?: string;
+  changeHistory?: MissionVersionSnapshot[];
   completionRate: number;        // Tỷ lệ hoàn thành (%)
   claimRate: number;             // Tỷ lệ nhận thưởng (%)
   totalCompletedCount: number;
   totalClaimedCount: number;
   lastUpdated: string;
   updatedBy: string;
-  auditNotes?: string;
 }
 
 // ----------------------------------------------------
@@ -65,12 +137,11 @@ export interface Mission {
 export interface DailyCycleConfig {
   resetTime: string;             // "00:00"
   timeZone: string;              // "Asia/Ho_Chi_Minh (GMT+7)"
-  requiredDailyCount: number;    // 5 nhiệm vụ bắt buộc
-  maxBonusCount: number;         // 1 nhiệm vụ thưởng
+  requiredDailyCount: 5;         // Khóa cứng: Đúng 5 nhiệm vụ bắt buộc (BF-12A)
+  maxBonusCount: 1;              // Khóa cứng: Tối đa 1 nhiệm vụ thưởng
   dailyChestReward: {
     coins: number;
     xp: number;
-    gems: number;
     chestName: string;
   };
   weightedRandomSeed: string;
@@ -84,7 +155,6 @@ export interface WeeklyStampMilestone {
   reward: {
     coins: number;
     xp: number;
-    gems: number;
     exclusiveItem?: string;      // Tên avatar frame, title, hoặc booster
   };
   icon: string;
@@ -102,7 +172,6 @@ export interface WeeklyMilestoneConfig {
 
 export interface MissionGuardrailConfig {
   maxCoinsCapPerQuest: number;   // Mặc định 1000 Coins
-  maxGemsCapPerQuest: number;    // Mặc định 100 Gems
   maxDailyPoolCoinsOutput: number;// Mặc định 2500 Coins/ngày/học viên
   requireSuperAdminForOverride: boolean; // Bắt buộc Super Admin duyệt ngoại lệ
   antiSpamScanRule: boolean;     // F-GAME-11: Yêu cầu "≥ 1 từ lưu thành công"
@@ -114,7 +183,6 @@ export type ViolationSeverity = 'low' | 'medium' | 'high';
 
 export type MissionViolationType =
   | 'COIN_CAP_EXCEEDED'
-  | 'GEM_CAP_EXCEEDED'
   | 'DAILY_OUTPUT_SPIKE'
   | 'ANTI_CHEAT_SUSPICION'
   | 'UNCLAIMED_EXPIRY_SPIKE';
@@ -166,6 +234,7 @@ export type MissionsTabNavId =
 export interface MissionFilterState {
   searchQuery: string;
   type: 'ALL' | MissionType;
+  category: 'ALL' | MissionCategory | 'BONUS';
   actionType: 'ALL' | MissionActionType;
   status: 'ALL' | MissionStatus;
   difficulty: 'ALL' | MissionDifficulty;
@@ -176,12 +245,13 @@ export interface MissionFilterState {
 export interface MissionsRibbonMetrics {
   totalPoolCount: number;
   activeDailyPoolCount: number;
-  activeWeeklyPoolCount: number;
+  weeklyMilestonesCount: number; // 3 mốc (3/5/7 stamps)
+  slotCoverageCount: number;     // Số nhóm slot (1-5) đã có ít nhất 1 active mission
   avgCompletionRate: number;
   avgClaimRate: number;
   unclaimedRiskRate: number;
   faucetCoins24h: number;
-  faucetGems24h: number;
   guardrailStatus: 'healthy' | 'warning' | 'breached';
   activeViolationsCount: number;
 }
+

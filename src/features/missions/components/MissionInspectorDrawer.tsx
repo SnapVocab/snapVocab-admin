@@ -37,8 +37,7 @@ export const MissionInspectorDrawer: React.FC<MissionInspectorDrawerProps> = ({
   if (!isOpen || !mission) return null;
 
   const isOverCeiling =
-    (mission.reward.coins || 0) > guardrailConfig.maxCoinsCapPerQuest ||
-    (mission.reward.gems || 0) > guardrailConfig.maxGemsCapPerQuest;
+    (mission.reward.coins || 0) > guardrailConfig.maxCoinsCapPerQuest;
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30 backdrop-blur-xs select-none">
@@ -79,10 +78,59 @@ export const MissionInspectorDrawer: React.FC<MissionInspectorDrawerProps> = ({
         <div className="flex-1 p-5 overflow-y-auto space-y-4 text-xs">
           {/* Mission Title & Description */}
           <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                mission.isBonus
+                  ? 'bg-snapy-light text-snapy border-snapy/20'
+                  : 'bg-primary-light text-primary border-primary/20'
+              }`}>
+                {mission.isBonus ? '★ BONUS QUEST' : mission.category}
+              </span>
+              <span className="text-[10px] font-mono font-bold text-primary px-1.5 py-0.5 rounded bg-surface-subtle border border-border">
+                v{mission.version || 1}
+              </span>
+              <span className="text-[10px] font-mono text-text-muted">
+                Client: {mission.minimumSupportedClientVersion || 'v1.0.0'}
+              </span>
+            </div>
             <h2 className="text-base font-bold text-text mb-1 leading-snug">
               {mission.title}
             </h2>
             <p className="text-text-muted leading-relaxed">{mission.description}</p>
+          </div>
+
+          {/* Technical Capability & Rules Box */}
+          <div className="p-3 bg-surface-subtle border border-border rounded-xl space-y-2">
+            <span className="text-[10px] font-bold text-text uppercase tracking-wider block">
+              Quy Chuẩn Kỹ Thuật (BF-12C & BF-15A)
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <span className="text-text-muted block">Hành Động (Action):</span>
+                <strong className="text-text font-mono">{mission.actionType}</strong>
+              </div>
+              <div>
+                <span className="text-text-muted block">Gom Tụ (Aggregation):</span>
+                <strong className="text-text font-mono">{mission.aggregationType}</strong>
+              </div>
+              <div className="col-span-2">
+                <span className="text-text-muted block">Trigger Event:</span>
+                <code className="text-primary font-mono text-[10px] bg-surface px-1 py-0.5 rounded border border-border">
+                  {mission.triggerEvent}
+                </code>
+              </div>
+              <div className="col-span-2">
+                <span className="text-text-muted block">Màn Hình Điều Hướng (CTA Route):</span>
+                <strong className="text-text font-mono">
+                  {mission.navigationParams?.targetScreen || 'HOME_HUB'}
+                </strong>
+                {mission.navigationParams?.ctaLabel && (
+                  <span className="text-text-muted text-[10px] ml-1">
+                    ("{mission.navigationParams.ctaLabel}")
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Target Metric Box */}
@@ -109,23 +157,17 @@ export const MissionInspectorDrawer: React.FC<MissionInspectorDrawerProps> = ({
             <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
               Phần Thưởng Nhận Được
             </span>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 bg-emerald-50/60 border border-emerald-200 rounded-xl text-center">
-                <div className="text-[10px] text-emerald-800 font-semibold">XP</div>
-                <div className="text-sm font-bold text-emerald-700 font-mono">
-                  +{mission.reward.xp}
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-2">
               <div className="p-2.5 bg-reward-light/60 border border-reward/30 rounded-xl text-center">
                 <div className="text-[10px] text-[#9A7000] font-semibold">Coins</div>
                 <div className="text-sm font-bold text-[#9A7000] font-mono">
                   +{mission.reward.coins}
                 </div>
               </div>
-              <div className="p-2.5 bg-blue-50/60 border border-blue-200 rounded-xl text-center">
-                <div className="text-[10px] text-blue-800 font-semibold">Gems</div>
-                <div className="text-sm font-bold text-blue-700 font-mono">
-                  +{mission.reward.gems || 0}
+              <div className="p-2.5 bg-emerald-50/60 border border-emerald-200 rounded-xl text-center">
+                <div className="text-[10px] text-emerald-800 font-semibold">XP</div>
+                <div className="text-sm font-bold text-emerald-700 font-mono">
+                  +{mission.reward.xp}
                 </div>
               </div>
             </div>
@@ -155,7 +197,7 @@ export const MissionInspectorDrawer: React.FC<MissionInspectorDrawerProps> = ({
                 <p className="text-[11px] leading-relaxed text-text-muted">
                   {isOverCeiling
                     ? 'Nhiệm vụ này có mức thưởng lớn hơn 1,000 Coins và đã được gán ngoại lệ trong Audit Trail.'
-                    : 'Nằm trong ngưỡng trần an toàn (≤ 1,000 Coins & ≤ 100 Gems). Tương thích thuật toán F-GAME-11.'}
+                    : 'Nằm trong ngưỡng trần an toàn (≤ 1,000 Coins). Tương thích thuật toán F-GAME-11.'}
                 </p>
               </div>
             </div>

@@ -3,7 +3,10 @@ import {
   DailyCycleConfig,
   WeeklyMilestoneConfig,
   WeeklyStampMilestone,
+  Mission,
+  MissionGuardrailConfig,
 } from '../../../domains/missions/types';
+import { calculateWorstCaseDailyOutput } from '../../../domains/missions/selectors';
 import {
   CalendarClock,
   Clock,
@@ -23,6 +26,8 @@ interface CycleAndChestTabProps {
   dailyConfig: DailyCycleConfig;
   weeklyConfig: WeeklyMilestoneConfig;
   countdownText: string;
+  missions?: Mission[];
+  guardrailConfig?: MissionGuardrailConfig;
   onUpdateDailyConfig: (newConfig: DailyCycleConfig) => void;
   onUpdateWeeklyConfig: (newConfig: WeeklyMilestoneConfig) => void;
 }
@@ -31,12 +36,20 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
   dailyConfig,
   weeklyConfig,
   countdownText,
+  missions = [],
+  guardrailConfig,
   onUpdateDailyConfig,
   onUpdateWeeklyConfig,
 }) => {
   const [dailyForm, setDailyForm] = useState<DailyCycleConfig>(dailyConfig);
   const [weeklyForm, setWeeklyForm] = useState<WeeklyMilestoneConfig>(weeklyConfig);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const worstCase = calculateWorstCaseDailyOutput(
+    missions,
+    dailyForm.dailyChestReward.coins,
+    guardrailConfig?.maxDailyPoolCoinsOutput || 2500
+  );
 
   const handleSaveAll = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +61,7 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
 
   const handleUpdateMilestone = (
     index: number,
-    field: 'coins' | 'xp' | 'gems' | 'exclusiveItem',
+    field: 'coins' | 'xp' | 'exclusiveItem',
     val: string | number
   ) => {
     const updatedMilestones = [...weeklyForm.milestones];
@@ -63,46 +76,102 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
   };
 
   return (
-    <form onSubmit={handleSaveAll} className="space-y-5 select-none text-xs">
-      {/* Top Banner Countdown & Save Toast */}
-      <div className="bg-gradient-to-r from-snapy-light/80 to-amber-50 border border-snapy/20 rounded-2xl p-4 shadow-card flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-snapy text-white flex items-center justify-center shadow-xs">
-            <Clock size={20} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-text">
-                Chu Kỳ Reset 00:00 Asia/Ho_Chi_Minh (GMT+7)
-              </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-snapy text-white font-mono">
-                LIVE
-              </span>
-            </div>
-            <p className="text-[11px] text-text-muted mt-0.5">
-              Thời gian đếm ngược còn lại của ngày hôm nay:{' '}
-              <strong className="text-snapy font-mono font-bold text-xs">
-                {countdownText}
-              </strong>
-            </p>
-          </div>
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* Top Banner Alert */}
+      {saveSuccess && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+          <Check size={16} className="text-emerald-600" />
+          <span>Đã lưu thành công các thông số Chu Kỳ Reset, Rương Ngày & Tuần!</span>
+        </div>
+      )}
+
+      {/* Header Info */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface border border-border rounded-2xl p-4 shadow-card">
+        <div className="space-y-0.5">
+          <h2 className="text-sm font-bold text-text flex items-center gap-2">
+            <span>Chu Kỳ Nhiệm Vụ & Cơ Chế Mở Rương Thưởng (Chests)</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
+              Timezone: Asia/Ho_Chi_Minh
+            </span>
+          </h2>
+          <p className="text-xs text-text-muted">
+            Quản lý giờ chốt sổ Daily Chest và các mốc tích lũy tem Activity Stamps theo tuần (BF-12E, BF-12F)
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {saveSuccess && (
-            <div className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
-              <Check size={14} />
-              <span>Đã lưu cấu hình LiveOps!</span>
-            </div>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+            <span className="text-[10px] text-text-muted block">Thời gian tới reset:</span>
+            <span className="font-mono text-sm font-extrabold text-primary">
+              {countdownText}
+            </span>
+          </div>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSaveAll}
             className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
           >
             <Check size={14} />
             <span>Lưu & Cập Nhật Chu Kỳ</span>
           </button>
         </div>
+      </div>
+
+      {/* WORST-CASE DAILY POOL SIMULATION PANEL (BF-15A) */}
+      <div className="bg-surface border border-border rounded-2xl p-5 shadow-card space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Coins size={16} className="text-amber-500" />
+            <h3 className="text-xs font-bold text-text">
+              Mô Phỏng Trần Phát Thưởng Daily Pool (Worst-Case Output Simulation - BF-15A)
+            </h3>
+          </div>
+          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${
+            worstCase.isExceeded
+              ? 'bg-danger-light text-danger border-danger/30'
+              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          }`}>
+            {worstCase.isExceeded ? '⚠️ VƯỢT TRẦN HỆ THỐNG' : '✓ AN TOÀN TRONG HẠN MỨC'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+          <div className="p-3 bg-surface-subtle border border-border rounded-xl">
+            <span className="text-[10px] text-text-muted block font-semibold">5 Slot Bắt Buộc (Max)</span>
+            <span className="text-sm font-bold font-mono text-text">
+              {worstCase.mandatoryCoinsMax.toLocaleString()} 🪙
+            </span>
+          </div>
+
+          <div className="p-3 bg-surface-subtle border border-border rounded-xl">
+            <span className="text-[10px] text-text-muted block font-semibold">1 Slot Bonus (Max)</span>
+            <span className="text-sm font-bold font-mono text-text">
+              +{worstCase.bonusCoinsMax.toLocaleString()} 🪙
+            </span>
+          </div>
+
+          <div className="p-3 bg-surface-subtle border border-border rounded-xl">
+            <span className="text-[10px] text-text-muted block font-semibold">Daily Chest Thưởng</span>
+            <span className="text-sm font-bold font-mono text-text">
+              +{worstCase.chestCoins.toLocaleString()} 🪙
+            </span>
+          </div>
+
+          <div className={`p-3 rounded-xl border ${
+            worstCase.isExceeded
+              ? 'bg-danger-light/30 border-danger/40 text-danger'
+              : 'bg-primary-light/40 border-primary/30 text-primary'
+          }`}>
+            <span className="text-[10px] text-text-muted block font-semibold">Tổng Kịch Bản Xấu Nhất / Cap</span>
+            <span className="text-sm font-bold font-mono">
+              {worstCase.totalWorstCaseCoins.toLocaleString()} / {worstCase.capLimit.toLocaleString()} 🪙
+            </span>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-text-muted">
+          Công thức quy chuẩn BF-15A: Tự động cộng phần thưởng cao nhất trong từng nhóm slot đang active nhằm đảm bảo kể cả khi thuật toán weighted-random chọn toàn bộ nhiệm vụ nhiều Coin nhất, tổng phát ra mỗi học viên/ngày không vượt quá hạn mức Guardrail.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -116,7 +185,7 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-text">Chu Kỳ Reset Hàng Ngày</h3>
                 <p className="text-[11px] text-text-muted">
-                  Quy tắc F-GAME-10 & Cơ chế Random Weighted Pool
+                  Quy tắc BF-12A: Cố định 5 nhiệm vụ bắt buộc + tối đa 1 bonus
                 </p>
               </div>
             </div>
@@ -127,47 +196,39 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
 
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-text mb-1">
-                  Số Nhiệm Vụ Bắt Buộc / Ngày
-                </label>
-                <input
-                  type="number"
-                  min="3"
-                  max="10"
-                  value={dailyForm.requiredDailyCount}
-                  onChange={(e) =>
-                    setDailyForm({
-                      ...dailyForm,
-                      requiredDailyCount: Number(e.target.value),
-                    })
-                  }
-                  className="w-full p-2 rounded-lg border border-border bg-surface text-text font-mono font-bold focus:ring-1 focus:ring-primary"
-                />
+              {/* KHÓA CỨNG 5 NHIỆM VỤ */}
+              <div className="p-3 bg-surface-subtle border border-border rounded-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-text text-xs">
+                    Số Nhiệm Vụ Bắt Buộc
+                  </label>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    Cố Định
+                  </span>
+                </div>
+                <div className="text-lg font-mono font-extrabold text-primary">
+                  5 nhiệm vụ
+                </div>
                 <span className="text-[10px] text-text-muted mt-0.5 block">
-                  Tiêu chuẩn: 5 nhiệm vụ/ngày
+                  Quy chuẩn BF-12A: Đúng 5 slot danh mục
                 </span>
               </div>
 
-              <div>
-                <label className="block font-semibold text-text mb-1">
-                  Nhiệm Vụ Thưởng Thêm (+Bonus)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="3"
-                  value={dailyForm.maxBonusCount}
-                  onChange={(e) =>
-                    setDailyForm({
-                      ...dailyForm,
-                      maxBonusCount: Number(e.target.value),
-                    })
-                  }
-                  className="w-full p-2 rounded-lg border border-border bg-surface text-text font-mono font-bold focus:ring-1 focus:ring-primary"
-                />
+              {/* KHÓA CỨNG TỐI ĐA 1 BONUS */}
+              <div className="p-3 bg-surface-subtle border border-border rounded-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-text text-xs">
+                    Nhiệm Vụ Thưởng Thêm
+                  </label>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    Cố Định
+                  </span>
+                </div>
+                <div className="text-lg font-mono font-extrabold text-primary">
+                  Tối đa 1 bonus
+                </div>
                 <span className="text-[10px] text-text-muted mt-0.5 block">
-                  Tiêu chuẩn: Tối đa 1 bonus
+                  Tùy chọn, không tính mở Daily Chest
                 </span>
               </div>
             </div>
@@ -196,9 +257,10 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
             <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
               <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <strong>Quy chuẩn nghiêm ngặt (F-GAME-10):</strong> Sau mốc 00:00 GMT+7,
+                <strong>Quy chuẩn nghiêm ngặt (BF-12G):</strong> Sau mốc 00:00 GMT+7,
                 mọi tiến độ nhiệm vụ ngày chưa hoàn thành hoặc đã hoàn thành nhưng chưa
-                nhận thưởng sẽ hết hạn và <strong>không cộng dồn sang ngày sau</strong>.
+                claim sẽ lập tức chuyển sang trạng thái <code>EXPIRED</code>. Hệ thống
+                tuyệt đối không cộng dồn hoặc cấp bù Activity Stamp hồi tố.
               </div>
             </div>
           </div>
@@ -217,7 +279,7 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-text mb-1">Coins</label>
                 <input
@@ -249,25 +311,6 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
                       dailyChestReward: {
                         ...dailyForm.dailyChestReward,
                         xp: Number(e.target.value),
-                      },
-                    })
-                  }
-                  className="w-full p-2 rounded-lg border border-border bg-surface text-text font-mono font-bold focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-text mb-1">Gems</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={dailyForm.dailyChestReward.gems}
-                  onChange={(e) =>
-                    setDailyForm({
-                      ...dailyForm,
-                      dailyChestReward: {
-                        ...dailyForm.dailyChestReward,
-                        gems: Number(e.target.value),
                       },
                     })
                   }
@@ -334,7 +377,7 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-semibold text-text mb-0.5">
                       Coins
@@ -363,20 +406,6 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
                       className="w-full p-1.5 rounded-md border border-border bg-surface text-text font-mono font-bold text-xs focus:ring-1 focus:ring-primary"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-text mb-0.5">
-                      Gems
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={ms.reward.gems}
-                      onChange={(e) =>
-                        handleUpdateMilestone(index, 'gems', e.target.value)
-                      }
-                      className="w-full p-1.5 rounded-md border border-border bg-surface text-text font-mono font-bold text-xs focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
                 </div>
 
                 {ms.tier !== 'bronze' && (
@@ -400,6 +429,6 @@ export const CycleAndChestTab: React.FC<CycleAndChestTabProps> = ({
           </div>
         </div>
       </div>
-    </form>
+    </div>
   );
 };

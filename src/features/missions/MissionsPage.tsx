@@ -17,6 +17,7 @@ import {
   INITIAL_LEARNER_SAMPLES,
 } from '../../domains/missions/mock-data';
 import { computeMissionRibbonMetrics } from '../../domains/missions/selectors';
+import { getCapabilityByAction } from '../../domains/missions/capabilities';
 import { MissionsMetricsRibbon } from './components/MissionsMetricsRibbon';
 import { MissionsTabNav } from './components/MissionsTabNav';
 import { MissionPoolTab } from './components/MissionPoolTab';
@@ -25,6 +26,7 @@ import { MissionGuardrailsTab } from './components/MissionGuardrailsTab';
 import { LearnerActivityTab } from './components/LearnerActivityTab';
 import { MissionFormModal } from './components/MissionFormModal';
 import { MissionInspectorDrawer } from './components/MissionInspectorDrawer';
+import { MissionActivationModal } from './components/MissionActivationModal';
 import { AuditReasonModal } from './components/AuditReasonModal';
 import {
   Target,
@@ -62,6 +64,10 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
   const [inspectingMission, setInspectingMission] = useState<Mission | null>(null);
   const [isInspectDrawerOpen, setIsInspectDrawerOpen] = useState(false);
+
+  // Activation Checklist Modal state (Draft -> Active Lifecycle)
+  const [activatingMission, setActivatingMission] = useState<Mission | null>(null);
+  const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
 
   // Audit Modal state
   const [auditConfig, setAuditConfig] = useState<{
@@ -129,46 +135,58 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
     }, 450);
   };
 
-  // Add / Save Mission
+  // Add / Save Mission (Draft-First Lifecycle)
   const handleSaveMission = (
     missionData: Partial<Mission>,
     isOverrideApproved?: boolean
   ) => {
     if (editingMission) {
+      const nextVersion = (editingMission.version || 1) + 1;
       setMissions((prev) =>
         prev.map((m) =>
           m.id === editingMission.id
             ? ({
                 ...m,
                 ...missionData,
+                version: nextVersion,
                 lastUpdated: 'Vừa xong',
                 updatedBy: 'Lead Admin Hoà',
               } as Mission)
             : m
         )
       );
-      showToast(`Đã cập nhật nhiệm vụ ${editingMission.code}!`);
+      showToast(`Đã cập nhật nhiệm vụ ${editingMission.code} (v${nextVersion})!`);
     } else {
+      const cap = getCapabilityByAction(missionData.actionType || 'SCAN_OBJECT');
       const newMission: Mission = {
         id: `ms-${Date.now()}`,
         code: missionData.code || `MS-D-${Math.floor(10 + Math.random() * 90)}`,
         title: missionData.title || 'Nhiệm vụ mới',
         description: missionData.description || '',
         type: missionData.type || 'daily',
+        category: missionData.category || cap.category,
         actionType: missionData.actionType || 'SCAN_OBJECT',
-        targetCount: missionData.targetCount || 1,
-        unit: missionData.unit || 'lượt',
+        triggerEvent: missionData.triggerEvent || cap.defaultTriggerEvent,
+        aggregationType: missionData.aggregationType || cap.defaultAggregation,
+        targetCount: missionData.targetCount || cap.suggestedTargetCount,
+        unit: missionData.unit || cap.defaultUnit,
         difficulty: missionData.difficulty || 'easy',
         reward: missionData.reward || { xp: 40, coins: 60 },
         weight: missionData.weight || 80,
-        status: missionData.status || 'active',
+        status: 'draft', // Luôn bắt đầu ở trạng thái Draft theo chuẩn BF-15A
+        version: 1,
         targetAudience: missionData.targetAudience || 'all',
         isBonus: missionData.isBonus || false,
+        minimumSupportedClientVersion:
+          missionData.minimumSupportedClientVersion || cap.supportedClientVersion,
+        navigationParams: missionData.navigationParams || cap.defaultNavigation,
+        completionRule: missionData.completionRule || {},
+        eligibilityRule: missionData.eligibilityRule,
         completionRate: 0,
         claimRate: 0,
         totalCompletedCount: 0,
         totalClaimedCount: 0,
-        lastUpdated: 'Vừa tạo',
+        lastUpdated: 'Vừa tạo (Bản nháp)',
         updatedBy: 'Lead Admin Hoà',
       };
       setMissions((prev) => [newMission, ...prev]);
@@ -182,7 +200,7 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
           missionTitle: newMission.title,
           severity: 'high',
           violationType: 'COIN_CAP_EXCEEDED',
-          description: `Phần thưởng ${newMission.reward.coins} Coins vượt trần 1,000 Coins đã được phê duyệt ngoại lệ.`,
+          description: `Phần thưởng ${newMission.reward.coins} Coins vượt trần ${guardrailConfig.maxCoinsCapPerQuest} Coins đã được phê duyệt ngoại lệ.`,
           timestamp: new Date().toLocaleString('vi-VN'),
           status: 'whitelisted',
           mitigatedBy: 'Super Admin',
@@ -191,36 +209,76 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
         setViolations((prev) => [newVio, ...prev]);
       }
 
-      showToast(`Đã thêm nhiệm vụ ${newMission.code} vào hệ thống!`);
+      showToast(`Đã tạo bản nháp nhiệm vụ ${newMission.code}. Hãy kiểm tra và kích hoạt!`);
     }
 
     setIsFormModalOpen(false);
     setEditingMission(null);
   };
 
-  // Toggle Active/Draft
-  const handleToggleStatus = (mission: Mission) => {
-    const nextStatus = mission.status === 'active' ? 'draft' : 'active';
+  // Activation Handlers (Draft -> Active Lifecycle)
+  const handleRequestActivate = (mission: Mission) => {
+    setActivatingMission(mission);
+    setIsActivationModalOpen(true);
+  };
+
+  const handleConfirmActivate = (
+    mission: Mission,
+    auditReason: string,
+    approvalCode?: string
+  ) => {
     setMissions((prev) =>
-      prev.map((m) => (m.id === mission.id ? { ...m, status: nextStatus } : m))
+      prev.map((m) =>
+        m.id === mission.id
+          ? {
+              ...m,
+              status: 'active',
+              auditNotes:
+                (m.auditNotes ? `${m.auditNotes} | ` : '') +
+                `Kích hoạt [v${m.version || 1}]: ${auditReason}${
+                  approvalCode ? ` (Override code: ${approvalCode})` : ''
+                }`,
+              lastUpdated: 'Vừa kích hoạt',
+              updatedBy: 'Lead Admin Hoà',
+            }
+          : m
+      )
     );
-    showToast(`Nhiệm vụ ${mission.code} đã chuyển sang trạng thái "${nextStatus}".`);
+    setIsActivationModalOpen(false);
+    setActivatingMission(null);
+    showToast(`Đã kích hoạt nhiệm vụ ${mission.code} vào LiveOps Pool thành công!`);
+  };
+
+  // Toggle Active/Draft (Tắt active -> về draft; Kích hoạt draft -> mở modal checklist)
+  const handleToggleStatus = (mission: Mission) => {
+    if (mission.status === 'active') {
+      setMissions((prev) =>
+        prev.map((m) =>
+          m.id === mission.id
+            ? { ...m, status: 'draft', lastUpdated: 'Vừa hạ về Draft' }
+            : m
+        )
+      );
+      showToast(`Nhiệm vụ ${mission.code} đã chuyển về trạng thái Bản nháp.`);
+    } else {
+      handleRequestActivate(mission);
+    }
   };
 
   // Duplicate Mission
   const handleDuplicateMission = (mission: Mission) => {
-    const randomSuffix = Math.floor(10 + Math.random() * 90);
     const duplicated: Mission = {
       ...mission,
       id: `ms-copy-${Date.now()}`,
       code: `${mission.code}-COPY`,
       title: `${mission.title} (Bản sao)`,
       status: 'draft',
+      version: 1,
       totalCompletedCount: 0,
       totalClaimedCount: 0,
       completionRate: 0,
       claimRate: 0,
-      lastUpdated: 'Vừa xong',
+      lastUpdated: 'Vừa tạo (Bản nháp)',
       updatedBy: 'Lead Admin Hoà',
     };
     setMissions((prev) => [duplicated, ...prev]);
@@ -308,9 +366,6 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
               reward: {
                 ...m.reward,
                 coins: Math.min(m.reward.coins, guardrailConfig.maxCoinsCapPerQuest),
-                gems: m.reward.gems
-                  ? Math.min(m.reward.gems, guardrailConfig.maxGemsCapPerQuest)
-                  : undefined,
               },
             }
           : m
@@ -324,7 +379,7 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
               ...v,
               status: 'mitigated',
               mitigatedBy: 'Lead Admin Hoà',
-              reason: 'Tự động hạ mức thưởng về trần an toàn (1,000 Coins / 100 Gems)',
+              reason: 'Tự động hạ mức thưởng về trần an toàn (1,000 Coins)',
             }
           : v
       )
@@ -333,13 +388,13 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
     showToast(`Đã hạ mức thưởng nhiệm vụ ${target.missionCode} về ngưỡng an toàn!`);
   };
 
-  // Manual Grant for Learner
+  // Manual Grant for Learner (Tuân thủ No-Backfill BF-12G: Cấp bồi hoàn ví, KHÔNG mở rương/stamp hồi tố)
   const handleManualGrant = (learner: LearnerMissionProgressSample) => {
     setAuditConfig({
       isOpen: true,
-      title: `Hỗ Trợ Cộng Thưởng Thủ Công: ${learner.learnerName}`,
-      description: `Học viên có ${learner.unclaimedCoinsAtRisk} Coins chưa nhận thưởng do sự cố mạng hoặc quên trước giờ reset. Nhập mã Ticket hỗ trợ để cấp bù.`,
-      actionLabel: 'Cấp Bù Phần Thưởng',
+      title: `Ghi Nhận Sự Cố & Bồi Hoàn Ví Ops: ${learner.learnerName}`,
+      description: `Học viên có ${learner.unclaimedCoinsAtRisk} Coins chưa nhận thưởng do sự cố hệ thống. Theo quy tắc BF-12G, hệ thống KHÔNG mở rương hồi tố hay cộng Activity Stamp sau reset. Vui lòng nhập mã Ticket hỗ trợ để cấp bù Coins trực tiếp vào ví bồi hoàn.`,
+      actionLabel: 'Cấp Bồi Hoàn Ví (No-Backfill)',
       isDangerous: false,
       onConfirmCallback: (reason) => {
         setLearners((prev) =>
@@ -347,17 +402,16 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
             l.learnerId === learner.learnerId
               ? {
                   ...l,
-                  dailyChestClaimed: true,
                   unclaimedCoinsAtRisk: 0,
                   status: 'claimed_all',
-                  recentEventKey: `MANUAL-GRANT-${Date.now()}`,
+                  recentEventKey: `OPS-INCIDENT-COMPENSATE-${Date.now()}`,
                 }
               : l
           )
         );
         setAuditConfig((prev) => ({ ...prev, isOpen: false }));
         showToast(
-          `Đã giải quyết và cộng thưởng bù cho học viên ${learner.learnerName} (Ticket: ${reason})!`
+          `Đã giải quyết sự cố và cấp bồi hoàn ví cho học viên ${learner.learnerName} (Ticket: ${reason}). Tuân thủ No-Backfill BF-12G!`
         );
       },
     });
@@ -428,7 +482,7 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
       <MissionsTabNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        activePoolCount={ribbonMetrics.activeDailyPoolCount + ribbonMetrics.activeWeeklyPoolCount}
+        activePoolCount={ribbonMetrics.activeDailyPoolCount}
         violationsCount={ribbonMetrics.activeViolationsCount}
       />
 
@@ -454,6 +508,7 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
               setIsInspectDrawerOpen(true);
             }}
             onToggleStatus={handleToggleStatus}
+            onRequestActivate={handleRequestActivate}
             onDuplicateMission={handleDuplicateMission}
             onArchiveMission={handleArchiveMission}
           />
@@ -464,6 +519,8 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
             dailyConfig={dailyConfig}
             weeklyConfig={weeklyConfig}
             countdownText={countdownText}
+            missions={missions}
+            guardrailConfig={guardrailConfig}
             onUpdateDailyConfig={(newCfg) => {
               setDailyConfig(newCfg);
               showToast('Đã lưu cấu hình chu kỳ reset 00:00 & Daily Chest!');
@@ -526,6 +583,18 @@ export const MissionsPage: React.FC<MissionsPageProps> = ({
           setIsInspectDrawerOpen(false);
         }}
         onArchive={handleArchiveMission}
+      />
+
+      <MissionActivationModal
+        isOpen={isActivationModalOpen}
+        mission={activatingMission}
+        allMissions={missions}
+        guardrailConfig={guardrailConfig}
+        onClose={() => {
+          setIsActivationModalOpen(false);
+          setActivatingMission(null);
+        }}
+        onConfirmActivate={handleConfirmActivate}
       />
 
       <AuditReasonModal

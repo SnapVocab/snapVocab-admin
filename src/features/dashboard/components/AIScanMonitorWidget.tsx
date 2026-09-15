@@ -1,6 +1,6 @@
 import React from 'react';
 import { AIScanProjection } from '../../../domains/dashboard/types';
-import { Camera, AlertCircle, Clock, Sparkles, ArrowRight } from 'lucide-react';
+import { Camera, Clock, CheckCircle2, BarChart2, ArrowRight } from 'lucide-react';
 
 interface AIScanMonitorWidgetProps {
   aiScan: AIScanProjection;
@@ -11,123 +11,102 @@ export const AIScanMonitorWidget: React.FC<AIScanMonitorWidgetProps> = ({
   aiScan,
   onNavigate,
 }) => {
+  const maxHourly = Math.max(...aiScan.hourlyPoints.map((p) => p.value), 1);
+
   return (
-    <div className="bg-surface border border-border rounded-xl p-4 shadow-card flex flex-col justify-between select-none">
+    <div className="bg-surface border border-border rounded-xl p-4 shadow-card flex flex-col justify-between">
       {/* Header */}
       <div>
         <div className="flex items-center justify-between pb-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-snapy-light text-snapy flex items-center justify-center">
-              <Camera size={14} />
+            <div className="w-7 h-7 rounded-md bg-snapy-light text-snapy flex items-center justify-center select-none">
+              <Camera size={16} />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-text">AI Scan Monitor & Review Queue</h3>
-              <p className="text-[10px] text-text-muted">
+              <h3 className="text-sm font-bold text-text">AI Scan Monitor & Chẩn Đoán Kỹ Thuật</h3>
+              <p className="text-xs text-text-muted">
                 Gemini Vision Object Detection & Active Feedback Loop
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>94.2% OK</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold select-none">
+            <CheckCircle2 size={12} className="text-emerald-600" />
+            <span>{aiScan.confidenceRate}% Tin cậy cao</span>
           </div>
         </div>
 
-        {/* 3 Micro Metrics */}
-        <div className="grid grid-cols-3 gap-2 my-3">
-          <div className="p-2 rounded-lg bg-surface-subtle border border-border">
-            <div className="text-[10px] text-text-muted">Hôm nay</div>
-            <div className="text-sm font-bold font-mono text-text mt-0.5">
+        {/* 3 Technical Diagnostic Metrics */}
+        <div className="grid grid-cols-3 gap-2.5 my-3.5">
+          <div className="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div className="text-xs text-text-muted select-none">Tổng Scan Hôm nay</div>
+            <div className="text-base font-bold font-mono text-text mt-0.5 select-text">
               {aiScan.todayScans.toLocaleString('vi-VN')}
             </div>
           </div>
 
-          <div className="p-2 rounded-lg bg-surface-subtle border border-border">
-            <div className="text-[10px] text-text-muted">Độ trễ TB</div>
-            <div className="text-sm font-bold font-mono text-text mt-0.5 flex items-center gap-1">
-              <Clock size={12} className="text-text-muted" />
+          <div className="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div className="text-xs text-text-muted select-none">Độ trễ phản hồi TB</div>
+            <div className="text-base font-bold font-mono text-text mt-0.5 flex items-center gap-1 select-text">
+              <Clock size={13} className="text-text-muted select-none" />
               {aiScan.avgLatencyMs}ms
             </div>
           </div>
 
-          <div className="p-2 rounded-lg bg-surface-subtle border border-border">
-            <div className="text-[10px] text-text-muted">Độ tin cậy cao</div>
-            <div className="text-sm font-bold font-mono text-emerald-600 mt-0.5">
+          <div className="p-2.5 rounded-lg bg-surface-subtle border border-border">
+            <div className="text-xs text-text-muted select-none">Tỷ lệ tự động đạt</div>
+            <div className="text-base font-bold font-mono text-emerald-600 mt-0.5 select-text">
               {aiScan.confidenceRate}%
             </div>
           </div>
         </div>
 
-        {/* Actionable Review Queue & Issue Banners */}
-        <div className="space-y-2">
-          {/* Urgent P1 Reports */}
-          <div
-            onClick={() => onNavigate?.('reports')}
-            className="p-2.5 rounded-lg bg-danger-light border border-danger/30 flex items-center justify-between cursor-pointer hover:border-danger transition-all group"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-danger/20 text-danger flex items-center justify-center shrink-0">
-                <AlertCircle size={13} />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-danger flex items-center gap-1.5">
-                  <span>{aiScan.urgentReportCount} Báo cáo Lỗi Scan (P1)</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-danger text-white text-[9px] font-mono">
-                    Khẩn cấp
-                  </span>
-                </div>
-                <div className="text-[10px] text-text-muted mt-0.5">
-                  Người học báo cáo kết quả nhận diện camera chưa chính xác
-                </div>
-              </div>
+        {/* Diagnostic Chart: Hourly Scan Throughput */}
+        <div className="p-3 rounded-lg bg-surface-subtle/50 border border-border">
+          <div className="flex items-center justify-between text-xs font-bold text-text-muted mb-2 select-none">
+            <div className="flex items-center gap-1.5">
+              <BarChart2 size={13} className="text-snapy" />
+              <span>Lưu lượng Scan theo giờ (Throughput)</span>
             </div>
-            <ArrowRight
-              size={13}
-              className="text-danger opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-            />
+            <span className="text-[11px] font-mono text-text-muted">Đỉnh: {maxHourly} scan/h</span>
           </div>
 
-          {/* Pending Operator Queue */}
-          <div
-            onClick={() => onNavigate?.('ai-queue')}
-            className="p-2.5 rounded-lg bg-snapy-light border border-snapy/30 flex items-center justify-between cursor-pointer hover:border-snapy transition-all group"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-snapy/20 text-snapy flex items-center justify-center shrink-0">
-                <Sparkles size={13} />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-snapy flex items-center gap-1.5">
-                  <span>Hàng đợi Review Queue ({aiScan.pendingQueueCount} ảnh)</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-snapy text-white text-[9px] font-mono font-bold">
-                    P2
+          {/* Micro Bar Chart */}
+          <div className="h-16 flex items-end gap-2 pt-2 border-b border-border/60">
+            {aiScan.hourlyPoints.map((pt) => {
+              const hPercent = Math.max((pt.value / maxHourly) * 100, 10);
+
+              return (
+                <div key={pt.label} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
+                  <div
+                    className="w-full bg-snapy/40 group-hover:bg-snapy rounded-t transition-all"
+                    style={{ height: `${hPercent}%` }}
+                    title={`${pt.label}: ${pt.value} scan`}
+                  />
+                  <span className="text-[10px] font-mono text-text-muted group-hover:text-text select-none">
+                    {pt.label}
                   </span>
                 </div>
-                <div className="text-[10px] text-text-muted mt-0.5">
-                  Ảnh scan có độ tin cậy AI &lt; 75% cần operator kiểm duyệt
-                </div>
-              </div>
-            </div>
-            <ArrowRight
-              size={13}
-              className="text-snapy opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-            />
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Footer link */}
-      <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
-        <span>Active Learning Feedback Loop: Sẵn sàng</span>
+      {/* Footer link to AI Studio */}
+      <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-xs text-text-muted">
+        <span>Active Learning Feedback Loop: Đang chạy</span>
         <button
           type="button"
           onClick={() => onNavigate?.('ai-queue')}
-          className="text-xs font-semibold text-snapy hover:text-snapy-hover transition-colors"
+          aria-label="Xem chi tiết hàng đợi AI Queue"
+          className="flex items-center gap-1 text-xs font-bold text-snapy hover:text-snapy-hover transition-colors focus-visible:ring-2 focus-visible:ring-snapy focus-visible:outline-none rounded px-1.5 py-0.5"
         >
-          Xử lý hàng đợi →
+          <span>Chi tiết AI Review Queue ({aiScan.pendingQueueCount})</span>
+          <ArrowRight size={13} />
         </button>
       </div>
     </div>
   );
 };
+

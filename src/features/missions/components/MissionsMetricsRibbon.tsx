@@ -34,20 +34,20 @@ export const MissionsMetricsRibbon: React.FC<MissionsMetricsRibbonProps> = ({
         </div>
         <div>
           <div className="text-xl font-bold font-mono text-text flex items-baseline gap-1">
-            <span>{metrics.activeDailyPoolCount + metrics.activeWeeklyPoolCount}</span>
+            <span>{metrics.activeDailyPoolCount}</span>
             <span className="text-xs font-normal text-text-muted">
               / {metrics.totalPoolCount} Quests
             </span>
           </div>
           <div className="text-[11px] text-text-muted flex items-center gap-1 mt-0.5 font-mono">
-            <span className="text-primary font-bold">{metrics.activeDailyPoolCount} Daily</span>
+            <span className="text-primary font-bold">{metrics.activeDailyPoolCount} Active</span>
             <span>·</span>
-            <span className="text-info font-bold">{metrics.activeWeeklyPoolCount} Weekly</span>
+            <span className="text-emerald-700 font-bold">{metrics.slotCoverageCount}/5 Slots</span>
           </div>
         </div>
         <div className="mt-2 text-[10px] text-emerald-600 font-medium flex items-center gap-1">
           <Sparkles size={11} />
-          <span>Pool xoay tua ngẫu nhiên</span>
+          <span>{metrics.weeklyMilestonesCount} mốc Weekly Milestones</span>
         </div>
       </div>
 
@@ -124,14 +124,11 @@ export const MissionsMetricsRibbon: React.FC<MissionsMetricsRibbonProps> = ({
             <span className="text-xs font-normal text-text-muted">Coins</span>
           </div>
           <div className="text-[11px] text-text-muted flex items-center gap-1 mt-0.5 font-mono">
-            <span>và</span>
-            <strong className="text-info font-bold">
-              {metrics.faucetGems24h} Gems
-            </strong>
+            <span className="text-emerald-600 font-semibold">Kinh tế 100% Coins</span>
           </div>
         </div>
         <div className="mt-2 text-[10px] text-text-muted">
-          <span>An toàn: &lt; 2,500/người</span>
+          <span>An toàn: &lt; 2,500 Coins/người</span>
         </div>
       </div>
 

@@ -12,6 +12,7 @@ import {
   MissionGuardrailConfig,
 } from '../../../domains/missions/types';
 import { filterMissions } from '../../../domains/missions/selectors';
+import { getSlotCategoryBadge } from '../../../domains/missions/capabilities';
 import { MobileMissionSimulator } from './MobileMissionSimulator';
 import {
   Search,
@@ -43,6 +44,7 @@ interface MissionPoolTabProps {
   onEditMission: (mission: Mission) => void;
   onInspectMission: (mission: Mission) => void;
   onToggleStatus: (mission: Mission) => void;
+  onRequestActivate?: (mission: Mission) => void;
   onDuplicateMission: (mission: Mission) => void;
   onArchiveMission: (mission: Mission) => void;
 }
@@ -57,17 +59,19 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
   onEditMission,
   onInspectMission,
   onToggleStatus,
+  onRequestActivate,
   onDuplicateMission,
   onArchiveMission,
 }) => {
   const [filters, setFilters] = useState<MissionFilterState>({
     searchQuery: '',
     type: 'ALL',
+    category: 'ALL',
     actionType: 'ALL',
     status: 'ALL',
     difficulty: 'ALL',
     targetAudience: 'ALL',
-    sortBy: 'weight',
+    sortBy: 'newest',
   });
 
   const [showSimulator, setShowSimulator] = useState(true);
@@ -77,22 +81,26 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
     return filterMissions(missions, filters);
   }, [missions, filters]);
 
+  const activeDailyCount = missions.filter(
+    (m) => m.type === 'daily' && m.status === 'active' && !m.isBonus
+  ).length;
+
   return (
-    <div className="flex flex-col lg:flex-row gap-4 items-start select-none">
-      {/* CỘT CHÍNH: BẢNG QUẢN LÝ KHO NHIỆM VỤ (FLEX-1) */}
-      <div className="flex-1 w-full bg-surface border border-border rounded-xl p-4 shadow-card flex flex-col space-y-4">
-        {/* Top Action Bar: Search, Filters & Add Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-          <div className="flex items-center gap-2 flex-1">
+    <div className="flex flex-col xl:flex-row gap-5">
+      {/* CỘT TRÁI: BẢNG DỮ LIỆU CHÍNH */}
+      <div className="flex-1 space-y-4">
+        {/* Thanh tìm kiếm & Bộ lọc nhanh */}
+        <div className="bg-surface border border-border rounded-2xl p-4 shadow-card space-y-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
             {/* Search Input */}
-            <div className="relative flex-1 max-w-sm">
+            <div className="relative flex-1 w-full">
               <Search
-                size={14}
-                className="absolute left-3 top-2.5 text-text-muted pointer-events-none"
+                size={15}
+                className="absolute left-2.5 top-2.5 text-text-muted"
               />
               <input
                 type="text"
-                placeholder="Tìm theo tên, mã (MS-D-..), chỉ tiêu..."
+                placeholder="Tìm theo mã (MS-D-..), tiêu đề hoặc nội dung..."
                 value={filters.searchQuery}
                 onChange={(e) =>
                   setFilters({ ...filters, searchQuery: e.target.value })
@@ -122,9 +130,29 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
               className="text-xs p-2 rounded-lg border border-border bg-surface text-text font-medium focus:ring-1 focus:ring-primary"
             >
               <option value="ALL">Tất cả loại</option>
-              <option value="daily">Hàng ngày (Daily)</option>
-              <option value="weekly">Hàng tuần (Weekly)</option>
+              <option value="daily">Hàng ngày (Daily Pool)</option>
               <option value="achievement">Thành tựu (Lifetime)</option>
+              <option value="special_event">Sự kiện đặc biệt</option>
+            </select>
+
+            {/* Slot Category Filter (BF-12A standard) */}
+            <select
+              value={filters.category}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  category: e.target.value as any,
+                })
+              }
+              className="text-xs p-2 rounded-lg border border-border bg-surface text-text font-semibold focus:ring-1 focus:ring-primary"
+            >
+              <option value="ALL">Mọi nhóm Slot</option>
+              <option value="SCAN_CAPTURE">Slot 1: Scan AI</option>
+              <option value="VOCAB_BUILDING">Slot 2: Vocab Building</option>
+              <option value="FLASHCARD_SRS">Slot 3: Flashcard/SRS</option>
+              <option value="QUIZ_ACCURACY">Slot 4: Quiz/Accuracy</option>
+              <option value="RETENTION_GAMIFICATION">Slot 5: Gamification</option>
+              <option value="BONUS">Nhiệm vụ Thưởng (+Bonus)</option>
             </select>
 
             {/* Action Type Filter */}
@@ -144,6 +172,8 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
               <option value="LEARN_NEW_WORDS">Học từ mới</option>
               <option value="QUIZ_PERFECT">Quiz 100%</option>
               <option value="MAINTAIN_STREAK">Giữ Streak</option>
+              <option value="EXPLORE_TOPIC">Khám phá chủ đề</option>
+              <option value="LISTEN_AUDIO">Nghe audio</option>
             </select>
 
             {/* Status Filter */}
@@ -161,7 +191,7 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
               <option value="active">Đang chạy (Active)</option>
               <option value="draft">Bản nháp (Draft)</option>
               <option value="scheduled">Lên lịch (Scheduled)</option>
-              <option value="archived">Đã lưu trữ</option>
+              <option value="archived">Lưu trữ (Archived)</option>
             </select>
           </div>
 
@@ -200,7 +230,8 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
             <thead>
               <tr className="bg-surface-subtle/80 text-text-muted font-semibold border-b border-border text-[11px] uppercase tracking-wider">
                 <th className="p-3">Mã & Tiêu Đề</th>
-                <th className="p-3">Hành Động & Độ Khó</th>
+                <th className="p-3">Slot Category & Phiên Bản</th>
+                <th className="p-3">Hành Động & Event</th>
                 <th className="p-3 text-center">Chỉ Tiêu</th>
                 <th className="p-3 text-center">Phần Thưởng</th>
                 <th className="p-3 text-center">Trọng Số Pool</th>
@@ -212,7 +243,7 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
             <tbody className="divide-y divide-border bg-surface">
               {filteredMissions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-text-muted">
+                  <td colSpan={9} className="p-8 text-center text-text-muted">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Target size={28} className="text-text-muted/40" />
                       <p className="font-semibold text-xs">
@@ -225,9 +256,8 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
                 filteredMissions.map((mission) => {
                   const isOverCeiling =
                     (mission.reward.coins || 0) >
-                      guardrailConfig.maxCoinsCapPerQuest ||
-                    (mission.reward.gems || 0) >
-                      guardrailConfig.maxGemsCapPerQuest;
+                    guardrailConfig.maxCoinsCapPerQuest;
+                  const slotBadge = getSlotCategoryBadge(mission.category);
 
                   return (
                     <tr
@@ -235,7 +265,7 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
                       className="hover:bg-surface-subtle/40 transition-colors"
                     >
                       {/* Mã & Tiêu Đề */}
-                      <td className="p-3 max-w-[240px]">
+                      <td className="p-3 max-w-[220px]">
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                             {mission.code}
@@ -243,11 +273,6 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
                           <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-info-light text-info border border-info/20">
                             {mission.type}
                           </span>
-                          {mission.isBonus && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-snapy-light text-snapy border border-snapy/20">
-                              ★ Bonus
-                            </span>
-                          )}
                         </div>
                         <div
                           className="font-bold text-text truncate hover:text-primary cursor-pointer"
@@ -261,21 +286,30 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
                         </div>
                       </td>
 
-                      {/* Hành Động & Độ Khó */}
+                      {/* Slot Category & Version */}
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${slotBadge.color}`}>
+                            {mission.isBonus ? '★ Bonus' : slotBadge.label}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-primary">
+                            v{mission.version || 1}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-text-muted block">
+                          Client: {mission.minimumSupportedClientVersion || 'v1.0.0'}
+                        </span>
+                      </td>
+
+                      {/* Hành Động & Event */}
                       <td className="p-3 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm">
-                            {mission.actionType === 'SCAN_OBJECT' && '📸'}
-                            {mission.actionType === 'REVIEW_SRS' && '🔄'}
-                            {mission.actionType === 'LEARN_NEW_WORDS' && '📖'}
-                            {mission.actionType === 'QUIZ_PERFECT' && '🎯'}
-                            {mission.actionType === 'MAINTAIN_STREAK' && '🔥'}
-                            {mission.actionType === 'LISTEN_AUDIO' && '🎧'}
-                            {mission.actionType === 'EXPLORE_TOPIC' && '🗂️'}
-                          </span>
                           <span className="font-semibold text-text text-[11px]">
                             {mission.actionType}
                           </span>
+                        </div>
+                        <div className="text-[10px] font-mono text-text-muted mt-0.5 truncate max-w-[150px]" title={mission.triggerEvent}>
+                          {mission.triggerEvent}
                         </div>
                         <span
                           className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.2 rounded capitalize ${
@@ -309,11 +343,6 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
                           <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                             +{mission.reward.xp} XP
                           </span>
-                          {mission.reward.gems ? (
-                            <span className="text-info bg-info-light px-1.5 py-0.5 rounded border border-info/20">
-                              +{mission.reward.gems}💎
-                            </span>
-                          ) : null}
                         </div>
                         {isOverCeiling && (
                           <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-amber-700 font-bold">
@@ -348,19 +377,31 @@ export const MissionPoolTab: React.FC<MissionPoolTabProps> = ({
 
                       {/* Trạng Thái */}
                       <td className="p-3 text-center whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus(mission)}
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all border ${
-                            mission.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                              : mission.status === 'draft'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                              : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                          }`}
-                        >
-                          {mission.status === 'active' ? '● Đang chạy' : mission.status}
-                        </button>
+                        {mission.status === 'active' ? (
+                          <button
+                            type="button"
+                            onClick={() => onToggleStatus(mission)}
+                            title="Bấm để chuyển về Bản nháp (Draft)"
+                            className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-all"
+                          >
+                            ● Đang chạy
+                          </button>
+                        ) : mission.status === 'draft' ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRequestActivate ? onRequestActivate(mission) : onToggleStatus(mission)
+                            }
+                            title="Bấm để kiểm duyệt và kích hoạt (BF-15A)"
+                            className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-300 hover:bg-blue-100 transition-all shadow-xs"
+                          >
+                            ▶ Kích Hoạt
+                          </button>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                            {mission.status}
+                          </span>
+                        )}
                       </td>
 
                       {/* Thao Tác */}
