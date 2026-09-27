@@ -9,14 +9,17 @@ interface SeasonFormModalProps {
   initialData?: Season | null;
 }
 
-export const SeasonFormModal: React.FC<SeasonFormModalProps> = ({
-  isOpen,
+export const SeasonFormModal: React.FC<SeasonFormModalProps> = (props) => {
+  if (!props.isOpen) return null;
+
+  return <SeasonFormModalContent {...props} />;
+};
+
+const SeasonFormModalContent: React.FC<SeasonFormModalProps> = ({
   onClose,
   onSubmit,
   initialData,
 }) => {
-  if (!isOpen) return null;
-
   const [code, setCode] = useState(
     initialData?.code || `SEASON_${new Date().getFullYear()}_W${Math.ceil(new Date().getDate() / 7) + 36}`
   );

@@ -1,6 +1,8 @@
 import { useState, lazy, Suspense } from 'react';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { Loader2 } from 'lucide-react';
+import { AuthProvider } from './domains/auth/use-auth';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Code-split all feature pages with React.lazy
 const DashboardPage = lazy(() =>
@@ -63,7 +65,7 @@ function PageLoadingFallback() {
   );
 }
 
-export function App() {
+function AdminWorkspace() {
   const [activeNav, setActiveNav] = useState<string>('dashboard');
   const [currentWordTitle, setCurrentWordTitle] = useState<string>('apple');
 
@@ -186,6 +188,16 @@ export function App() {
     >
       <Suspense fallback={<PageLoadingFallback />}>{renderCurrentView()}</Suspense>
     </AdminLayout>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <ProtectedRoute>
+        <AdminWorkspace />
+      </ProtectedRoute>
+    </AuthProvider>
   );
 }
 

@@ -11,8 +11,13 @@ interface AuditReasonModalProps {
   onConfirm: (reason: string, ticketId: string) => void;
 }
 
-export const AuditReasonModal: React.FC<AuditReasonModalProps> = ({
-  isOpen,
+export const AuditReasonModal: React.FC<AuditReasonModalProps> = (props) => {
+  if (!props.isOpen) return null;
+
+  return <AuditReasonModalContent {...props} />;
+};
+
+const AuditReasonModalContent: React.FC<AuditReasonModalProps> = ({
   onClose,
   title,
   description,
@@ -20,8 +25,6 @@ export const AuditReasonModal: React.FC<AuditReasonModalProps> = ({
   isDangerous = false,
   onConfirm,
 }) => {
-  if (!isOpen) return null;
-
   const [reason, setReason] = useState('');
   const [ticketId, setTicketId] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
