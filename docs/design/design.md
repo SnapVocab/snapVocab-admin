@@ -73,6 +73,35 @@ Danger Red       #EF4444  ➔ Lưu trữ (Archive), Xóa, Lỗi hệ thống, C�
 3. Màu **Snapy Orange (`#FF8A00`)** chỉ đại diện cho tính năng AI Camera Scan và chuỗi Streak.
 4. Màu **Reward Gold (`#FFC42E`)** bảo lưu riêng cho hệ thống kinh tế ảo và phần thưởng nhiệm vụ.
 
+
+### Bộ UI chung: Button & Badge (`src/components/ui`, 2026-10-06)
+
+Màu **hành động** tách khỏi màu **trạng thái**: "Phát hành" (nút) và "Đã phát hành" (badge) cùng nhóm xanh nhưng khác độ nổi bật.
+
+| Button | Dùng cho |
+| :--- | :--- |
+| `primary` | Hành động chính của khu vực — **mỗi khu vực một nút**. Nền `primary-solid #3A8200` (chữ trắng ≥ 4.5:1; `#58CC02` chỉ đạt 2.2:1). |
+| `secondary` | Hủy, quay lại, xem trước; hành động đứng cạnh primary (VD "Phát hành" cạnh "Lưu thay đổi"). |
+| `ghost` | Thao tác trong bảng, mở menu. |
+| `danger` | **Xác nhận** hành động không hoàn tác (Xóa, Ngừng bán vĩnh viễn). Nền `danger-solid #DC2626`. |
+| `danger-outline` | Nút **mở** bước xác nhận nguy hiểm. |
+
+- Kích thước: `sm` 32px/12px (toolbar, bảng) · `md` 36px/13px (mặc định, form, modal) · `lg` 40px/14px. Bo 8px, icon 14–16px.
+- `loading` giữ nguyên chiều rộng, spinner + `loadingText`; disabled không hover; focus bàn phím có vòng viền `info`.
+- Nút chỉ icon bắt buộc `label` (tên truy cập + tooltip).
+
+| Badge tone | Ý nghĩa |
+| :--- | :--- |
+| `neutral` | Chưa hoạt động / đã kết thúc (Bản nháp, Đã lưu trữ, không mở bán) |
+| `info` | Thông tin / đã lên lịch (Chờ mở bán) |
+| `success` | Hoạt động (Đã phát hành, Đang mở bán) |
+| `warning` | Cần chú ý (Có thay đổi chưa lưu) |
+| `danger` | Lỗi / bị chặn — **không** dùng cho trạng thái đã kết thúc |
+
+- Mỗi module ánh xạ trạng thái nghiệp vụ sang tone trong một component riêng (VD `features/shop/components/ShopItemStatusBadge.tsx`).
+- Tương phản của mọi tone được kiểm bằng `tests/ui-tokens.test.ts`. Xem mọi biến thể ở trang **UI Kit (dev)** (chỉ có ở bản dev).
+- Áp dụng dần: chuyển một module sang bộ UI chung khi chỉnh sửa module đó; không thay toàn admin một lượt. Đã chuyển: Shop.
+
 ---
 
 ## 4. Cấu trúc Điều hướng Sidebar (Information Architecture)
@@ -102,7 +131,7 @@ Sidebar được tổ chức theo đúng trình tự tư duy nghiệp vụ của
 │   Shop & Economy       │
 │   Missions             │
 │   Badges & Titles      │
-│   Leaderboard Seasons  │
+│   Leaderboard (view)   │
 │                        │
 │ PEOPLE                 │
 │   Learners             │
@@ -228,7 +257,7 @@ Khi người học trên mobile bấm nút *"Báo cáo kết quả scan sai"*:
    * Đưa ảnh và nhãn đúng vào tập dữ liệu tinh chỉnh (fine-tuning dataset) cho Gemini Vision API.
 
 ### 7.3. Hàng rào An toàn LiveOps (LiveOps Guardrails)
-* **Domain-level Validation:** Giới hạn mức thưởng nhiệm vụ (nếu cấu hình $> 1,000$ Coins hoặc $> 100$ Gems sẽ bị từ chối/yêu cầu Super Admin phê duyệt).
+* **Domain-level Validation:** Validation Mission Pool theo [daily_mission.md](../../../docs/decisions/daily_mission.md) §8.3. Giới hạn tổng reward/ngày chưa được chốt (PD-DM-02) — không tự đặt ngưỡng trong UI.
 * **Streak Recovery Tool:** Hỗ trợ phục hồi chuỗi học cho người dùng bị mất streak do lỗi kỹ thuật, bắt buộc đính kèm mã ticket hỗ trợ vào nhật ký Audit Log.
 
 ---

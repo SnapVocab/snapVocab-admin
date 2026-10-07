@@ -11,10 +11,12 @@ import {
   useDeleteShopItem,
 } from '../../../domains/shop/queries';
 import {
-  deriveAvailability,
+  deriveSaleState,
   formatShopItemTypeLabel,
+  mapBackendErrorsToFields,
 } from '../../../domains/shop/mappers';
-import { ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
+import { SaleStateBadge } from '../components/ShopItemStatusBadge';
+import { Button } from '../../../components/ui';
 import {
   PublishConfirmationModal,
   ArchiveConfirmationModal,
@@ -25,8 +27,6 @@ import {
   Plus,
   RotateCw,
   Coins,
-  CheckCircle2,
-  XCircle,
   Edit2,
   Globe,
   Archive,
@@ -97,6 +97,11 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
   const meta = listResponse?.meta;
   const totalPages = meta?.pages ?? Math.ceil((meta?.total || 0) / pageSize) ?? 1;
 
+  // Deleting/archiving the last row of the last page leaves an empty page: step back to the real last one.
+  useEffect(() => {
+    if (meta && items.length === 0 && page > 0) setPage(Math.max(0, meta.pages - 1));
+  }, [meta, items.length, page]);
+
   // Action Modals State
   const [publishingItem, setPublishingItem] = useState<AdminShopItemDTO | null>(null);
   const [archivingItem, setArchivingItem] = useState<AdminShopItemDTO | null>(null);
@@ -107,44 +112,34 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
   const archiveMutation = useArchiveShopItem();
   const deleteMutation = useDeleteShopItem();
 
-  const handleConfirmPublish = async () => {
-    if (!publishingItem) return;
+  // Errors stay inside the modal the operator is using; closing or reopening clears them.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const closeModals = () => {
+    setPublishingItem(null);
+    setArchivingItem(null);
+    setDeletingItem(null);
+    setActionError(null);
+  };
+  const run = async (action: () => Promise<unknown>, success: string, fallback: string) => {
+    setActionError(null);
     try {
-      await publishMutation.mutateAsync(publishingItem.id);
-      onToast?.(`Đã phát hành vật phẩm "${publishingItem.name}" thành công.`);
-      setPublishingItem(null);
+      await action();
+      onToast?.(success);
+      closeModals();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Phát hành thất bại.';
-      alert(msg);
+      setActionError(mapBackendErrorsToFields(err).generalError || fallback);
     }
   };
 
-  const handleConfirmArchive = async () => {
-    if (!archivingItem) return;
-    try {
-      await archiveMutation.mutateAsync(archivingItem.id);
-      onToast?.(`Đã lưu trữ vật phẩm "${archivingItem.name}".`);
-      setArchivingItem(null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Lưu trữ thất bại.';
-      alert(msg);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      onToast?.(`Đã xóa bản nháp "${deletingItem.name}".`);
-      setDeletingItem(null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Xóa thất bại.';
-      alert(msg);
-    }
-  };
+  const handleConfirmPublish = () => publishingItem
+    && run(() => publishMutation.mutateAsync(publishingItem.id), `Đã phát hành "${publishingItem.name}".`, 'Phát hành thất bại.');
+  const handleConfirmArchive = () => archivingItem
+    && run(() => archiveMutation.mutateAsync(archivingItem.id), `Đã lưu trữ "${archivingItem.name}".`, 'Lưu trữ thất bại.');
+  const handleConfirmDelete = () => deletingItem
+    && run(() => deleteMutation.mutateAsync(deletingItem.id), `Đã xóa bản nháp "${deletingItem.name}".`, 'Xóa thất bại.');
 
   return (
-    <div className="space-y-4 select-none">
+    <div className="space-y-4">
       {/* TOOLBAR — flat row, no card boxing */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Left: Filters */}
@@ -153,7 +148,8 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           <div className="relative flex-1 min-w-[220px] max-w-sm">
             <Search size={14} className="absolute left-3 top-2.5 text-text-muted" />
             <input
-              type="text"
+              type="search"
+              aria-label="Tìm vật phẩm theo mã hoặc tên"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm theo mã code, tên vật phẩm..."
@@ -165,11 +161,12 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           <select
             value={typeFilter}
             onChange={handleTypeChange}
+            aria-label="Loại vật phẩm"
             className="px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface text-text font-medium cursor-pointer"
           >
-            <option value="ALL">Tất cả loại</option>
-            <option value="THEME">Chủ đề</option>
-            <option value="AVATAR_FRAME">Khung Avatar</option>
+            <option value="ALL">Mọi loại vật phẩm</option>
+            <option value="THEME">Giao diện cửa hàng</option>
+            <option value="AVATAR_FRAME">Khung avatar</option>
             <option value="XP_BOOSTER">XP Booster</option>
           </select>
 
@@ -177,53 +174,33 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           <select
             value={statusFilter}
             onChange={handleStatusChange}
+            aria-label="Trạng thái phát hành (vòng đời)"
             className="px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface text-text font-medium cursor-pointer"
           >
-            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ALL">Mọi trạng thái phát hành</option>
             <option value="DRAFT">Bản nháp</option>
             <option value="PUBLISHED">Đã phát hành</option>
             <option value="ARCHIVED">Đã lưu trữ</option>
           </select>
 
           {/* Refresh button */}
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text-muted hover:text-text transition-colors cursor-pointer disabled:opacity-50"
-            title="Làm mới danh sách"
-          >
-            <RotateCw size={14} className={isFetching ? 'animate-spin text-primary' : ''} />
-          </button>
+          <Button size="sm" icon={<RotateCw />} label="Làm mới danh sách" loading={isFetching} onClick={() => refetch()} />
         </div>
 
         {/* Right: Create */}
-        <button
-          type="button"
-          onClick={onCreateItem}
-          className="px-3.5 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-        >
-          <Plus size={14} />
-          <span>Tạo Vật Phẩm Mới</span>
-        </button>
+        <Button variant="primary" icon={<Plus />} onClick={onCreateItem}>Tạo vật phẩm mới</Button>
       </div>
 
       {/* ERROR STATE */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs text-rose-800">
+        <div role="alert" className="p-4 bg-danger-light border border-danger/30 rounded-xl flex items-center justify-between text-[13px] text-danger-dark">
           <div className="flex items-center gap-2">
-            <AlertCircle size={16} className="text-rose-600 shrink-0" />
+            <AlertCircle size={16} className="shrink-0" />
             <span>
               {error instanceof Error ? error.message : 'Không thể tải danh sách Shop Items.'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold transition-colors cursor-pointer"
-          >
-            Thử lại
-          </button>
+          <Button size="sm" onClick={() => refetch()}>Thử lại</Button>
         </div>
       )}
 
@@ -233,15 +210,12 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-surface-subtle border-b border-border text-text-muted font-semibold text-[11px] uppercase tracking-wider">
-                <th className="py-2.5 px-4 min-w-[220px]">Vật phẩm</th>
-                <th className="py-2.5 px-3 min-w-[130px]">Mã</th>
-                <th className="py-2.5 px-3 min-w-[120px]">Loại</th>
-                <th className="py-2.5 px-3 min-w-[110px]">Giá</th>
-                <th className="py-2.5 px-3 min-w-[140px]">Trạng thái</th>
-                <th className="py-2.5 px-3 min-w-[120px]">Cho phép mua</th>
-                <th className="py-2.5 px-3 min-w-[150px]">Thời gian bán</th>
-                <th className="py-2.5 px-3 min-w-[120px]">Cập nhật</th>
-                <th className="py-2.5 px-4 min-w-[100px] text-right">Thao tác</th>
+                <th className="py-2.5 px-4 min-w-[280px]">Vật phẩm</th>
+                <th className="py-2.5 px-3">Loại</th>
+                <th className="py-2.5 px-3">Giá</th>
+                <th className="py-2.5 px-3 min-w-[200px]">Trạng thái bán</th>
+                <th className="py-2.5 px-3">Cập nhật</th>
+                <th className="py-2.5 px-4 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -258,20 +232,17 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-3"><div className="h-3 bg-neutral-200 rounded w-16" /></td>
                     <td className="py-3 px-3"><div className="h-5 bg-neutral-200 rounded-full w-20" /></td>
                     <td className="py-3 px-3"><div className="h-3 bg-neutral-200 rounded w-14" /></td>
                     <td className="py-3 px-3"><div className="h-5 bg-neutral-200 rounded-full w-24" /></td>
-                    <td className="py-3 px-3"><div className="h-3 bg-neutral-200 rounded w-10" /></td>
-                    <td className="py-3 px-3"><div className="h-3 bg-neutral-200 rounded w-24" /></td>
                     <td className="py-3 px-3"><div className="h-3 bg-neutral-200 rounded w-20" /></td>
                     <td className="py-3 px-4 text-right"><div className="h-6 bg-neutral-200 rounded w-16 ml-auto" /></td>
                   </tr>
                 ))
-              ) : items.length === 0 ? (
+              ) : items.length === 0 && error ? null : items.length === 0 ? (
                 // EMPTY STATE
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-text-muted">
+                  <td colSpan={6} className="py-12 text-center text-text-muted">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <PackageX size={36} className="text-text-muted/60" />
                       <p className="font-semibold text-sm text-text">Không tìm thấy vật phẩm nào</p>
@@ -281,8 +252,9 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
                           : 'Chưa có vật phẩm nào trong catalog. Hãy tạo vật phẩm đầu tiên.'}
                       </p>
                       {debouncedQuery || typeFilter !== 'ALL' || statusFilter !== 'ALL' ? (
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          className="mt-2"
                           onClick={() => {
                             setSearchQuery('');
                             setDebouncedQuery('');
@@ -290,19 +262,11 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
                             setStatusFilter('ALL');
                             setPage(0);
                           }}
-                          className="mt-2 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-surface-subtle transition-colors cursor-pointer"
                         >
                           Xóa bộ lọc
-                        </button>
+                        </Button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={onCreateItem}
-                          className="mt-2 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Plus size={13} />
-                          <span>Tạo vật phẩm đầu tiên</span>
-                        </button>
+                        <Button size="sm" className="mt-2" icon={<Plus />} onClick={onCreateItem}>Tạo vật phẩm đầu tiên</Button>
                       )}
                     </div>
                   </td>
@@ -310,7 +274,7 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
               ) : (
                 // DATA ROWS
                 items.map((item) => {
-                  const availability = deriveAvailability(item.availableFrom, item.availableUntil);
+                  const sale = deriveSaleState(item);
                   const updatedDateStr = item.updatedAt
                     ? new Date(item.updatedAt).toLocaleDateString('vi-VN', {
                         day: '2-digit',
@@ -348,23 +312,18 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
                             )}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-text truncate max-w-[200px]" title={item.name}>
+                            <div className="font-semibold text-text line-clamp-2 max-w-[280px]" title={item.name}>
                               {item.name}
                             </div>
-                            {item.description && (
-                              <div className="text-[11px] text-text-muted truncate max-w-[220px]" title={item.description}>
-                                {item.description}
-                              </div>
-                            )}
+                            <span
+                              className="font-mono text-[11px] font-bold text-text-muted select-all cursor-text"
+                              title="Bấm để chọn mã"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {item.code}
+                            </span>
                           </div>
                         </div>
-                      </td>
-
-                      {/* Code */}
-                      <td className="py-2.5 px-3">
-                        <span className="font-mono text-[11px] font-bold text-text bg-surface-subtle px-1.5 py-0.5 rounded border border-border">
-                          {item.code}
-                        </span>
                       </td>
 
                       {/* Type */}
@@ -377,8 +336,8 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
                       {/* Price */}
                       <td className="py-2.5 px-3">
                         {item.purchasable ? (
-                          <span className="font-bold text-reward flex items-center gap-1">
-                            <Coins size={12} className="text-amber-500 shrink-0" />
+                          <span className="font-semibold text-text tabular-nums flex items-center gap-1">
+                            <Coins size={12} className="text-reward shrink-0" />
                             <span>{(item.price ?? 0).toLocaleString('vi-VN')}</span>
                           </span>
                         ) : (
@@ -386,88 +345,36 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
                         )}
                       </td>
 
-                      {/* Status */}
+                      {/* Sale state: the conclusion, with its reason */}
                       <td className="py-2.5 px-3">
-                        <ShopItemStatusBadge status={item.status} />
-                      </td>
-
-                      {/* Purchasable */}
-                      <td className="py-2.5 px-3">
-                        {item.purchasable ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-600 text-[11px]">
-                            <CheckCircle2 size={13} />
-                            <span>Bật</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-text-muted text-[11px]">
-                            <XCircle size={13} />
-                            <span>Tắt</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Availability */}
-                      <td className="py-2.5 px-3">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${availability.badgeClass}`}
-                        >
-                          {availability.label}
-                        </span>
+                        <SaleStateBadge sale={sale} />
                       </td>
 
                       {/* Updated */}
-                      <td className="py-2.5 px-3 text-[11px] text-text-muted font-mono whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-xs text-text-muted tabular-nums whitespace-nowrap">
                         {updatedDateStr}
                       </td>
 
                       {/* Actions */}
                       <td className="py-2.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          {/* Edit */}
-                          <button
-                            type="button"
-                            onClick={() => onEditItem(item.id)}
-                            className="p-1.5 rounded-lg hover:bg-surface-subtle text-text-muted hover:text-text transition-colors"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-
                           {/* Publish (DRAFT only) */}
                           {item.status === 'DRAFT' && (
-                            <button
-                              type="button"
-                              onClick={() => setPublishingItem(item)}
-                              className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 transition-colors"
-                              title="Phát hành"
-                            >
-                              <Globe size={13} />
-                            </button>
+                            <Button variant="ghost" size="sm" icon={<Globe />} onClick={() => setPublishingItem(item)}>Phát hành</Button>
                           )}
 
                           {/* Archive (PUBLISHED only) */}
                           {item.status === 'PUBLISHED' && (
-                            <button
-                              type="button"
-                              onClick={() => setArchivingItem(item)}
-                              className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 hover:text-amber-700 transition-colors"
-                              title="Lưu trữ"
-                            >
-                              <Archive size={13} />
-                            </button>
+                            <Button variant="ghost" size="sm" className="text-danger-dark" icon={<Archive />} label="Ngừng bán vĩnh viễn" onClick={() => setArchivingItem(item)} />
                           )}
 
                           {/* Delete (DRAFT only) */}
                           {item.status === 'DRAFT' && (
-                            <button
-                              type="button"
-                              onClick={() => setDeletingItem(item)}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-600 transition-colors"
-                              title="Xóa bản nháp"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            <Button variant="ghost" size="sm" className="text-danger-dark" icon={<Trash2 />} label="Xóa bản nháp" onClick={() => setDeletingItem(item)} />
                           )}
+
+                          {/* Edit last: right-aligned, so it lines up on every row whatever else is shown */}
+                          <Button variant="ghost" size="sm" icon={<Edit2 />} label="Chỉnh sửa" onClick={() => onEditItem(item.id)} />
                         </div>
                       </td>
                     </tr>
@@ -486,29 +393,16 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page <= 0 || isLoading}
-                className="px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-40 cursor-pointer"
-              >
-                <ChevronLeft size={14} />
-                <span>Trước</span>
-              </button>
+              <Button size="sm" icon={<ChevronLeft />} disabled={page <= 0 || isLoading} onClick={() => setPage((p) => Math.max(0, p - 1))}>Trước</Button>
 
               <span className="px-2 font-mono text-xs text-text font-bold">
                 {page + 1} / {Math.max(1, totalPages)}
               </span>
 
-              <button
-                type="button"
-                onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}
-                disabled={page + 1 >= totalPages || isLoading}
-                className="px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-40 cursor-pointer"
-              >
-                <span>Sau</span>
+              <Button size="sm" disabled={page + 1 >= totalPages || isLoading} onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}>
+                Sau
                 <ChevronRight size={14} />
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -520,7 +414,8 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           isOpen={true}
           item={publishingItem}
           isPublishing={publishMutation.isPending}
-          onClose={() => setPublishingItem(null)}
+          errorMessage={actionError}
+          onClose={closeModals}
           onConfirm={handleConfirmPublish}
         />
       )}
@@ -530,7 +425,8 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           isOpen={true}
           itemName={archivingItem.name}
           isArchiving={archiveMutation.isPending}
-          onClose={() => setArchivingItem(null)}
+          errorMessage={actionError}
+          onClose={closeModals}
           onConfirm={handleConfirmArchive}
         />
       )}
@@ -540,7 +436,8 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           isOpen={true}
           itemName={deletingItem.name}
           isDeleting={deleteMutation.isPending}
-          onClose={() => setDeletingItem(null)}
+          errorMessage={actionError}
+          onClose={closeModals}
           onConfirm={handleConfirmDelete}
         />
       )}

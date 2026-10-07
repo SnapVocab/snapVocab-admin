@@ -86,6 +86,8 @@ export function useUpdateShopItem() {
     onSuccess: (data) => {
       queryClient.setQueryData(adminShopKeys.detail(data.id), data);
       queryClient.invalidateQueries({ queryKey: ['adminShop', 'list'] });
+      // A draft's type/themeKey change frees or takes a theme.
+      queryClient.invalidateQueries({ queryKey: adminShopKeys.itemTypes() });
     },
   });
 }

@@ -2,10 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isFieldEditable,
-  deriveAvailability,
+  deriveSaleState,
+  isoToVnInput,
+  vnInputToIso,
   formatShopItemTypeLabel,
   mapBackendErrorsToFields,
   validateAssetFile,
+  configForType,
+  itemToForm,
+  buildUpdatePayload,
+  readImageHeader,
+  checkAssetHeader,
 } from '../src/domains/shop/mappers';
 import {
   ShopItemStatus,
@@ -33,14 +40,14 @@ import {
 const MOCK_METADATA: ShopItemTypeMetadataDTO = {
   commonFields: [
     { name: 'code', inputType: 'TEXT', required: true, requiredToPublish: true, editableIn: ['DRAFT'] },
-    { name: 'name', inputType: 'TEXT', required: true, requiredToPublish: true, editableIn: ['DRAFT', 'PUBLISHED'] },
-    { name: 'description', inputType: 'TEXT', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED'] },
-    { name: 'iconKey', inputType: 'IMAGE', required: false, requiredToPublish: true, editableIn: ['DRAFT', 'PUBLISHED'] },
+    { name: 'name', inputType: 'TEXT', required: true, requiredToPublish: true, editableIn: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] },
+    { name: 'description', inputType: 'TEXT', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] },
+    { name: 'iconKey', inputType: 'IMAGE', required: false, requiredToPublish: true, editableIn: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] },
     { name: 'purchasable', inputType: 'BOOLEAN', required: true, requiredToPublish: true, editableIn: ['DRAFT', 'PUBLISHED'] },
     { name: 'price', inputType: 'NUMBER', required: true, requiredToPublish: true, min: 1, max: 100000, editableIn: ['DRAFT', 'PUBLISHED'] },
     { name: 'availableFrom', inputType: 'DATETIME', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED'] },
     { name: 'availableUntil', inputType: 'DATETIME', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED'] },
-    { name: 'sortOrder', inputType: 'NUMBER', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED'] },
+    { name: 'sortOrder', inputType: 'NUMBER', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] },
   ],
   types: [
     {
@@ -100,7 +107,7 @@ const MOCK_METADATA: ShopItemTypeMetadataDTO = {
           min: 1,
           max: 10,
           defaultValue: 5,
-          editableIn: ['DRAFT'],
+          editableIn: ['DRAFT', 'PUBLISHED'],
         },
       ],
     },
@@ -181,38 +188,43 @@ test('9. API - createShopAssetUploadUrl accepts fileName', () => {
    ========================================================================= */
 
 test('10. List - Format type labels in Vietnamese', () => {
-  assert.equal(formatShopItemTypeLabel('THEME'), 'Chủ đề');
-  assert.equal(formatShopItemTypeLabel('AVATAR_FRAME'), 'Khung Avatar');
+  assert.equal(formatShopItemTypeLabel('THEME'), 'Giao diện cửa hàng');
+  assert.equal(formatShopItemTypeLabel('AVATAR_FRAME'), 'Khung avatar');
   assert.equal(formatShopItemTypeLabel('XP_BOOSTER'), 'XP Booster');
   assert.equal(formatShopItemTypeLabel(undefined), '—');
 });
 
-test('11. List - Availability: UNLIMITED when both dates are null', () => {
-  const res = deriveAvailability(null, null);
-  assert.equal(res.state, 'UNLIMITED');
-  assert.equal(res.label, 'Không giới hạn');
+const NOW = new Date('2026-10-06T05:00:00Z'); // 12:00 UTC+7
+const published = { status: 'PUBLISHED' as ShopItemStatus, purchasable: true, availableFrom: null, availableUntil: null };
+
+test('11. Sale state - lifecycle wins: DRAFT and ARCHIVED regardless of window', () => {
+  assert.equal(deriveSaleState({ ...published, status: 'DRAFT' }, NOW).state, 'DRAFT');
+  assert.equal(deriveSaleState({ ...published, status: 'ARCHIVED' }, NOW).state, 'ARCHIVED');
 });
 
-test('12. List - Availability: UPCOMING when availableFrom is in the future', () => {
-  const future = new Date(Date.now() + 86400000).toISOString();
-  const res = deriveAvailability(future, null);
-  assert.equal(res.state, 'UPCOMING');
-  assert.equal(res.label, 'Chưa mở bán');
+test('12. Sale state - published but not purchasable is reward-only, even inside a window', () => {
+  const res = deriveSaleState({ ...published, purchasable: false, availableFrom: '2026-10-01T00:00:00Z' }, NOW);
+  assert.equal(res.state, 'REWARD_ONLY');
+  assert.equal(res.label, 'Chỉ dùng làm phần thưởng');
 });
 
-test('13. List - Availability: EXPIRED when availableUntil is in the past', () => {
-  const past = new Date(Date.now() - 86400000).toISOString();
-  const res = deriveAvailability(null, past);
-  assert.equal(res.state, 'EXPIRED');
-  assert.equal(res.label, 'Đã kết thúc');
+test('13. Sale state - UPCOMING / ON_SALE / ENDED from the window, details in UTC+7', () => {
+  const upcoming = deriveSaleState({ ...published, availableFrom: '2026-10-07T01:00:00Z' }, NOW);
+  assert.equal(upcoming.state, 'UPCOMING');
+  assert.equal(upcoming.detail, 'Mở bán 07/10/2026 08:00 (UTC+7)');
+  assert.equal(deriveSaleState({ ...published, availableUntil: '2026-10-06T04:59:00Z' }, NOW).state, 'ENDED');
+  const onSale = deriveSaleState({ ...published, availableUntil: '2026-10-31T16:59:00Z' }, NOW);
+  assert.equal(onSale.state, 'ON_SALE');
+  assert.equal(onSale.detail, 'Đến 31/10/2026 23:59 (UTC+7)');
+  assert.equal(deriveSaleState(published, NOW).detail, 'Không giới hạn thời gian');
 });
 
-test('14. List - Availability: ACTIVE when within available window', () => {
-  const past = new Date(Date.now() - 86400000).toISOString();
-  const future = new Date(Date.now() + 86400000).toISOString();
-  const res = deriveAvailability(past, future);
-  assert.equal(res.state, 'ACTIVE');
-  assert.equal(res.label, 'Đang bán');
+test('14. Sale window - UTC+7 input round-trips to the backend Instant', () => {
+  assert.equal(vnInputToIso('2026-10-06T17:00'), '2026-10-06T10:00:00.000Z');
+  assert.equal(isoToVnInput('2026-10-06T10:00:00Z'), '2026-10-06T17:00');
+  assert.equal(isoToVnInput(vnInputToIso('2026-12-31T23:59')), '2026-12-31T23:59');
+  assert.equal(vnInputToIso(null), null);
+  assert.equal(isoToVnInput(''), null);
 });
 
 test('15. List - Pagination zero-based index compliance', () => {
@@ -507,3 +519,81 @@ test('38. Legacy Elimination - No Gems, Rarity, Stock, Flash Sale or Discount in
   assert.equal((canonicalItem as any).salePercentage, undefined);
 });
 
+
+/* =========================================================================
+   REGRESSIONS: editor mapping → request body (audit F01/F02/F03/F09/F10)
+   ========================================================================= */
+
+const serverItem = (over: Partial<AdminShopItemDTO>): AdminShopItemDTO => ({
+  id: 7, version: 3, code: 'THEME_NEON', type: 'THEME', behavior: 'EQUIP', name: 'Neon', description: null,
+  iconKey: 'public/shop/a.png', iconUrl: null, status: 'PUBLISHED', purchasable: true, price: 500,
+  availableFrom: '2026-10-06T10:00:45Z', availableUntil: null, sortOrder: 0, themeKey: 'MIDNIGHT_NEON',
+  frameAssetKey: null, frameAssetUrl: null, boostDurationMinutes: null, maxQuantity: null, multiplier: null,
+  publishedAt: null, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', ...over,
+});
+
+test('R1. config of another type is null for THEME/AVATAR_FRAME; booster defaults only for boosters', () => {
+  assert.deepEqual(configForType('THEME'), { themeKey: null, frameAssetKey: null, boostDurationMinutes: null, maxQuantity: null });
+  assert.deepEqual(configForType('AVATAR_FRAME', { themeKey: 'MIDNIGHT_NEON', boostDurationMinutes: 30 }),
+    { themeKey: null, frameAssetKey: null, boostDurationMinutes: null, maxQuantity: null });
+  assert.deepEqual(configForType('XP_BOOSTER'), { themeKey: null, frameAssetKey: null, boostDurationMinutes: 30, maxQuantity: 5 });
+
+  const form = itemToForm(serverItem({}));
+  assert.equal(form.boostDurationMinutes, null);
+  assert.equal(form.maxQuantity, null);
+  assert.equal(form.description, '');
+});
+
+test('R2. PATCH sends only changed fields; an untouched second-precision sale window is never resent', () => {
+  const base = itemToForm(serverItem({}));
+  const payload = buildUpdatePayload({ ...base, name: 'Neon 2' }, base, 3);
+  assert.deepEqual(payload, { name: 'Neon 2', version: 3 });
+
+  const edited = buildUpdatePayload({ ...base, availableUntil: '2026-10-07T17:00' }, base, 3);
+  assert.deepEqual(edited, { availableUntil: '2026-10-07T10:00:00.000Z', version: 3 });
+});
+
+test('R3. VERSION_CONFLICT without currentVersion (flush-time conflict) is still a conflict', () => {
+  const mapped = mapBackendErrorsToFields(new ApiClientError('modified concurrently', 'VERSION_CONFLICT', 409, {}));
+  assert.equal(mapped.isVersionConflict, true);
+  assert.equal(mapped.serverVersion, undefined);
+
+  const locked = mapBackendErrorsToFields(new ApiClientError('locked', 'FIELD_LOCKED', 409, { fields: ['code'] }));
+  assert.equal(locked.isVersionConflict, false);
+});
+
+test('R4. field errors produce a summary naming each field, including fields not on screen', () => {
+  const mapped = mapBackendErrorsToFields(new ApiClientError('x', 'INVALID_SHOP_ITEM_CONFIG', 400, {
+    errors: [{ field: 'boostDurationMinutes', code: 'INVALID_SHOP_ITEM_CONFIG', message: 'must be null for THEME' },
+      { field: 'description', code: 'VALIDATION_ERROR', message: 'at most 500 characters' }],
+  }));
+  assert.equal(mapped.generalError, 'Kiểm tra lại: Thời lượng, Mô tả.');
+});
+
+test('R5. asset header: icon square ≥256; frame 512×512 with alpha; magic must match MIME', () => {
+  const png = (w: number, h: number, colorType: number) => {
+    const b = new Uint8Array(33);
+    b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+    const dv = new DataView(b.buffer);
+    dv.setUint32(16, w); dv.setUint32(20, h); b[24] = 8; b[25] = colorType;
+    return b;
+  };
+  const webpVp8x = (w: number, h: number, alpha: boolean) => {
+    const b = new Uint8Array(30);
+    b.set([...'RIFF'].map((c) => c.charCodeAt(0)), 0);
+    b.set([...'WEBPVP8X'].map((c) => c.charCodeAt(0)), 8);
+    b[20] = alpha ? 0x10 : 0;
+    const u24 = (o: number, v: number) => { b[o] = v & 0xff; b[o + 1] = (v >> 8) & 0xff; b[o + 2] = (v >> 16) & 0xff; };
+    u24(24, w - 1); u24(27, h - 1);
+    return b;
+  };
+
+  assert.deepEqual(readImageHeader(png(512, 512, 6)), { format: 'png', width: 512, height: 512, alpha: true });
+  assert.equal(checkAssetHeader(readImageHeader(png(256, 256, 2)), 'image/png', 'icon'), null);
+  assert.match(checkAssetHeader(readImageHeader(png(300, 200, 6)), 'image/png', 'icon')!, /vuông/);
+  assert.match(checkAssetHeader(readImageHeader(png(128, 128, 6)), 'image/png', 'icon')!, /256/);
+  assert.match(checkAssetHeader(readImageHeader(png(512, 512, 2)), 'image/png', 'frame')!, /trong suốt/);
+  assert.equal(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/webp', 'frame'), null);
+  assert.match(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/png', 'frame')!, /hợp lệ/);
+  assert.equal(readImageHeader(new Uint8Array(40)), null);
+});

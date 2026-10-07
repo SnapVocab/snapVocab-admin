@@ -53,7 +53,7 @@ export interface AdminShopItemDTO {
   type: ShopItemType;
   behavior: 'EQUIP' | 'ACTIVATE';
   name: string;
-  description: string;
+  description: string | null;
   iconKey: string | null;
   iconUrl: string | null;
   status: ShopItemStatus;

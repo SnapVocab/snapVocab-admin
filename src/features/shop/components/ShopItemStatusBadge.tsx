@@ -1,51 +1,26 @@
 import React from 'react';
 import { ShopItemStatus } from '../../../domains/shop/types';
+import { DerivedSaleState } from '../../../domains/shop/mappers';
+import { Badge, BadgeTone } from '../../../components/ui';
 import { FileEdit, Globe, Archive } from 'lucide-react';
 
-interface ShopItemStatusBadgeProps {
-  status: ShopItemStatus;
-  className?: string;
-}
-
-export const ShopItemStatusBadge: React.FC<ShopItemStatusBadgeProps> = ({
-  status,
-  className = '',
-}) => {
-  switch (status) {
-    case 'DRAFT':
-      return (
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 ${className}`}
-        >
-          <FileEdit size={12} className="text-amber-600" />
-          <span>Bản nháp</span>
-        </span>
-      );
-    case 'PUBLISHED':
-      return (
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 ${className}`}
-        >
-          <Globe size={12} className="text-emerald-600" />
-          <span>Đã phát hành</span>
-        </span>
-      );
-    case 'ARCHIVED':
-      return (
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200 ${className}`}
-        >
-          <Archive size={12} className="text-neutral-500" />
-          <span>Đã lưu trữ</span>
-        </span>
-      );
-    default:
-      return (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600 ${className}`}
-        >
-          {status}
-        </span>
-      );
-  }
+/** Shop's mapping of lifecycle status to a Badge tone. ARCHIVED has ended: neutral, not red. */
+const STATUS: Record<ShopItemStatus, { label: string; tone: BadgeTone; icon: React.ReactElement<{ size?: number }> }> = {
+  DRAFT: { label: 'Bản nháp', tone: 'neutral', icon: <FileEdit /> },
+  PUBLISHED: { label: 'Đã phát hành', tone: 'success', icon: <Globe /> },
+  ARCHIVED: { label: 'Đã lưu trữ', tone: 'neutral', icon: <Archive /> },
 };
+
+/** Lifecycle only (editor header). Lists use SaleStateBadge, which answers "is it on sale". */
+export const ShopItemStatusBadge: React.FC<{ status: ShopItemStatus }> = ({ status }) => {
+  const s = STATUS[status];
+  return s ? <Badge tone={s.tone} icon={s.icon}>{s.label}</Badge> : <Badge>{status}</Badge>;
+};
+
+/** Sale conclusion (tone chosen in deriveSaleState) plus its one-line reason. */
+export const SaleStateBadge: React.FC<{ sale: DerivedSaleState }> = ({ sale }) => (
+  <div className="space-y-0.5">
+    <Badge tone={sale.tone}>{sale.label}</Badge>
+    <div className="text-xs text-text-muted">{sale.detail}</div>
+  </div>
+);

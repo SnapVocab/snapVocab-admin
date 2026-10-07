@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import { Button } from '../../../components/ui';
+import React, { useId, useState, useRef } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { uploadShopAsset } from '../../../domains/shop/api';
-import { validateAssetFile } from '../../../domains/shop/mappers';
+import { checkAssetHeader, readImageHeader, validateAssetFile } from '../../../domains/shop/mappers';
 
 interface AssetUploadFieldProps {
   label: string;
@@ -12,6 +13,8 @@ interface AssetUploadFieldProps {
   disabled?: boolean;
   error?: string;
   onChange: (objectName: string | null, previewUrl: string | null) => void;
+  /** Lets the editor hold Save/Publish until the upload has finished. */
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
@@ -19,18 +22,19 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   helperText,
   type,
   valueKey,
-  previewUrl: initialPreviewUrl,
+  previewUrl: displayPreview,
   disabled = false,
   error,
   onChange,
+  onUploadingChange,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const errorId = useId();
 
-  const displayPreview = localPreview || initialPreviewUrl;
   const maxKb = type === 'icon' ? 200 : 300;
+  const pickFile = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,31 +42,30 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
 
     setUploadError(null);
 
-    // 1. Client-side validation: MIME + size
-    const validation = validateAssetFile(file, type);
-    if (!validation.valid) {
-      setUploadError(validation.error || 'File không hợp lệ');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
-
     try {
       setIsUploading(true);
+      onUploadingChange?.(true);
 
-      // 2. Upload flow: Presigned URL -> PUT binary
+      // 1. Client-side validation: MIME + size, then pixel size/alpha from the header (shop.md §2.3)
+      const validation = validateAssetFile(file, type);
+      const invalid = !validation.valid
+        ? validation.error || 'File không hợp lệ'
+        : checkAssetHeader(readImageHeader(new Uint8Array(await file.arrayBuffer())), file.type, type);
+      if (invalid) {
+        setUploadError(invalid);
+        return;
+      }
+
+      // 2. Upload flow: Presigned URL -> PUT binary; the parent owns key + preview from here on.
+      // ponytail: blob preview URLs are never revoked; a few hundred KB per upload until the tab closes.
       const { objectName, previewUrl } = await uploadShopAsset(file);
-
-      // Create a local preview object URL for immediate display
-      const objectUrl = previewUrl || URL.createObjectURL(file);
-      setLocalPreview(objectUrl);
-
-      // Pass objectName to parent form
-      onChange(objectName, objectUrl);
+      onChange(objectName, previewUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Tải lên asset thất bại.';
       setUploadError(msg);
     } finally {
       setIsUploading(false);
+      onUploadingChange?.(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -70,7 +73,6 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (disabled || isUploading) return;
-    setLocalPreview(null);
     setUploadError(null);
     onChange(null, null);
   };
@@ -78,17 +80,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-text flex items-center gap-1.5">
-          <span>{label}</span>
-          <span className="text-[11px] font-normal text-text-muted">
-            (PNG, WebP ≤ {maxKb} KB)
-          </span>
-        </label>
-        {valueKey && (
-          <span className="text-[10px] font-mono text-text-muted truncate max-w-[200px]" title={valueKey}>
-            Key: {valueKey}
-          </span>
-        )}
+        <span className="text-[13px] font-semibold text-text">{label}</span>
       </div>
 
       <div
@@ -97,13 +89,8 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
             ? 'border-border bg-surface-subtle/50 opacity-70 cursor-not-allowed'
             : error || uploadError
             ? 'border-rose-300 bg-rose-50/30 hover:border-rose-400'
-            : 'border-border hover:border-primary/50 bg-surface hover:bg-surface-subtle/30 cursor-pointer'
+            : 'border-border hover:border-primary/50 bg-surface hover:bg-surface-subtle/30'
         }`}
-        onClick={() => {
-          if (!disabled && !isUploading && !displayPreview) {
-            fileInputRef.current?.click();
-          }
-        }}
       >
         <input
           ref={fileInputRef}
@@ -120,7 +107,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
               <div className={`relative ${type === 'icon' ? 'w-12 h-12' : 'w-14 h-14'} rounded-lg overflow-hidden border border-border bg-neutral-900/5 shadow-xs flex items-center justify-center shrink-0`}>
                 <img
                   src={displayPreview}
-                  alt="Asset preview"
+                  alt={label}
                   className="max-w-full max-h-full object-contain"
                 />
                 {isUploading && (
@@ -133,39 +120,32 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
                 <div className="text-xs font-semibold text-text">
                   {type === 'icon' ? 'Ảnh biểu tượng' : 'Khung avatar'}
                 </div>
-                <div className="text-[11px] text-text-muted truncate max-w-[200px] sm:max-w-xs font-mono">
-                  {valueKey ? `Key: ${valueKey}` : 'Đã chọn ảnh'}
+                <div className="text-xs text-text-muted truncate max-w-[200px] sm:max-w-xs" title={valueKey ?? undefined}>
+                  {valueKey ? 'Đã tải lên' : 'Đã chọn ảnh'}
                 </div>
               </div>
             </div>
 
             {!disabled && !isUploading && (
-              <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-subtle text-text text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <RefreshCw size={12} />
-                  <span>Thay ảnh</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRemove}
-                  className="p-1.5 rounded-lg border border-border hover:bg-rose-50 text-text-muted hover:text-rose-600 hover:border-rose-200 transition-colors cursor-pointer"
-                  title="Xóa ảnh này"
-                >
-                  <X size={14} />
-                </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button size="sm" icon={<RefreshCw />} onClick={pickFile}>Thay ảnh</Button>
+                <Button variant="ghost" size="sm" icon={<X />} label="Xóa ảnh này" onClick={handleRemove} />
               </div>
             )}
           </div>
         ) : (
-          <div className="py-3 px-3 w-full flex items-center justify-center gap-3 text-center">
+          <button
+            type="button"
+            onClick={pickFile}
+            disabled={disabled || isUploading}
+            aria-label={`${label}: chọn ảnh để tải lên`}
+            aria-describedby={uploadError || error ? errorId : undefined}
+            className="py-3 px-3 w-full flex items-center justify-center gap-3 text-center rounded-xl cursor-pointer disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
             {isUploading ? (
               <div className="flex items-center gap-2 text-primary py-1">
                 <Loader2 size={18} className="animate-spin" />
-                <span className="text-xs font-semibold">Đang tải lên asset...</span>
+                <span className="text-xs font-semibold">Đang tải lên…</span>
               </div>
             ) : (
               <div className="flex items-center gap-3">
@@ -174,7 +154,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
                 </div>
                 <div className="text-left">
                   <div className="text-xs font-semibold text-text">
-                    {disabled ? 'Chưa có asset' : (type === 'icon' ? 'Chọn ảnh để tải lên' : 'Chọn khung avatar để tải lên')}
+                    {disabled ? 'Chưa có ảnh' : 'Chọn ảnh để tải lên'}
                   </div>
                   <div className="text-[11px] text-text-muted">
                     PNG / WebP · tối đa {maxKb} KB
@@ -182,16 +162,16 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
                 </div>
               </div>
             )}
-          </div>
+          </button>
         )}
       </div>
 
       {helperText && !uploadError && !error && (
-        <p className="text-[11px] text-text-muted">{helperText}</p>
+        <p className="text-xs text-text-muted">{helperText}</p>
       )}
 
       {(uploadError || error) && (
-        <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1 mt-1">
+        <p id={errorId} role="alert" className="text-xs font-medium text-danger-dark flex items-center gap-1 mt-1">
           <AlertCircle size={12} className="shrink-0" />
           <span>{uploadError || error}</span>
         </p>

@@ -17,8 +17,10 @@ import {
   Settings,
   ChevronRight,
   Shield,
+  Palette,
 } from 'lucide-react';
 import { useAuth } from '../../domains/auth/use-auth';
+import { adminMissionsEnabled } from '../../domains/admin-missions/config';
 
 interface SidebarProps {
   activeNav: string;
@@ -86,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'LIVEOPS & ECONOMY',
       items: [
         { id: 'shop', label: 'Shop & Economy', icon: <ShoppingBag size={16} /> },
-        { id: 'missions', label: 'Missions Engine', icon: <Target size={16} /> },
+        ...(adminMissionsEnabled ? [{ id: 'missions', label: 'Nhiệm vụ hằng ngày', icon: <Target size={16} /> }] : []),
         { id: 'badges', label: 'Badges & Titles', icon: <Award size={16} /> },
         { id: 'seasons', label: 'Seasons & Leagues', icon: <Calendar size={16} /> },
       ],
@@ -116,6 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: 'v12',
           badgeColor: 'bg-neutral-100 text-neutral-600 font-bold border border-border',
         },
+        ...(import.meta.env.DEV ? [{ id: 'ui-kit', label: 'UI Kit (dev)', icon: <Palette size={16} /> }] : []),
       ],
     },
   ];
