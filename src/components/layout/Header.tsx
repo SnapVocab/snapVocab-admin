@@ -72,6 +72,14 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="font-semibold text-[#9A7000]">Shop & Economy</span>
           </>
         );
+      case 'badges':
+        return (
+          <>
+            <span className="hidden sm:inline text-text-muted">LiveOps</span>
+            <span className="hidden sm:inline text-text-light">/</span>
+            <span className="font-semibold text-text">Huy hiệu</span>
+          </>
+        );
       case 'learners':
         return (
           <>

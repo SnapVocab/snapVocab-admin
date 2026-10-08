@@ -9,7 +9,6 @@ import {
   Camera,
   ShoppingBag,
   Target,
-  Award,
   Calendar,
   Users,
   AlertTriangle,
@@ -18,9 +17,11 @@ import {
   ChevronRight,
   Shield,
   Palette,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '../../domains/auth/use-auth';
 import { adminMissionsEnabled } from '../../domains/admin-missions/config';
+import { adminBadgesEnabled } from '../../domains/admin-badges/config';
 
 interface SidebarProps {
   activeNav: string;
@@ -89,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'shop', label: 'Shop & Economy', icon: <ShoppingBag size={16} /> },
         ...(adminMissionsEnabled ? [{ id: 'missions', label: 'Nhiệm vụ hằng ngày', icon: <Target size={16} /> }] : []),
-        { id: 'badges', label: 'Badges & Titles', icon: <Award size={16} /> },
+        ...(adminBadgesEnabled ? [{ id: 'badges', label: 'Huy hiệu', icon: <Award size={16} /> }] : []),
         { id: 'seasons', label: 'Seasons & Leagues', icon: <Calendar size={16} /> },
       ],
     },

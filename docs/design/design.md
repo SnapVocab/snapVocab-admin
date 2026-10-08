@@ -1,6 +1,10 @@
 # SnapVocab Admin — Master Design & Architecture Specification
 
 > **Source of Truth** cho Thiết kế Giao diện (UI/UX), Hệ thống Nhận diện, Kiến trúc Vận hành (LiveOps), và Bản hợp đồng Dữ liệu (Domain Contracts) của dự án **SnapVocab Web Admin (`snapAdmin`)**.
+>
+> **Badges — CLEAN-BDG-01 (2026-10-07):** nghiệp vụ theo [badges.md](../../../docs/decisions/badges.md), cao hơn prototype này. Release đầu chỉ seed/migration, không Admin CRUD, Titles, cấp tay hay thu hồi. Route/menu và import của Badges mock đã gỡ; source `features/badges`/`domains/badges` giữ làm prototype, không phải contract triển khai.
+
+> **Admin Huy hiệu P1 (2026-10-08):** module mới `features/admin-badges` dùng GET list/detail thật, chỉ đọc và mặc định ẩn sau `VITE_ADMIN_BADGES_ENABLED`. UI theo [admin_badges_ui.md](../../../docs/ui/admin_badges_ui.md); phạm vi release tiếp theo theo PD-BDG-13a–d trong badges.md. Chưa nghiệm thu staging; fixture chỉ dùng cho test.
 
 ---
 
@@ -39,7 +43,7 @@ Hệ thống `snapAdmin` được phân bổ nguồn lực và cấu trúc theo 
      DATA / SaaS      CONTENT / AI       LIVEOPS
         40%               35%               25%
    (Learners, Table, (Studio, TTS,    (Shop, Missions,
-    Audit Trail)      AI Scan Queue)    Badges, Economy)
+    Audit Trail)      AI Scan Queue)    Economy)
 ```
 
 ### Nguyên tắc 1: Data-Dense chứ không phải Card-Dense
@@ -130,7 +134,6 @@ Sidebar được tổ chức theo đúng trình tự tư duy nghiệp vụ của
 │ LIVEOPS                │
 │   Shop & Economy       │
 │   Missions             │
-│   Badges & Titles      │
 │   Leaderboard (view)   │
 │                        │
 │ PEOPLE                 │

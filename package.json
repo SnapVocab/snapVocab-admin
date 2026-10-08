@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "npx tsx --test tests/selectors.test.ts tests/missions.test.ts tests/admin-shop.test.ts tests/admin-missions.test.ts tests/admin-missions.dom.test.ts tests/auth.test.ts tests/ui-tokens.test.ts",
+    "test": "tsx --test tests/selectors.test.ts tests/missions.test.ts tests/admin-shop.test.ts tests/admin-missions.test.ts tests/admin-missions.dom.test.ts tests/admin-badges.test.ts tests/admin-badges.dom.test.ts tests/auth.test.ts tests/ui-tokens.test.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -29,6 +29,7 @@
     "oxlint": "^1.79.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }

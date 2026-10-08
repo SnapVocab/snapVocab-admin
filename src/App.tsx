@@ -30,9 +30,10 @@ const ShopEconomyPage = lazy(() =>
 const AdminMissionsPage = lazy(() =>
   import('./features/admin-missions/AdminMissionsPage').then(m => ({ default: m.AdminMissionsPage }))
 );
-const BadgesPage = lazy(() =>
-  import('./features/badges/BadgesPage').then((m) => ({ default: m.BadgesPage }))
-);
+// Opt-in P1. Inline flag allows production builds to omit the module until staging acceptance.
+const AdminBadgesPage = import.meta.env.VITE_ADMIN_BADGES_ENABLED === 'true'
+  ? lazy(() => import('./features/admin-badges/AdminBadgesPage').then(m => ({ default: m.AdminBadgesPage })))
+  : null;
 const LeaderboardSeasonsPage = lazy(() =>
   import('./features/seasons/LeaderboardSeasonsPage').then((m) => ({
     default: m.LeaderboardSeasonsPage,
@@ -84,6 +85,8 @@ function AdminWorkspace() {
     switch (activeNav) {
       case 'missions':
         return adminMissionsEnabled ? <AdminMissionsPage onDirtyChange={setPageDirty} /> : <DashboardPage onNavigate={navigate} />;
+      case 'badges':
+        return AdminBadgesPage ? <AdminBadgesPage /> : <DashboardPage onNavigate={navigate} />;
       case 'dashboard':
         return <DashboardPage onNavigate={setActiveNav} />;
 
@@ -128,14 +131,6 @@ function AdminWorkspace() {
         return (
           <ShopEconomyPage
             onDirtyChange={setPageDirty}
-            onNavigate={setActiveNav}
-            onWordChange={setCurrentWordTitle}
-          />
-        );
-
-      case 'badges':
-        return (
-          <BadgesPage
             onNavigate={setActiveNav}
             onWordChange={setCurrentWordTitle}
           />
