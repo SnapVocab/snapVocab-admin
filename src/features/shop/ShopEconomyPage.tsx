@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ShopItemListPage } from './shop-list/ShopItemListPage';
 import { ShopItemEditorPage } from './shop-editor/ShopItemEditorPage';
-import { CheckCircle2 } from 'lucide-react';
+import { Check, ShoppingBag } from 'lucide-react';
+import { PageHeader } from '../../components/ui';
 
 interface ShopEconomyPageProps {
   onNavigate?: (navId: string) => void;
@@ -29,27 +30,20 @@ export const ShopEconomyPage: React.FC<ShopEconomyPageProps> = ({ onDirtyChange 
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-4 sm:p-6 space-y-4 min-w-0">
       {/* Toast Notification */}
       {toastMessage && (
-        <div role="status" className="fixed top-5 right-5 z-50 bg-text text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-semibold animate-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 size={16} className="text-primary" />
+        <div role="status" className="fixed right-6 top-6 z-40 flex items-center gap-2 rounded-xl border border-primary/30 bg-surface px-4 py-3 text-xs font-bold text-primary-dark shadow-elevated">
+          <Check size={16} />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Page Header — only shown in List view. In Editor view, Editor owns its clean header */}
       {!editorState.isOpen && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/70">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
-              <span>Cửa hàng</span>
-            </div>
-            <h1 className="text-xl font-extrabold text-text tracking-tight">
-              Quản lý cửa hàng
-            </h1>
-            <p className="text-xs text-text-muted mt-0.5">
-              Danh mục vật phẩm: Giao diện cửa hàng, Khung avatar và XP Booster.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Gamification"
+          icon={<ShoppingBag />}
+          title="Cửa hàng"
+          description="Danh mục vật phẩm người học mua bằng Coin: Giao diện cửa hàng, Khung avatar và XP Booster."
+        />
       )}
 
       {/* MAIN WORKFLOW: SHOP ITEM EDITOR OR SHOP ITEM LIST */}

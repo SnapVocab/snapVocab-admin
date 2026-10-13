@@ -16,7 +16,7 @@ import {
   mapBackendErrorsToFields,
 } from '../../../domains/shop/mappers';
 import { SaleStateBadge } from '../components/ShopItemStatusBadge';
-import { Button } from '../../../components/ui';
+import { Button, toolbarControl } from '../../../components/ui';
 import {
   PublishConfirmationModal,
   ArchiveConfirmationModal,
@@ -27,10 +27,6 @@ import {
   Plus,
   RotateCw,
   Coins,
-  Edit2,
-  Globe,
-  Archive,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   PackageX,
@@ -146,14 +142,14 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
         <div className="flex flex-wrap items-center gap-2 flex-1">
           {/* Search */}
           <div className="relative flex-1 min-w-[220px] max-w-sm">
-            <Search size={14} className="absolute left-3 top-2.5 text-text-muted" />
+            <Search size={14} className="absolute left-3 top-3 text-text-muted" />
             <input
               type="search"
               aria-label="Tìm vật phẩm theo mã hoặc tên"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm theo mã code, tên vật phẩm..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-border bg-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary text-text font-medium"
+              className={`${toolbarControl} w-full pl-9`}
             />
           </div>
 
@@ -162,7 +158,7 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
             value={typeFilter}
             onChange={handleTypeChange}
             aria-label="Loại vật phẩm"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface text-text font-medium cursor-pointer"
+            className={`${toolbarControl} cursor-pointer`}
           >
             <option value="ALL">Mọi loại vật phẩm</option>
             <option value="THEME">Giao diện cửa hàng</option>
@@ -175,7 +171,7 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
             value={statusFilter}
             onChange={handleStatusChange}
             aria-label="Trạng thái phát hành (vòng đời)"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface text-text font-medium cursor-pointer"
+            className={`${toolbarControl} cursor-pointer`}
           >
             <option value="ALL">Mọi trạng thái phát hành</option>
             <option value="DRAFT">Bản nháp</option>
@@ -184,7 +180,7 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
           </select>
 
           {/* Refresh button */}
-          <Button size="sm" icon={<RotateCw />} label="Làm mới danh sách" loading={isFetching} onClick={() => refetch()} />
+          <Button icon={<RotateCw />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>
         </div>
 
         {/* Right: Create */}
@@ -357,24 +353,12 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({
 
                       {/* Actions */}
                       <td className="py-2.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Publish (DRAFT only) */}
-                          {item.status === 'DRAFT' && (
-                            <Button variant="ghost" size="sm" icon={<Globe />} onClick={() => setPublishingItem(item)}>Phát hành</Button>
-                          )}
-
-                          {/* Archive (PUBLISHED only) */}
-                          {item.status === 'PUBLISHED' && (
-                            <Button variant="ghost" size="sm" className="text-danger-dark" icon={<Archive />} label="Ngừng bán vĩnh viễn" onClick={() => setArchivingItem(item)} />
-                          )}
-
-                          {/* Delete (DRAFT only) */}
-                          {item.status === 'DRAFT' && (
-                            <Button variant="ghost" size="sm" className="text-danger-dark" icon={<Trash2 />} label="Xóa bản nháp" onClick={() => setDeletingItem(item)} />
-                          )}
-
+                        <div className="flex items-center justify-end gap-2">
+                          {item.status === 'DRAFT' && <Button size="sm" onClick={() => setPublishingItem(item)}>Phát hành</Button>}
+                          {item.status === 'DRAFT' && <Button size="sm" variant="danger-outline" onClick={() => setDeletingItem(item)}>Xóa</Button>}
+                          {item.status === 'PUBLISHED' && <Button size="sm" variant="danger-outline" title="Ngừng bán vĩnh viễn" onClick={() => setArchivingItem(item)}>Ngừng bán</Button>}
                           {/* Edit last: right-aligned, so it lines up on every row whatever else is shown */}
-                          <Button variant="ghost" size="sm" icon={<Edit2 />} label="Chỉnh sửa" onClick={() => onEditItem(item.id)} />
+                          <Button size="sm" onClick={() => onEditItem(item.id)}>Sửa</Button>
                         </div>
                       </td>
                     </tr>

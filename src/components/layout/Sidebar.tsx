@@ -86,9 +86,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: 'LIVEOPS & ECONOMY',
+      title: 'GAMIFICATION',
       items: [
-        { id: 'shop', label: 'Shop & Economy', icon: <ShoppingBag size={16} /> },
+        { id: 'shop', label: 'Cửa hàng', icon: <ShoppingBag size={16} /> },
         ...(adminMissionsEnabled ? [{ id: 'missions', label: 'Nhiệm vụ hằng ngày', icon: <Target size={16} /> }] : []),
         ...(adminBadgesEnabled ? [{ id: 'badges', label: 'Huy hiệu', icon: <Award size={16} /> }] : []),
         { id: 'seasons', label: 'Seasons & Leagues', icon: <Calendar size={16} /> },
