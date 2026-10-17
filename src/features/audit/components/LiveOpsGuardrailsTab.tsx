@@ -18,7 +18,6 @@ interface LiveOpsGuardrailsTabProps {
   onSelectEntry: (entry: AuditLogEntry) => void;
   onNavigateToLearner?: (learnerId: string) => void;
   onNavigateToShop?: () => void;
-  onNavigateToMissions?: () => void;
 }
 
 export const LiveOpsGuardrailsTab: React.FC<LiveOpsGuardrailsTabProps> = ({
@@ -26,7 +25,6 @@ export const LiveOpsGuardrailsTab: React.FC<LiveOpsGuardrailsTabProps> = ({
   onSelectEntry,
   onNavigateToLearner,
   onNavigateToShop,
-  onNavigateToMissions,
 }) => {
   const liveopsLogs = logs.filter(
     (l) => l.domain === 'LIVEOPS_ECONOMY' || l.action === 'STREAK_RECOVERED' || l.action === 'CURRENCY_COMPENSATED'
@@ -54,7 +52,7 @@ export const LiveOpsGuardrailsTab: React.FC<LiveOpsGuardrailsTabProps> = ({
               </span>
             </div>
             <p className="text-xs text-text-muted mt-0.5">
-              Giám sát hạn mức kinh tế (Trần nhiệm vụ: 1,000 Coins / 100 Gems), can thiệp phục hồi Streak kèm mã Ticket và các đợt cấp bù tiền tệ.
+              Theo dõi hoạt động kinh tế và các can thiệp vận hành kèm mã Ticket.
             </p>
           </div>
         </div>
@@ -83,7 +81,7 @@ export const LiveOpsGuardrailsTab: React.FC<LiveOpsGuardrailsTabProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-text-muted mt-0.5">
-                Cấu hình nhiệm vụ vượt trần 1,000 Coins hoặc gian lận macro đã được Sentinel Bot tự động chặn lại và ghi vào sổ cái.
+                Xem chi tiết sự kiện và lý do kiểm toán trước khi xử lý.
               </p>
             </div>
           </div>

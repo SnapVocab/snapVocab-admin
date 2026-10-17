@@ -17,6 +17,20 @@ export const LeagueEditModal: React.FC<LeagueEditModalProps> = ({
 }) => {
   if (!isOpen || !league) return null;
 
+  return <LeagueEditModalContent onClose={onClose} league={league} onSave={onSave} />;
+};
+
+interface LeagueEditModalContentProps {
+  onClose: () => void;
+  league: LeagueConfig;
+  onSave: (updatedLeague: LeagueConfig) => void;
+}
+
+const LeagueEditModalContent: React.FC<LeagueEditModalContentProps> = ({
+  onClose,
+  league,
+  onSave,
+}) => {
   const [promotionRankMax, setPromotionRankMax] = useState(
     league.promotionRule.promotionRankMax
   );

@@ -228,7 +228,6 @@ export const AuditActivityLogPage: React.FC<AuditActivityLogPageProps> = ({
             onSelectEntry={handleSelectEntry}
             onNavigateToLearner={() => onNavigate?.('learners')}
             onNavigateToShop={() => onNavigate?.('shop')}
-            onNavigateToMissions={() => onNavigate?.('missions')}
           />
         )}
 

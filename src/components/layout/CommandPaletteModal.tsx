@@ -13,7 +13,9 @@ import {
   X,
   ArrowRight,
   Sparkles,
+  Target,
 } from 'lucide-react';
+import { adminMissionsEnabled } from '../../domains/admin-missions/config';
 
 interface CommandItem {
   id: string;
@@ -100,11 +102,21 @@ const COMMAND_LIST: CommandItem[] = [
   {
     id: 'nav-shop',
     category: 'Trang Điều Hướng',
-    title: 'Cửa Hàng & Kinh Tế Ảo',
-    subtitle: 'Dòng tiền Coins/Gems, vật phẩm và hàng rào an toàn',
+    title: 'Cửa hàng',
+    subtitle: 'Vật phẩm: Giao diện cửa hàng, Khung avatar, XP Booster',
     icon: <ShoppingBag size={16} />,
     navId: 'shop',
   },
+  ...(adminMissionsEnabled
+    ? [{
+        id: 'nav-missions',
+        category: 'Trang Điều Hướng' as const,
+        title: 'Nhiệm vụ hằng ngày',
+        subtitle: 'Mẫu nhiệm vụ, phần thưởng và trạng thái bật/tắt',
+        icon: <Target size={16} />,
+        navId: 'missions',
+      }]
+    : []),
   {
     id: 'nav-learners',
     category: 'Trang Điều Hướng',

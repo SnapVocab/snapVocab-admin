@@ -17,7 +17,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   onNavigate: controlledOnNavigate,
 }) => {
   const [internalActiveNav, setInternalActiveNav] = useState('dashboard');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const currentNav = controlledActiveNav !== undefined ? controlledActiveNav : internalActiveNav;
@@ -38,12 +37,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background font-sans">
-      {/* Sidebar Navigation (with responsive mobile drawer) */}
+      {/* Sidebar Navigation */}
       <Sidebar
         activeNav={currentNav}
         onNavigate={handleNavigate}
-        mobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Workspace View */}
@@ -51,7 +48,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         <Header
           currentWordTitle={currentWordTitle}
           activeNav={currentNav}
-          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
         <main className="flex-1 overflow-hidden relative">{children}</main>

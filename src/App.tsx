@@ -1,6 +1,9 @@
 import { useState, lazy, Suspense } from 'react';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { Loader2 } from 'lucide-react';
+import { AuthProvider } from './domains/auth/use-auth';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { adminMissionsEnabled } from './domains/admin-missions/config';
 
 // Code-split all feature pages with React.lazy
 const DashboardPage = lazy(() =>
@@ -24,12 +27,13 @@ const AIScanMonitorPage = lazy(() =>
 const ShopEconomyPage = lazy(() =>
   import('./features/shop/ShopEconomyPage').then((m) => ({ default: m.ShopEconomyPage }))
 );
-const MissionsPage = lazy(() =>
-  import('./features/missions/MissionsPage').then((m) => ({ default: m.MissionsPage }))
+const AdminMissionsPage = lazy(() =>
+  import('./features/admin-missions/AdminMissionsPage').then(m => ({ default: m.AdminMissionsPage }))
 );
-const BadgesPage = lazy(() =>
-  import('./features/badges/BadgesPage').then((m) => ({ default: m.BadgesPage }))
-);
+// Opt-in P1. Inline flag allows production builds to omit the module until staging acceptance.
+const AdminBadgesPage = import.meta.env.VITE_ADMIN_BADGES_ENABLED === 'true'
+  ? lazy(() => import('./features/admin-badges/AdminBadgesPage').then(m => ({ default: m.AdminBadgesPage })))
+  : null;
 const LeaderboardSeasonsPage = lazy(() =>
   import('./features/seasons/LeaderboardSeasonsPage').then((m) => ({
     default: m.LeaderboardSeasonsPage,
@@ -46,6 +50,8 @@ const AuditActivityLogPage = lazy(() =>
     default: m.AuditActivityLogPage,
   }))
 );
+// Dev-only reference page for src/components/ui; `DEV` is false in production, so the chunk is never emitted.
+const UiKitPage = import.meta.env.DEV ? lazy(() => import('./features/ui-kit/UiKitPage')) : null;
 const SettingsPage = lazy(() =>
   import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 );
@@ -63,12 +69,24 @@ function PageLoadingFallback() {
   );
 }
 
-export function App() {
+function AdminWorkspace() {
   const [activeNav, setActiveNav] = useState<string>('dashboard');
+  // Set by pages with editors (Missions, Shop): unsaved edits or a write in flight.
+  const [pageDirty, setPageDirty] = useState(false);
+  const navigate = (nav: string) => {
+    if (nav === activeNav) return;
+    if (pageDirty && !window.confirm('Trang hiện tại có thay đổi chưa lưu hoặc thao tác đang xử lý. Rời trang sẽ mất nội dung đang nhập. Tiếp tục?')) return;
+    setPageDirty(false);
+    setActiveNav(nav);
+  };
   const [currentWordTitle, setCurrentWordTitle] = useState<string>('apple');
 
   const renderCurrentView = () => {
     switch (activeNav) {
+      case 'missions':
+        return adminMissionsEnabled ? <AdminMissionsPage onDirtyChange={setPageDirty} /> : <DashboardPage onNavigate={navigate} />;
+      case 'badges':
+        return AdminBadgesPage ? <AdminBadgesPage /> : <DashboardPage onNavigate={navigate} />;
       case 'dashboard':
         return <DashboardPage onNavigate={setActiveNav} />;
 
@@ -112,22 +130,7 @@ export function App() {
       case 'shop':
         return (
           <ShopEconomyPage
-            onNavigate={setActiveNav}
-            onWordChange={setCurrentWordTitle}
-          />
-        );
-
-      case 'missions':
-        return (
-          <MissionsPage
-            onNavigate={setActiveNav}
-            onWordChange={setCurrentWordTitle}
-          />
-        );
-
-      case 'badges':
-        return (
-          <BadgesPage
+            onDirtyChange={setPageDirty}
             onNavigate={setActiveNav}
             onWordChange={setCurrentWordTitle}
           />
@@ -173,6 +176,10 @@ export function App() {
           />
         );
 
+      case 'ui-kit':
+        if (UiKitPage) return <UiKitPage />;
+        return <DashboardPage onNavigate={setActiveNav} />;
+
       default:
         return <DashboardPage onNavigate={setActiveNav} />;
     }
@@ -182,10 +189,20 @@ export function App() {
     <AdminLayout
       currentWordTitle={currentWordTitle}
       activeNav={activeNav}
-      onNavigate={setActiveNav}
+      onNavigate={navigate}
     >
       <Suspense fallback={<PageLoadingFallback />}>{renderCurrentView()}</Suspense>
     </AdminLayout>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <ProtectedRoute>
+        <AdminWorkspace />
+      </ProtectedRoute>
+    </AuthProvider>
   );
 }
 

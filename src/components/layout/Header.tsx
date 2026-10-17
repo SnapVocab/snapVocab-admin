@@ -1,17 +1,15 @@
 import React from 'react';
-import { Search, Bell, Menu } from 'lucide-react';
+import { Search, Bell } from 'lucide-react';
 
 interface HeaderProps {
   currentWordTitle?: string;
   activeNav?: string;
-  onToggleSidebar?: () => void;
   onOpenCommandPalette?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentWordTitle,
   activeNav = 'dashboard',
-  onToggleSidebar,
   onOpenCommandPalette,
 }) => {
   const renderBreadcrumb = () => {
@@ -69,9 +67,25 @@ export const Header: React.FC<HeaderProps> = ({
       case 'shop':
         return (
           <>
-            <span className="hidden sm:inline text-text-muted">LiveOps</span>
+            <span className="hidden sm:inline text-text-muted">Gamification</span>
             <span className="hidden sm:inline text-text-light">/</span>
-            <span className="font-semibold text-[#9A7000]">Shop & Economy</span>
+            <span className="font-semibold text-text">Cửa hàng</span>
+          </>
+        );
+      case 'missions':
+        return (
+          <>
+            <span className="hidden sm:inline text-text-muted">Gamification</span>
+            <span className="hidden sm:inline text-text-light">/</span>
+            <span className="font-semibold text-text">Nhiệm vụ hằng ngày</span>
+          </>
+        );
+      case 'badges':
+        return (
+          <>
+            <span className="hidden sm:inline text-text-muted">Gamification</span>
+            <span className="hidden sm:inline text-text-light">/</span>
+            <span className="font-semibold text-text">Huy hiệu</span>
           </>
         );
       case 'learners':
@@ -94,18 +108,9 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-12 border-b border-border bg-surface px-3 sm:px-4 flex items-center justify-between select-none shrink-0 gap-2">
-      {/* Left: Hamburger (mobile/tablet) + Dynamic Breadcrumbs */}
+    <header className="h-12 border-b border-border bg-surface px-4 flex items-center justify-between select-none shrink-0 gap-2">
+      {/* Left: Dynamic Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs min-w-0">
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          aria-label="Mở menu thanh bên"
-          className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-subtle lg:hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-        >
-          <Menu size={18} />
-        </button>
-
         <div className="flex items-center gap-1.5 truncate">{renderBreadcrumb()}</div>
       </div>
 

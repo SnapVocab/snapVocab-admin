@@ -22,6 +22,10 @@ export default {
           DEFAULT: '#58CC02',
           hover: '#46A302',
           light: '#EAF8DF',
+          dark: '#2F6E00',
+          // Button fills: white text needs >= 4.5:1, which brand #58CC02 (2.2:1) cannot give.
+          solid: '#3A8200',
+          'solid-hover': '#2F6E00',
         },
         snapy: {
           DEFAULT: '#FF8A00',
@@ -32,16 +36,26 @@ export default {
           DEFAULT: '#FFC42E',
           hover: '#E0AB26',
           light: '#FFF9E6',
+          dark: '#8A6100',
         },
         info: {
           DEFAULT: '#1CB0F6',
           hover: '#1899D6',
           light: '#E8F7FE',
+          dark: '#0B6E99',
         },
         danger: {
           DEFAULT: '#EF4444',
           hover: '#DC2626',
           light: '#FEE2E2',
+          dark: '#B91C1C',
+          solid: '#DC2626',
+          'solid-hover': '#B91C1C',
+        },
+        warning: {
+          DEFAULT: '#F59E0B',
+          light: '#FFF7E6',
+          dark: '#8A4B00',
         },
       },
       fontFamily: {

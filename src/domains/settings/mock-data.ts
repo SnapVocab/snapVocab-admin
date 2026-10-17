@@ -46,7 +46,7 @@ export const INITIAL_ROLE_PERMISSIONS: RolePermissionRule[] = [
   {
     role: 'LIVEOPS_MANAGER',
     roleNameVi: 'Quản trị viên LiveOps & Kinh tế',
-    description: 'Quản lý cửa hàng Shop, tạo nhiệm vụ Missions, trao huy hiệu Badges và giám sát mùa giải Leaderboard.',
+    description: 'Quản lý cửa hàng Shop, trao huy hiệu Badges và giám sát mùa giải Leaderboard.',
     canPublishVocab: false,
     canReviewAiLabels: false,
     canModifyEconomy: true,
