@@ -17,6 +17,7 @@ import { TemplateBuilderStudio } from './components/TemplateBuilderStudio';
 import { TemplateMobileSimulator } from './components/TemplateMobileSimulator';
 import { TemplateInspectorDrawer } from './components/TemplateInspectorDrawer';
 import { AssignTemplateDeckModal } from './components/AssignTemplateDeckModal';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import {
   Layers,
   Sparkles,
@@ -55,6 +56,7 @@ export const TemplatesPage: React.FC<TemplatesPageProps> = ({
   const [assigningTemplate, setAssigningTemplate] = useState<CardTemplate | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [editingTemplateForBuilder, setEditingTemplateForBuilder] = useState<CardTemplate | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<CardTemplate | null>(null);
 
   // Success Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -178,27 +180,23 @@ export const TemplatesPage: React.FC<TemplatesPageProps> = ({
   };
 
   const handleDeleteCustomTemplate = (tpl: CardTemplate) => {
-    const affectedDecks = deckMappings.filter((d) => d.currentTemplateId === tpl.id);
-    const confirmed = confirm(
-      `Bạn có chắc chắn muốn xóa mềm mẫu "${tpl.name}"?\n\nCảnh báo an toàn: ${
-        affectedDecks.length > 0
-          ? `${affectedDecks.length} bộ bài đang dùng mẫu này sẽ tự động chuyển về mẫu CLASSIC.`
-          : 'Không có bộ bài nào bị ảnh hưởng.'
-      }\nToàn bộ thẻ từ vựng và tiến độ SRS của học viên được bảo toàn nguyên vẹn.`
-    );
+    setTemplateToDelete(tpl);
+  };
 
-    if (confirmed) {
-      // Fallback affected decks to CLASSIC
-      setDeckMappings((prev) =>
-        prev.map((d) =>
-          d.currentTemplateId === tpl.id
-            ? { ...d, currentTemplateId: 'tpl-sys-classic', currentTemplateName: 'Classic Flip' }
-            : d
-        )
-      );
-      setCustomTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
-      showToast(`Đã xóa mềm mẫu ${tpl.name}. Các bộ bài liên kết đã chuyển về CLASSIC an toàn.`);
-    }
+  const handleConfirmDeleteTemplate = () => {
+    if (!templateToDelete) return;
+    const tpl = templateToDelete;
+    // Fallback affected decks to CLASSIC
+    setDeckMappings((prev) =>
+      prev.map((d) =>
+        d.currentTemplateId === tpl.id
+          ? { ...d, currentTemplateId: 'tpl-sys-classic', currentTemplateName: 'Classic Flip' }
+          : d
+      )
+    );
+    setCustomTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+    showToast(`Đã xóa mềm mẫu ${tpl.name}. Các bộ bài liên kết đã chuyển về CLASSIC an toàn.`);
+    setTemplateToDelete(null);
   };
 
   return (
@@ -507,6 +505,28 @@ export const TemplatesPage: React.FC<TemplatesPageProps> = ({
         onClose={() => setIsAssignModalOpen(false)}
         onConfirmAssign={handleConfirmAssign}
       />
+
+      {/* Delete Template Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(templateToDelete)}
+        tone="danger"
+        title={`Xóa mềm mẫu "${templateToDelete?.name}"?`}
+        description="Mẫu này sẽ được xóa khỏi danh mục tùy chỉnh. Toàn bộ thẻ từ vựng và tiến độ SRS của học viên được bảo toàn nguyên vẹn."
+        confirmLabel="Xác nhận xóa mềm"
+        cancelLabel="Hủy"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDeleteTemplate}
+        onClose={() => setTemplateToDelete(null)}
+      >
+        <div className="rounded-xl border border-warning/30 bg-warning-light/70 p-3 text-xs text-warning-dark leading-relaxed">
+          <p className="font-semibold mb-0.5">Cảnh báo an toàn:</p>
+          <p>
+            {templateToDelete && deckMappings.filter((d) => d.currentTemplateId === templateToDelete.id).length > 0
+              ? `${deckMappings.filter((d) => d.currentTemplateId === templateToDelete.id).length} bộ bài đang dùng mẫu này sẽ tự động chuyển về mẫu CLASSIC.`
+              : 'Không có bộ bài nào đang liên kết với mẫu này.'}
+          </p>
+        </div>
+      </ConfirmModal>
     </div>
   );
 };

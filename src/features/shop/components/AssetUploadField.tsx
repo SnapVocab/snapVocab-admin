@@ -80,15 +80,15 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[13px] font-semibold text-text">{label}</span>
+        <span className="text-body font-semibold text-text">{label}</span>
       </div>
 
       <div
-        className={`relative border border-dashed rounded-xl transition-all ${
+        className={`relative border border-dashed rounded-lg transition-all ${
           disabled
             ? 'border-border bg-surface-subtle/50 opacity-70 cursor-not-allowed'
             : error || uploadError
-            ? 'border-rose-300 bg-rose-50/30 hover:border-rose-400'
+            ? 'border-danger/40 bg-danger-light/30 hover:border-danger/60'
             : 'border-border hover:border-primary/50 bg-surface hover:bg-surface-subtle/30'
         }`}
       >
@@ -140,7 +140,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
             disabled={disabled || isUploading}
             aria-label={`${label}: chọn ảnh để tải lên`}
             aria-describedby={uploadError || error ? errorId : undefined}
-            className="py-3 px-3 w-full flex items-center justify-center gap-3 text-center rounded-xl cursor-pointer disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="py-3 px-3 w-full flex items-center justify-center gap-3 text-center rounded-lg cursor-pointer disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {isUploading ? (
               <div className="flex items-center gap-2 text-primary py-1">
@@ -156,7 +156,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
                   <div className="text-xs font-semibold text-text">
                     {disabled ? 'Chưa có ảnh' : 'Chọn ảnh để tải lên'}
                   </div>
-                  <div className="text-[11px] text-text-muted">
+                  <div className="text-xs text-text-muted">
                     PNG / WebP · tối đa {maxKb} KB
                   </div>
                 </div>

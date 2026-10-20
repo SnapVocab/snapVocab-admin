@@ -11,9 +11,9 @@ const badge = (id: number, sortOrder: number, code: string, metric: string, thre
 });
 
 const SEED: AdminBadge[] = [
-  badge(1, 10, 'STREAK_7', 'LONGEST_STREAK_DAYS', 7, 'Một Tuần Bền Bỉ', 'Hoàn thành ít nhất 1 quiz mỗi ngày, 7 ngày liên tiếp', 'flame'),
-  badge(2, 11, 'STREAK_30', 'LONGEST_STREAK_DAYS', 30, 'Tháng Không Nghỉ', 'Hoàn thành ít nhất 1 quiz mỗi ngày, 30 ngày liên tiếp', 'flame'),
-  badge(3, 12, 'STREAK_100', 'LONGEST_STREAK_DAYS', 100, 'Trăm Ngày Kiên Trì', 'Hoàn thành ít nhất 1 quiz mỗi ngày, 100 ngày liên tiếp', 'flame'),
+  badge(1, 10, 'STREAK_7', 'LONGEST_STREAK_DAYS', 7, 'Một Tuần Bền Bỉ', 'Làm quiz hoặc ôn thẻ mỗi ngày, 7 ngày liên tiếp', 'flame'),
+  badge(2, 11, 'STREAK_30', 'LONGEST_STREAK_DAYS', 30, 'Tháng Không Nghỉ', 'Làm quiz hoặc ôn thẻ mỗi ngày, 30 ngày liên tiếp', 'flame'),
+  badge(3, 12, 'STREAK_100', 'LONGEST_STREAK_DAYS', 100, 'Trăm Ngày Kiên Trì', 'Làm quiz hoặc ôn thẻ mỗi ngày, 100 ngày liên tiếp', 'flame'),
   badge(4, 20, 'QUIZ_1', 'QUIZ_COMPLETED', 1, 'Bài Quiz Đầu Tiên', 'Hoàn thành 1 quiz', 'clipboard-check'),
   badge(5, 21, 'QUIZ_10', 'QUIZ_COMPLETED', 10, 'Quen Tay Quiz', 'Hoàn thành 10 quiz', 'clipboard-check'),
   badge(6, 22, 'QUIZ_50', 'QUIZ_COMPLETED', 50, 'Chiến Binh Quiz', 'Hoàn thành 50 quiz', 'clipboard-check'),
@@ -34,7 +34,7 @@ const EDGE: AdminBadge[] = [
   // Inactive, nobody earned it; also makes "Vốn từ tự xây" a four-milestone series.
   badge(13, 43, 'WORDS_250', 'DISTINCT_WORDS_ADDED', 250, 'Hai Trăm Rưỡi Từ', 'Tự thêm 250 từ khác nhau vào bộ sưu tập của bạn', 'book-open', { isActive: false, earnerCount: 0 }),
   // Inactive with earners: they keep seeing it, nobody else does.
-  badge(14, 13, 'STREAK_14', 'LONGEST_STREAK_DAYS', 14, 'Hai Tuần Liền', 'Hoàn thành ít nhất 1 quiz mỗi ngày, 14 ngày liên tiếp', 'flame', { isActive: false, earnerCount: 340, version: 2 }),
+  badge(14, 13, 'STREAK_14', 'LONGEST_STREAK_DAYS', 14, 'Hai Tuần Liền', 'Làm quiz hoặc ôn thẻ mỗi ngày, 14 ngày liên tiếp', 'flame', { isActive: false, earnerCount: 340, version: 2 }),
   // Inactive with the smallest sortOrder of the whole catalog: the admin lists "Quiz hoàn thành" first, while a learner
   // who never earned it sees that shelf after "Chuỗi ngày học" (rev 2 §2.4).
   badge(15, 5, 'QUIZ_5', 'QUIZ_COMPLETED', 5, 'Năm Bài Quiz', 'Hoàn thành 5 quiz', 'clipboard-check', { isActive: false, earnerCount: 75, version: 1 }),

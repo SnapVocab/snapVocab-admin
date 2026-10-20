@@ -10,7 +10,7 @@ import { badgeErrorMessage } from './ui';
 
 function Loading({ detail = false }: { detail?: boolean }) {
   return <div role="status" aria-label={detail ? 'Đang tải chi tiết huy hiệu' : 'Đang tải catalog huy hiệu'}
-    className="space-y-3 rounded-xl border border-border bg-surface p-4">
+    className="space-y-3 rounded-lg border border-border bg-surface p-4">
     {Array.from({ length: detail ? 3 : 6 }, (_, i) => <div key={i} className="h-12 animate-pulse rounded-lg bg-surface-subtle motion-reduce:animate-none" />)}
   </div>;
 }

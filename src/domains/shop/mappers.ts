@@ -153,6 +153,57 @@ export function deriveSaleState(
 }
 
 /**
+ * Most Coin a learner can earn in a day: Daily Mission is the only Coin source and pays at most
+ * 85 Coin/day (daily_mission.md, economy approved). Prices read best in "full days" of missions.
+ */
+export const MAX_COIN_PER_DAY = 85;
+
+const days = (price: number) => (price / MAX_COIN_PER_DAY).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+
+/** "≈ 4,1 ngày": days of finishing all daily missions needed to afford `price`. */
+export const formatFullDays = (price: number) => `≈ ${days(price)} ngày`;
+export const formatFullDaysRange = (min: number, max: number) => `≈ ${days(min)}–${days(max)} ngày`;
+
+export interface PriceBand {
+  min: number;
+  max: number;
+  median: number;
+  count: number;
+}
+
+/** Prices of items of `type` a learner can buy right now, excluding `excludeId`. Null when there are none. */
+export function priceBand(
+  items: AdminShopItemDTO[],
+  type: ShopItemType,
+  excludeId?: number,
+  now: Date = new Date()
+): PriceBand | null {
+  const prices = items
+    .filter((i) => i.type === type && i.id !== excludeId && i.price != null && deriveSaleState(i, now).state === 'ON_SALE')
+    .map((i) => i.price as number)
+    .sort((a, b) => a - b);
+  if (!prices.length) return null;
+  const mid = prices.length >> 1;
+  const median = prices.length % 2 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2);
+  return { min: prices[0], max: prices[prices.length - 1], median, count: prices.length };
+}
+
+/**
+ * Soft guardrail: a price far outside what the same type sells for today. A UI hint only;
+ * the server enforces just 1–100,000 Coin.
+ * ponytail: fixed ×1.5 tolerance (so the top/bottom tier is not always flagged) and ≥3 items to compare
+ * against; the PO sets the real rule.
+ */
+export const PRICE_HINT_FACTOR = 1.5;
+const PRICE_HINT_MIN_SAMPLE = 3;
+export function priceHint(price: number | null | undefined, band: PriceBand | null): 'ABOVE' | 'BELOW' | null {
+  if (price == null || !band || band.count < PRICE_HINT_MIN_SAMPLE) return null;
+  if (price > band.max * PRICE_HINT_FACTOR) return 'ABOVE';
+  if (price < band.min / PRICE_HINT_FACTOR) return 'BELOW';
+  return null;
+}
+
+/**
  * Map backend error into a key-value record of field-specific error messages.
  */
 export function mapBackendErrorsToFields(
@@ -252,6 +303,11 @@ export function formatShopItemTypeLabel(type?: ShopItemType | string | null): st
     default:
       return type || '—';
   }
+}
+
+/** Lifecycle status in Vietnamese (the stored status, not the derived sale state). */
+export function formatShopItemStatusLabel(status?: string | null): string {
+  return ({ DRAFT: 'Bản nháp', PUBLISHED: 'Đã phát hành', ARCHIVED: 'Đã lưu trữ' } as Record<string, string>)[status ?? ''] ?? (status || '—');
 }
 
 /**

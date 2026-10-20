@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../domains/auth/use-auth';
 import { LoginPage } from '../../features/auth/LoginPage';
 
@@ -29,12 +28,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (status === 'booting') {
     return (
       <div
-        className="min-h-screen w-full flex flex-col items-center justify-center p-8 text-center text-text-muted select-none bg-background"
+        className="flex min-h-screen w-full select-none flex-col items-center justify-center gap-3 bg-surface p-8 text-center text-text-muted"
         role="status"
-        aria-label="Đang kiểm tra phiên làm việc quản trị"
+        aria-label="Đang kiểm tra phiên đăng nhập"
       >
-        <Loader2 size={30} className="animate-spin text-primary mb-3 motion-reduce:animate-none" />
-        <span className="text-xs font-semibold">Đang xác thực phiên quản trị...</span>
+        <img src="/brand/snapy.png" alt="" className="h-10 w-auto motion-safe:animate-pulse" />
+        <span className="text-xs">Đang kiểm tra phiên đăng nhập…</span>
       </div>
     );
   }

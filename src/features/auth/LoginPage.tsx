@@ -1,284 +1,175 @@
-import React, { useState } from 'react';
-import {
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-  Shield,
-} from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { AlertCircle } from 'lucide-react';
+import { Button, Field, fieldControl } from '../../components/ui';
+import { Wordmark } from '../../components/brand/BrandIcons';
+import { showMockScreens } from '../../components/layout/nav';
 import { useAuth } from '../../domains/auth/use-auth';
+import { validateLogin } from '../../domains/auth/auth-service';
+import { cn } from '../../lib/utils';
 
 interface LoginPageProps {
   onSuccess?: () => void;
 }
 
+/** One sentence the person signing in can act on. */
+function loginErrorMessage(err: { code?: string; statusCode?: number; message?: string } | undefined): string {
+  if (err?.code === 'FORBIDDEN_NOT_ADMIN' || err?.statusCode === 403) return 'Tài khoản này không có quyền quản trị.';
+  if (err?.code === 'INVALID_CREDENTIALS' || err?.statusCode === 401) return 'Email hoặc mật khẩu không đúng.';
+  if (err?.code === 'ACCOUNT_NOT_ACTIVATED') return 'Tài khoản chưa kích hoạt email.';
+  if (err?.code === 'NETWORK_ERROR' || err?.statusCode === 0) return 'Không kết nối được máy chủ. Thử lại sau ít phút.';
+  return err?.message || 'Đăng nhập không thành công. Thử lại.';
+}
+
+/*
+ * The brand side shows the product doing its one job: Snapy, the app's mascot, as the AI scan sees him.
+ * Box, tag and result card copy the mobile scan screen (SnapVocab/src/features/scan: detection-image,
+ * detected-item-card, display.BOX_COLORS); word, IPA and meaning are the "fox" entry of the SnapVocab dictionary.
+ */
+const DETECTIONS = [
+  // Position in % of snapy-full.png (306×424).
+  { label: 'fox', color: '#1CB0F6', box: { left: -1, top: 1, width: 102, height: 98 } },
+  { label: 'book', color: '#58CC02', box: { left: 17, top: 62, width: 28, height: 22 } },
+  { label: 'camera', color: '#A560F8', box: { left: 47, top: 67, width: 18, height: 11 } },
+];
+
+/** The mobile app's own headline (SnapVocab vi.json `welcome.title`). */
+const HEADLINE = 'Học tiếng Anh từ thế giới xung quanh bạn';
+
+const ScanVignette: React.FC = () => (
+  <figure className="m-0 flex flex-col items-center">
+    <div className="relative">
+      <img src="/brand/snapy-full.png" alt="" className="h-[min(340px,42vh)] w-auto select-none" draggable={false} />
+      {DETECTIONS.map(({ label, color, box }) => (
+        <span key={label} className="absolute rounded-[6px] border-2" style={{ left: `${box.left}%`, top: `${box.top}%`, width: `${box.width}%`, height: `${box.height}%`, borderColor: color }}>
+          <span className="absolute -left-0.5 -top-[18px] rounded-t-md px-1.5 py-0.5 text-[11px] font-bold leading-[14px] text-white" style={{ backgroundColor: color }}>{label}</span>
+        </span>
+      ))}
+    </div>
+    <figcaption className="relative -mt-10 ml-24 flex w-[280px] overflow-hidden rounded-3xl border-2 border-b-4 border-neutral-100 bg-white">
+      <span className="w-1.5 shrink-0" style={{ backgroundColor: DETECTIONS[0].color }} />
+      <span className="flex-1 p-4">
+        <span className="flex items-start gap-3">
+          <span className="flex-1 text-2xl font-extrabold leading-8 text-[#1E2A44]">fox</span>
+          <span className="mt-1 flex items-center gap-1.5 rounded-full border px-2.5 py-1" style={{ borderColor: '#58CC0266', backgroundColor: '#58CC021A' }}>
+            <span className="h-2 w-2 rounded-full bg-[#58CC02]" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wide text-neutral-700">Độ tin cậy cao</span>
+          </span>
+        </span>
+        <span className="mt-1 block">
+          <span className="mr-2 text-[15px] text-neutral-500">/fɑks/</span>
+          <span className="text-[15px] font-bold text-neutral-800">Con cáo.</span>
+        </span>
+      </span>
+    </figcaption>
+  </figure>
+);
+
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const { login } = useAuth();
-
+  const form = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
-
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [capsLock, setCapsLock] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handlePasswordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    setIsCapsLockOn(e.getModifierState('CapsLock'));
-  };
-
-  const validateForm = (): boolean => {
-    let isValid = true;
-    setEmailError(null);
-    setPasswordError(null);
-    setGeneralError(null);
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setEmailError('Vui lòng nhập email.');
-      isValid = false;
-    } else {
-      // Basic email regex RFC 5322 compliance
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        setEmailError('Email không đúng định dạng.');
-        isValid = false;
-      }
-    }
-
-    if (!password) {
-      setPasswordError('Vui lòng nhập mật khẩu.');
-      isValid = false;
-    }
-
-    return isValid;
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSubmitting) return;
-
-    if (!validateForm()) {
+    const invalid = validateLogin(email, password);
+    setErrors(invalid);
+    setGeneralError(null);
+    if (invalid.email || invalid.password) {
+      requestAnimationFrame(() => form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
       return;
     }
-
     setIsSubmitting(true);
-    setGeneralError(null);
-
     try {
-      await login({
-        email: email.trim(),
-        password,
-      });
+      await login({ email: email.trim(), password });
       onSuccess?.();
-    } catch (err: any) {
-      if (err?.code === 'FORBIDDEN_NOT_ADMIN' || err?.statusCode === 403) {
-        setGeneralError('Tài khoản không có quyền truy cập hệ thống quản trị.');
-      } else if (err?.code === 'INVALID_CREDENTIALS' || err?.statusCode === 401) {
-        setGeneralError('Email hoặc mật khẩu không chính xác.');
-      } else if (err?.code === 'ACCOUNT_NOT_ACTIVATED') {
-        setGeneralError('Tài khoản chưa được kích hoạt. Vui lòng liên hệ quản trị viên.');
-      } else if (err?.code === 'NETWORK_ERROR' || err?.statusCode === 0) {
-        setGeneralError('Không thể kết nối tới máy chủ. Vui lòng thử lại.');
-      } else {
-        setGeneralError(err?.message || 'Đăng nhập không thành công, vui lòng thử lại.');
-      }
+    } catch (err) {
+      setGeneralError(loginErrorMessage(err as { code?: string; statusCode?: number; message?: string }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-background flex flex-col justify-between items-center p-4 sm:p-6 select-none bg-[radial-gradient(#E2E8F0_1px,transparent_1px)] [background-size:24px_24px]">
-      {/* Top spacer for balanced vertical positioning */}
-      <div className="hidden sm:block sm:h-2" aria-hidden="true" />
+    <div className="grid min-h-screen bg-surface text-text lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <aside aria-hidden className="hidden flex-col justify-between overflow-hidden bg-snapy-light px-12 py-10 lg:flex">
+        <Wordmark />
+        <div className="space-y-12">
+          <p className="max-w-[400px] text-[32px] font-semibold leading-[1.15] tracking-tight text-[#1E2A44]">{HEADLINE}</p>
+          <ScanVignette />
+        </div>
+        <p className="text-xs text-text-muted">Một lượt quét trong ứng dụng SnapVocab.</p>
+      </aside>
 
-      {/* Main Container - compact, deliberate console card */}
-      <div className="w-full max-w-[440px] my-auto py-6 space-y-4">
-        {/* Main Card */}
-        <div className="bg-surface border border-border/80 rounded-2xl p-6 sm:p-7 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
-          {/* Brand Header - compact, clean typography, no false status dot */}
-          <div className="flex flex-col items-center text-center space-y-2.5 pb-4 border-b border-border/60">
-            {/* Mascot Snapy - deliberate, static brand mark */}
-            <div className="w-12 h-12 rounded-xl bg-amber-50/80 border border-amber-200/70 flex items-center justify-center text-2xl select-none">
-              🦊
-            </div>
+      <main className="flex min-h-screen flex-col px-6 py-8 sm:px-12">
+        {/* Narrow screens: no room for the scan picture, the brand stays as a band above the form. */}
+        <div className="-mx-6 -mt-8 bg-snapy-light px-6 pb-7 pt-8 sm:-mx-12 sm:px-12 lg:hidden">
+          <Wordmark />
+          <p className="mt-6 max-w-[320px] text-xl font-semibold leading-snug tracking-tight text-[#1E2A44]">{HEADLINE}</p>
+        </div>
+        <div className="my-auto w-full max-w-[360px] self-center py-12">
+          <h1 className="text-2xl font-semibold tracking-tight">Đăng nhập</h1>
+          <p className="mt-1.5 text-body text-text-muted">Dành cho tài khoản được cấp quyền quản trị.</p>
 
-            <div className="space-y-0.5">
-              <div className="flex items-center justify-center gap-2">
-                <span className="font-extrabold text-base text-text tracking-tight">SnapVocab</span>
-                <span className="text-neutral-300 select-none">·</span>
-                <span className="text-xs font-mono font-medium tracking-wide text-neutral-500 uppercase">
-                  Admin Console
-                </span>
-              </div>
-              <div className="text-xs text-text-muted">
-                Studio & LiveOps Console
-              </div>
-            </div>
-          </div>
-
-          {/* Form Context Heading */}
-          <div className="space-y-1">
-            <h1 className="text-sm font-bold text-text">Đăng nhập quản trị</h1>
-            <p className="text-xs text-text-muted leading-relaxed">
-              Sử dụng tài khoản quản trị để truy cập Studio & LiveOps Console.
-            </p>
-          </div>
-
-          {/* General Error Banner */}
           {generalError && (
-            <div
-              className="p-3 bg-rose-50 border border-rose-200/90 rounded-xl flex items-start gap-2.5 text-xs text-rose-800"
-              role="alert"
-            >
-              <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
-              <span className="leading-relaxed">{generalError}</span>
+            <div role="alert" className="mt-6 flex items-start gap-2 rounded-md border border-danger/30 bg-danger-light px-3 py-2.5 text-body text-danger-dark">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{generalError}</span>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {/* Email Field */}
-            <div className="space-y-1.5">
-              <label
-                htmlFor="admin-email"
-                className="text-xs font-semibold text-text flex items-center gap-1"
-              >
-                <span>Email quản trị</span>
-                <span className="text-rose-500" aria-hidden="true">*</span>
-              </label>
-
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-light group-focus-within:text-emerald-700 transition-colors">
-                  <Mail size={15} />
-                </div>
-                <input
-                  id="admin-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailError) setEmailError(null);
-                  }}
-                  disabled={isSubmitting}
-                  placeholder="admin@snapvocab.com"
-                  autoComplete="email"
-                  aria-invalid={Boolean(emailError)}
-                  aria-describedby={emailError ? 'admin-email-error' : undefined}
-                  className={`w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border bg-neutral-50/40 hover:bg-neutral-50/80 focus:bg-surface text-text placeholder:text-neutral-400 transition-all focus:outline-none ${
-                    emailError
-                      ? 'border-rose-400 bg-rose-50/20 ring-1 ring-rose-400'
-                      : 'border-border focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/15'
-                  } disabled:opacity-60 disabled:cursor-not-allowed`}
-                />
-              </div>
-
-              {emailError && (
-                <p id="admin-email-error" className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
-                  <AlertCircle size={12} className="shrink-0" />
-                  <span>{emailError}</span>
-                </p>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="admin-password"
-                  className="text-xs font-semibold text-text flex items-center gap-1"
-                >
-                  <span>Mật khẩu</span>
-                  <span className="text-rose-500" aria-hidden="true">*</span>
-                </label>
-                {isCapsLockOn && (
-                  <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <span>Caps Lock đang bật</span>
-                  </span>
-                )}
-              </div>
-
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-light group-focus-within:text-emerald-700 transition-colors">
-                  <Lock size={15} />
-                </div>
-                <input
-                  id="admin-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (passwordError) setPasswordError(null);
-                  }}
-                  onKeyDown={handlePasswordKeyDown}
-                  onKeyUp={handlePasswordKeyDown}
-                  disabled={isSubmitting}
-                  placeholder="Nhập mật khẩu quản trị..."
-                  autoComplete="current-password"
-                  aria-invalid={Boolean(passwordError)}
-                  aria-describedby={passwordError ? 'admin-password-error' : undefined}
-                  className={`w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border bg-neutral-50/40 hover:bg-neutral-50/80 focus:bg-surface text-text placeholder:text-neutral-400 transition-all focus:outline-none ${
-                    passwordError
-                      ? 'border-rose-400 bg-rose-50/20 ring-1 ring-rose-400'
-                      : 'border-border focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/15'
-                  } disabled:opacity-60 disabled:cursor-not-allowed`}
-                />
+          <form ref={form} onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+            <Field label="Email" error={errors.email}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((x) => ({ ...x, email: undefined })); }}
+                disabled={isSubmitting}
+                autoComplete="username"
+                autoFocus
+                className={cn(fieldControl, 'h-10 text-sm')}
+              />
+            </Field>
+            <Field
+              label="Mật khẩu"
+              error={errors.password}
+              hint={capsLock ? 'Caps Lock đang bật.' : undefined}
+              addon={(
                 <button
                   type="button"
-                  tabIndex={0}
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-text-muted hover:text-text transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 rounded"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 rounded-r-lg px-3 text-xs font-medium text-text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-info"
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPassword ? 'Ẩn' : 'Hiện'}
                 </button>
-              </div>
-
-              {passwordError && (
-                <p id="admin-password-error" className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
-                  <AlertCircle size={12} className="shrink-0" />
-                  <span>{passwordError}</span>
-                </p>
               )}
-            </div>
-
-            {/* Submit CTA - Restrained Admin Emerald */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-2.5 px-4 mt-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:outline-none"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={15} className="animate-spin motion-reduce:animate-none" />
-                  <span>Đang xác thực phiên quản trị...</span>
-                </>
-              ) : (
-                <span>Đăng Nhập Quản Trị</span>
-              )}
-            </button>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((x) => ({ ...x, password: undefined })); }}
+                onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+                onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+                disabled={isSubmitting}
+                autoComplete="current-password"
+                className={cn(fieldControl, 'h-10 pr-14 text-sm')}
+              />
+            </Field>
+            <Button type="submit" variant="primary" size="lg" className="w-full" loading={isSubmitting} loadingText="Đang đăng nhập…">
+              Đăng nhập
+            </Button>
           </form>
-
-          {/* Security Notice - Anchored directly to card */}
-          <div className="pt-3 border-t border-border/60 flex items-center justify-center gap-1.5 text-[11px] text-text-muted">
-            <Shield size={13} className="text-emerald-700 shrink-0" />
-            <span>Chỉ dành cho tài khoản quản trị được cấp quyền</span>
-          </div>
         </div>
-
-        {/* Operational Version Metadata */}
-        <div className="text-center text-[11px] text-neutral-400 font-mono select-none">
-          SnapVocab Admin Console · v1.4.2
-        </div>
-      </div>
-
-      {/* Bottom spacer for balanced vertical positioning */}
-      <div className="hidden sm:block sm:h-2" aria-hidden="true" />
+        {showMockScreens && <p className="text-xs text-text-light">Bản dev: các màn chạy dữ liệu mẫu có chữ “mẫu” trên thanh bên.</p>}
+      </main>
     </div>
   );
 };

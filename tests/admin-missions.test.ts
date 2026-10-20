@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { catalogSummary, createPayload, emptyForm, matchPreset, poolShortage, presets, savePayload, supportedPreset, toForm, validateForm } from '../src/domains/admin-missions/mappers';
+import { catalogSummary, dailyOutlook, missionGroup, createPayload, emptyForm, matchPreset, poolShortage, presets, savePayload, supportedPreset, toForm, validateForm } from '../src/domains/admin-missions/mappers';
 import { createMissionTemplate, getMissionTemplates, patchTemplate, setTemplateActive } from '../src/domains/admin-missions/api';
 import type { MissionTemplate, SaveMission } from '../src/domains/admin-missions/types';
 import { missionKeys } from '../src/domains/admin-missions/queries';
@@ -83,7 +83,7 @@ test('List renders real catalog, accurate NONE wording, and no prototype chest/a
   client.setQueryData(missionKeys.list, [item]);
   const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client }, React.createElement(AdminMissionsPage, { onDirtyChange: () => {} })));
   assert.ok(html.includes('Thêm từ')); assert.ok(html.includes('Không có điều kiện cấp'));
-  assert.ok(html.includes('Invariant catalog')); assert.ok(html.includes('Không đạt'));
+  assert.ok(html.includes('Đủ 5 nhiệm vụ mỗi ngày')); assert.ok(html.includes('Không đạt')); assert.ok(!html.includes('nvariant'));
   assert.ok(!html.includes('Mọi người')); assert.ok(!html.includes('Chest'));
   client.setQueryData(missionKeys.list, [{ ...item, isActive: false }]);
   const empty = renderToStaticMarkup(React.createElement(QueryClientProvider, { client }, React.createElement(AdminMissionsPage, { onDirtyChange: () => {} })));
@@ -93,7 +93,7 @@ test('List renders real catalog, accurate NONE wording, and no prototype chest/a
 test('Create editor renders Shop-style form and explicit inactive state', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client }, React.createElement(MissionEditor, { onBack: () => {}, onSaved: () => {}, onActivate: () => {}, onDirtyChange: () => {} })));
-  assert.ok(html.includes('Tạo mới luôn ở trạng thái Tắt')); assert.ok(html.includes('XEM TRƯỚC NỘI DUNG'));
+  assert.ok(html.includes('Tạo mới luôn ở trạng thái Tắt')); assert.ok(html.includes('Xem trước trên ứng dụng'));
   assert.ok(html.includes('Phần thưởng')); assert.ok(html.includes('Không có điều kiện cấp'));
   assert.ok(html.includes('Điều kiện cấp ảnh hưởng việc nhiệm vụ được chọn')); assert.ok(!html.includes('Sao chép mã'));
   client.clear();
@@ -103,7 +103,7 @@ test('Edit editor shows locked code with copy action and reward item label', () 
   const rewarded = { ...item, rewardItemCode: 'FRAME', rewardItemFallbackCoin: 5 };
   client.setQueryData(missionKeys.detail(1), rewarded);
   const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client }, React.createElement(MissionEditor, { id: 1, onBack: () => {}, onSaved: () => {}, onActivate: () => {}, onDirtyChange: () => {} })));
-  assert.ok(html.includes('Sao chép mã')); assert.ok(html.includes('Phiên bản 4')); assert.ok(html.includes('+ 1 × FRAME'));
+  assert.ok(html.includes('Sao chép mã')); assert.ok(html.includes('Phiên bản 4')); assert.ok(html.includes('Vật phẩm: FRAME'), 'preview uses the mobile reward-item copy');
   client.clear();
 });
 test('Preset label follows the stored quiz filters; unmatched quiz config is custom', () => {
@@ -129,4 +129,23 @@ test('Editor is a scroll container, flags custom quiz, hides invalid objective a
   assert.ok(create.includes('Mỗi từ chỉ tăng một nhiệm vụ thêm từ'));
   assert.ok(create.includes('Thêm từ mới: 5'));
   client.clear();
+});
+
+test('Daily outlook mirrors MissionTracker.choose: seed catalog pays 80–85 Coin / 150–160 XP, slots 1 and 3 fall back to core', () => {
+  const t = (id: number, code: string, category: MissionTemplate['category'], coin: number, xp: number, eligibilityRule: MissionTemplate['eligibilityRule'] = 'NONE') =>
+    ({ ...item, id, code, category, rewardCoin: coin, rewardXp: xp, eligibilityRule });
+  const seed = [t(1, 'ADD_5_WORDS', 'VOCABULARY', 15, 25), t(2, 'QUIZ_SCORE_80', 'QUIZ', 20, 40), t(3, 'FINISH_2', 'QUIZ', 15, 30),
+    t(4, 'PERFECT', 'QUIZ', 25, 45), t(5, 'KEEP_DAILY_STREAK', 'RETENTION', 10, 20),
+    t(6, 'USE_XP_BOOSTER', 'SHOP', 5, 10, 'HAS_IDLE_XP_BOOSTER'), t(7, 'BUY_SHOP_ITEM', 'SHOP', 5, 10, 'HAS_PURCHASABLE_ITEM')];
+  const o = dailyOutlook(seed);
+  assert.deepEqual(o.coin, [80, 85]); assert.deepEqual(o.xp, [150, 160]); assert.equal(o.insufficient, false);
+  assert.deepEqual(o.slots.map(s => s.fallback), [true, false, true, false, false]);
+  // 4 core templates for 4 slots: every learner gets all of them; slot 5 rotates over the 3 others.
+  assert.deepEqual(o.slots[0].reachable.map(x => x.id).sort(), [1, 2, 3, 4]);
+  assert.deepEqual(o.slots[4].reachable.map(x => x.id).sort(), [5, 6, 7]);
+  assert.deepEqual(o.example?.map(x => x.id), [1, 2, 3, 4, 5]);
+  assert.deepEqual(seed.map(missionGroup), ['CORE', 'CORE', 'CORE', 'CORE', 'SLOT5', 'GATED', 'GATED']);
+  // Three core templates cannot fill slots 1–4.
+  const thin = dailyOutlook(seed.map(x => x.id === 4 ? { ...x, isActive: false } : x));
+  assert.equal(thin.insufficient, true); assert.equal(thin.coin, null);
 });

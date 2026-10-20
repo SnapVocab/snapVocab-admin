@@ -61,6 +61,13 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
+      // Type scale (design.md §3.3): text-xl page title · text-sm block title · text-body running text and controls ·
+      // text-xs tables and meta · text-2xs axis ticks and codes only · text-figure the numbers a strip leads with.
+      fontSize: {
+        '2xs': ['11px', { lineHeight: '14px' }],
+        body: ['13px', { lineHeight: '20px' }],
+        figure: ['20px', { lineHeight: '24px', letterSpacing: '-0.01em', fontWeight: '600' }],
+      },
       boxShadow: {
         'card': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
         'elevated': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',

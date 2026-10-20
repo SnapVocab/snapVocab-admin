@@ -4,6 +4,7 @@ import {
   parseJwtPayload,
   extractAuthorities,
   hasAdminAuthority,
+  validateLogin,
   isTokenExpired,
   saveAuthSession,
   clearAuthSession,
@@ -448,17 +449,18 @@ test('16. Role Gatekeeping - Admin account is granted access', () => {
   assert.equal(hasAdminAuthority(authorities), true);
 });
 
-test('17. Form Validation - Email regex and password presence requirements', () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  // Valid emails
-  assert.equal(emailRegex.test('admin@snapvocab.com'), true);
-  assert.equal(emailRegex.test('operator.lead@company.vn'), true);
+test('17. Form Validation - the login page validates email format and password presence', () => {
+  // Valid input: nothing to report (surrounding spaces are trimmed before checking).
+  assert.deepEqual(validateLogin('admin@snapvocab.com', 'x'), {});
+  assert.deepEqual(validateLogin('  operator.lead@company.vn ', 'x'), {});
 
   // Invalid emails
-  assert.equal(emailRegex.test(''), false);
-  assert.equal(emailRegex.test('admin'), false);
-  assert.equal(emailRegex.test('admin@'), false);
-  assert.equal(emailRegex.test('@snapvocab.com'), false);
-  assert.equal(emailRegex.test('admin snapvocab.com'), false);
+  for (const email of ['admin', 'admin@', '@snapvocab.com', 'admin snapvocab.com']) {
+    assert.equal(validateLogin(email, 'x').email, 'Email không đúng định dạng.', email);
+  }
+  assert.equal(validateLogin('   ', 'x').email, 'Nhập email.');
+
+  // Password presence; both errors at once on an empty form.
+  assert.deepEqual(validateLogin('admin@snapvocab.com', ''), { password: 'Nhập mật khẩu.' });
+  assert.deepEqual(validateLogin('', ''), { email: 'Nhập email.', password: 'Nhập mật khẩu.' });
 });

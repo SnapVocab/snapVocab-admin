@@ -219,6 +219,8 @@ Hai activation mutation trên hai template khác nhau không được cùng comm
 
 ## 7. Đồng bộ hình thức với Shop
 
+> **2026-10-19:** Phần hình thức của mục này được thay bằng [design.md](./design.md) rev 2 và [missions_ui.md](./missions_ui.md). Quy tắc "không hiển thị thống kê hoàn thành hay tổng thưởng giả" vẫn giữ; bộ 5 nhiệm vụ ví dụ và thưởng/ngày tính từ catalog thật được nới theo PD-ADS-12.
+
 Tái dùng token Tailwind hiện có: Inter; nền background `#F8F9F7`, surface trắng, border `#E5E7EB`; CTA primary `#58CC02`; reward vàng `#FFC42E`; danger đỏ. Header text-xl/extrabold, nội dung bảng compact, mô tả text-xs/muted; spacing p-4/sm:p-6 và gap-4.
 
 Control rounded-lg, bảng/card rounded-xl, modal rounded-2xl; cùng Lucide icon và kích thước, toast thành công, spinner, modal backdrop và vị trí field error của Shop. Dùng chữ kèm màu cho badge. Label liên kết input, focus rõ, modal có quản lý focus và trả focus về nút mở.

@@ -1,28 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
-import { Header } from './Header';
 import { CommandPaletteModal } from './CommandPaletteModal';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  currentWordTitle?: string;
-  activeNav?: string;
-  onNavigate?: (navId: string) => void;
+  activePath: string;
+  /** Shell navigation (sidebar, palette); the caller asks about unsaved work first. */
+  onNavigate: (path: string) => void;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({
-  children,
-  currentWordTitle,
-  activeNav: controlledActiveNav,
-  onNavigate: controlledOnNavigate,
-}) => {
-  const [internalActiveNav, setInternalActiveNav] = useState('dashboard');
+/**
+ * Sidebar + page. No top bar: the page title already names the screen and the sidebar shows where it lives,
+ * so a breadcrumb bar would only repeat them; quick search sits at the top of the sidebar (Ctrl/Cmd+K).
+ */
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activePath, onNavigate }) => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  const currentNav = controlledActiveNav !== undefined ? controlledActiveNav : internalActiveNav;
-  const handleNavigate = controlledOnNavigate || setInternalActiveNav;
-
-  // Global Keyboard Shortcut: Cmd+K / Ctrl+K
+  // Global shortcut: Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -30,36 +24,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         setIsCommandPaletteOpen((prev) => !prev);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background font-sans">
-      {/* Sidebar Navigation */}
-      <Sidebar
-        activeNav={currentNav}
-        onNavigate={handleNavigate}
-      />
-
-      {/* Main Workspace View */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-        <Header
-          currentWordTitle={currentWordTitle}
-          activeNav={currentNav}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        />
-        <main className="flex-1 overflow-hidden relative">{children}</main>
-      </div>
-
-      {/* Global Command Palette Modal */}
-      <CommandPaletteModal
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onNavigate={handleNavigate}
-      />
+    <div className="flex h-screen w-screen overflow-hidden bg-background font-sans text-text">
+      <Sidebar activePath={activePath} onNavigate={onNavigate} onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
+      <main className="relative min-w-0 flex-1 overflow-hidden">{children}</main>
+      <CommandPaletteModal isOpen={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} onNavigate={onNavigate} />
     </div>
   );
 };
-

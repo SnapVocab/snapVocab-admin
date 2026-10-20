@@ -1,11 +1,13 @@
-import React, { useState, useRef } from 'react';
-import { generateSmoothPath, formatChartNumber, Point } from './chart-utils';
+import React, { useRef, useState } from 'react';
+import { areaPath, formatChartNumber, linePath, type Point } from './chart-utils';
 import { ChartTooltip } from './ChartTooltip';
 
 export interface LineChartSeries {
   name: string;
   color: string;
   data: number[];
+  /** Flat fill under the line (single-series charts). */
+  fill?: boolean;
 }
 
 export interface LineChartProps {
@@ -14,176 +16,103 @@ export interface LineChartProps {
   height?: number;
   showLegend?: boolean;
   className?: string;
+  /** Axis ticks (compact: 1,4k). */
+  yFormat?: (val: number) => string;
+  /** Tooltip values (exact: 1.372). */
+  valueFormat?: (val: number) => string;
+  /** Extra tooltip line for the hovered index, e.g. "10/44 người học". */
+  detail?: (index: number) => string | undefined;
+  /** Points worth calling out on the chart itself, e.g. the biggest drop. */
+  marks?: { index: number; note: string }[];
 }
 
-export const LineChart: React.FC<LineChartProps> = ({
-  labels,
-  series,
-  height = 160,
-  showLegend = true,
-  className = '',
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+const X_LABEL_ROW = 18;
+const LEGEND_ROW = 20;
+
+/**
+ * Line chart drawn in a 100×100 SVG stretched to the box; strokes keep their width (non-scaling-stroke) and every
+ * label is HTML, so nothing distorts at any width. Straight segments, no point markers until hover.
+ */
+const exact = (v: number) => v.toLocaleString('vi-VN');
+
+export const LineChart: React.FC<LineChartProps> = ({ labels, series, height = 160, showLegend = true, className = '', yFormat = formatChartNumber, valueFormat = exact, detail, marks = [] }) => {
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
 
   if (!labels.length || !series.length) {
-    return (
-      <div
-        className={`flex items-center justify-center text-text-muted text-xs ${className}`}
-        style={{ height }}
-      >
-        Không có dữ liệu
-      </div>
-    );
+    return <div className={`flex items-center justify-center text-xs text-text-muted ${className}`} style={{ height }}>Không có dữ liệu</div>;
   }
 
-  const paddingLeft = 36;
-  const paddingRight = 16;
-  const paddingTop = 16;
-  const paddingBottom = 26;
+  const n = labels.length;
+  const values = series.flatMap((s) => s.data);
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const x = (i: number) => (n > 1 ? (i / (n - 1)) * 100 : 50);
+  const y = (v: number) => 100 - ((v - min) / range) * 100;
+  const ticks = [max, min + range / 2, min];
+  const legend = showLegend && series.length > 1;
+  const plotHeight = height - X_LABEL_ROW - (legend ? LEGEND_ROW : 0);
+  const xLabels = [...new Set([0, Math.floor((n - 1) / 2), n - 1])];
 
-  const width = 500;
-  const chartWidth = width - paddingLeft - paddingRight;
-  const chartHeight = height - paddingTop - paddingBottom;
-
-  const allValues = series.flatMap((s) => s.data);
-  const maxValue = Math.max(...allValues, 10);
-  const minValue = Math.min(...allValues, 0);
-  const range = maxValue - minValue || 1;
-
-  const computedSeries = series.map((s) => {
-    const points: Point[] = s.data.map((val, idx) => {
-      const x = paddingLeft + (idx / (labels.length - 1 || 1)) * chartWidth;
-      const y = paddingTop + chartHeight - ((val - minValue) / range) * chartHeight;
-      return { x, y };
-    });
-    return {
-      ...s,
-      points,
-      path: generateSmoothPath(points),
-    };
-  });
-
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const svgRelativeX = (mouseX / rect.width) * width;
-
-    let nearestIdx = 0;
-    let minDistance = Infinity;
-
-    labels.forEach((_, idx) => {
-      const targetX = paddingLeft + (idx / (labels.length - 1 || 1)) * chartWidth;
-      const dist = Math.abs(targetX - svgRelativeX);
-      if (dist < minDistance) {
-        minDistance = dist;
-        nearestIdx = idx;
-      }
-    });
-
-    setHoveredIndex(nearestIdx);
-    const actualX =
-      ((paddingLeft + (nearestIdx / (labels.length - 1 || 1)) * chartWidth) / width) *
-      rect.width;
-    setTooltipPos({ x: actualX, y: rect.height / 2 });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredIndex(null);
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = plotRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    setHovered(Math.round(ratio * (n - 1)));
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full select-none ${className}`} style={{ height }}>
-      {hoveredIndex !== null && (
-        <ChartTooltip
-          visible={true}
-          label={labels[hoveredIndex]}
-          value={series.map((s) => `${s.name}: ${s.data[hoveredIndex]}`).join(' | ')}
-          color={series[0]?.color}
-          x={tooltipPos.x}
-          y={tooltipPos.y}
-        />
-      )}
-
-      {showLegend && (
-        <div className="flex items-center gap-3 mb-1 text-[11px] text-text-muted justify-end">
+    <div className={`w-full select-none ${className}`} style={{ height }}>
+      {legend && (
+        <div className="flex h-5 items-start justify-end gap-3 text-xs text-text-muted">
           {series.map((s) => (
-            <div key={s.name} className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-              <span>{s.name}</span>
-            </div>
+            <span key={s.name} className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 rounded" style={{ backgroundColor: s.color }} />{s.name}</span>
           ))}
         </div>
       )}
+      <div className="ml-9 mr-1">
+        <div ref={plotRef} className="relative" style={{ height: plotHeight }} onMouseMove={onMove} onMouseLeave={() => setHovered(null)}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden>
+            {ticks.map((t, i) => (
+              <line key={i} x1={0} x2={100} y1={y(t)} y2={y(t)} stroke={i === ticks.length - 1 ? '#D1D5DB' : '#EEF0F2'} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            ))}
+            {marks.map((m) => (
+              <line key={`m${m.index}`} x1={x(m.index)} x2={x(m.index)} y1={0} y2={100} stroke="#9CA3AF" strokeDasharray="3 3" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            ))}
+            {series.map((s) => {
+              const pts: Point[] = s.data.map((v, i) => ({ x: x(i), y: y(v) }));
+              return (
+                <g key={s.name}>
+                  {s.fill && <path d={areaPath(pts, y(min))} fill={s.color} fillOpacity={0.1} />}
+                  <path d={linePath(pts)} fill="none" stroke={s.color} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                </g>
+              );
+            })}
+          </svg>
 
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-full overflow-visible"
-        preserveAspectRatio="none"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-      >
-        {/* Horizontal grid lines */}
-        {[0, 0.5, 1].map((ratio) => {
-          const y = paddingTop + chartHeight * ratio;
-          const val = Math.round(maxValue - ratio * range);
-          return (
-            <g key={ratio}>
-              <line
-                x1={paddingLeft}
-                y1={y}
-                x2={width - paddingRight}
-                y2={y}
-                stroke="#E5E7EB"
-                strokeDasharray="3 3"
-                strokeWidth="1"
-              />
-              <text
-                x={paddingLeft - 6}
-                y={y + 3.5}
-                textAnchor="end"
-                className="text-[9px] fill-text-muted font-mono"
-              >
-                {formatChartNumber(val)}
-              </text>
-            </g>
-          );
-        })}
+          {ticks.map((t, i) => (
+            <span key={i} className="absolute right-full mr-2 -translate-y-1/2 text-2xs tabular-nums text-text-light" style={{ top: `${y(t)}%` }}>{yFormat(Math.round(t))}</span>
+          ))}
+          {xLabels.map((i) => (
+            <span key={i} className="absolute top-full mt-1 text-2xs tabular-nums text-text-light" style={{ left: `${x(i)}%`, transform: i === 0 ? undefined : i === n - 1 ? 'translateX(-100%)' : 'translateX(-50%)' }}>{labels[i]}</span>
+          ))}
+          {marks.map((m) => (
+            <span key={`n${m.index}`} className="absolute -top-1 ml-1 whitespace-nowrap rounded bg-surface/90 px-1 text-2xs text-text-muted" style={{ left: `${x(m.index)}%`, transform: x(m.index) > 75 ? 'translateX(calc(-100% - 8px))' : undefined }}>{m.note}</span>
+          ))}
 
-        {/* Lines */}
-        {computedSeries.map((s) => (
-          <path
-            key={s.name}
-            d={s.path}
-            fill="none"
-            stroke={s.color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-
-        {/* X labels */}
-        {labels.map((lbl, idx) => {
-          if (idx === 0 || idx === labels.length - 1 || idx === Math.floor(labels.length / 2)) {
-            const x = paddingLeft + (idx / (labels.length - 1 || 1)) * chartWidth;
-            return (
-              <text
-                key={idx}
-                x={x}
-                y={height - 6}
-                textAnchor={idx === 0 ? 'start' : idx === labels.length - 1 ? 'end' : 'middle'}
-                className="text-[9px] fill-text-muted font-mono"
-              >
-                {lbl}
-              </text>
-            );
-          }
-          return null;
-        })}
-      </svg>
+          {hovered !== null && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 w-px bg-border-strong" style={{ left: `${x(hovered)}%` }} />
+              {series.map((s) => (
+                <span key={s.name} className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-surface" style={{ left: `${x(hovered)}%`, top: `${y(s.data[hovered])}%`, borderColor: s.color }} />
+              ))}
+              <ChartTooltip title={labels[hovered]} left={x(hovered)} detail={detail?.(hovered)}
+                rows={series.map((s) => ({ name: s.name, value: valueFormat(s.data[hovered]), color: s.color }))} />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

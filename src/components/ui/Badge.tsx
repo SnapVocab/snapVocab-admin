@@ -20,11 +20,15 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   icon?: React.ReactElement<{ size?: number }>;
 }
 
-/** Describes a state; never interactive. Modules map their own statuses to a tone (see ShopItemStatusBadge). */
+/**
+ * Describes a state; never interactive. Use it where the state is the point of the row (an exception, a lifecycle step
+ * that differs between rows); a state every row shares is plain text (design.md §3.5).
+ * Modules map their own statuses to a tone (see ShopItemStatusBadge).
+ */
 export const Badge: React.FC<BadgeProps> = ({ tone = 'neutral', icon, className, children, ...rest }) => (
   <span
     className={cn(
-      'inline-flex h-6 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold whitespace-nowrap',
+      'inline-flex h-5 items-center gap-1 rounded border px-1.5 text-xs font-medium whitespace-nowrap',
       TONE[tone],
       className,
     )}

@@ -74,6 +74,17 @@ export function hasAdminAuthority(authorities: string[]): boolean {
   return authorities.includes('ROLE_ADMIN');
 }
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Field errors of the login form; an empty object means it can be sent. */
+export function validateLogin(email: string, password: string): { email?: string; password?: string } {
+  const value = email.trim();
+  return {
+    ...(!value ? { email: 'Nhập email.' } : !EMAIL.test(value) ? { email: 'Email không đúng định dạng.' } : {}),
+    ...(!password ? { password: 'Nhập mật khẩu.' } : {}),
+  };
+}
+
 /**
  * Checks if the JWT access token is expired or will expire within the buffer window.
  * Default buffer: 30 seconds before actual expiration.

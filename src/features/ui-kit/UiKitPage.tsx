@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { Archive, Globe, Plus, Save, Trash2, Edit2 } from 'lucide-react';
-import { Badge, BadgeTone, Button, ButtonSize, ButtonVariant } from '../../components/ui';
+import {
+  Badge,
+  BadgeTone,
+  Button,
+  ButtonSize,
+  ButtonVariant,
+  ConfirmModal,
+  ConfirmModalTone,
+} from '../../components/ui';
 
 const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger', 'danger-outline'];
 const SIZES: ButtonSize[] = ['sm', 'md', 'lg'];
@@ -25,6 +33,7 @@ const Section: React.FC<{ title: string; note?: string; children: React.ReactNod
 /** Internal (dev-only) reference for the shared UI kit: every variant, size and state in one place. */
 export const UiKitPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [modalTone, setModalTone] = useState<ConfirmModalTone | null>(null);
   const fakeSave = () => {
     setLoading(true);
     setTimeout(() => setLoading(false), 1500);
@@ -98,6 +107,64 @@ export const UiKitPage: React.FC = () => {
           <Badge tone="info">Nhãn dài: Mở bán 07/10/2026 08:00 (UTC+7)</Badge>
         </div>
       </Section>
+
+      <Section title="ConfirmModal · hộp thoại xác nhận" note="Thay thế hoàn toàn window.confirm/alert. Focus mặc định vào nút Hủy, hỗ trợ Esc và khóa cuộn nền.">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button variant="secondary" onClick={() => setModalTone('warning')}>
+            Mở modal Cảnh báo (Warning)
+          </Button>
+          <Button variant="danger-outline" onClick={() => setModalTone('danger')}>
+            Mở modal Nguy hiểm (Danger)
+          </Button>
+          <Button variant="secondary" onClick={() => setModalTone('info')}>
+            Mở modal Thông tin (Info)
+          </Button>
+          <Button variant="secondary" onClick={() => setModalTone('primary')}>
+            Mở modal Thành công (Primary)
+          </Button>
+        </div>
+      </Section>
+
+      {modalTone && (
+        <ConfirmModal
+          isOpen={true}
+          tone={modalTone}
+          title={
+            modalTone === 'warning'
+              ? 'Rời trang khi chưa lưu?'
+              : modalTone === 'danger'
+              ? 'Xóa vĩnh viễn cấu hình này?'
+              : modalTone === 'info'
+              ? 'Thông báo cập nhật hệ thống'
+              : 'Xác nhận áp dụng thay đổi?'
+          }
+          description={
+            modalTone === 'warning'
+              ? 'Trang hiện tại có thay đổi chưa lưu hoặc thao tác đang xử lý. Rời trang sẽ mất nội dung đang nhập.'
+              : modalTone === 'danger'
+              ? 'Hành động này không thể hoàn tác. Dữ liệu liên quan sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu.'
+              : modalTone === 'info'
+              ? 'Hệ thống sẽ đồng bộ dữ liệu người học theo chu kỳ định kỳ tiếp theo vào lúc 00:00 (UTC+7).'
+              : 'Mọi thiết lập sẽ được ghi vào sổ kiểm toán hệ thống (Audit Log) ngay lập tức.'
+          }
+          confirmLabel={
+            modalTone === 'warning'
+              ? 'Rời trang'
+              : modalTone === 'danger'
+              ? 'Xóa vĩnh viễn'
+              : 'Đã hiểu'
+          }
+          cancelLabel="Ở lại tiếp tục"
+          onConfirm={() => setModalTone(null)}
+          onClose={() => setModalTone(null)}
+        >
+          {modalTone === 'warning' && (
+            <div className="rounded-xl border border-warning/30 bg-warning-light/70 p-3 text-xs text-warning-dark leading-relaxed">
+              <span className="font-semibold">Mẹo:</span> Bạn có thể bấm "Lưu bản nháp" trước khi rời đi để giữ lại dữ liệu.
+            </div>
+          )}
+        </ConfirmModal>
+      )}
     </div>
   );
 };

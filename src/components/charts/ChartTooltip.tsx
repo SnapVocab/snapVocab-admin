@@ -1,51 +1,27 @@
 import React from 'react';
 
 export interface ChartTooltipProps {
-  label: string;
-  value: string | number;
-  subValue?: string;
-  color?: string;
-  visible: boolean;
-  x?: number;
-  y?: number;
+  /** X label of the hovered point, e.g. "19/10". */
+  title: string;
+  rows: { name: string; value: string; color: string }[];
+  detail?: string;
+  /** Horizontal position in % of the plot; the box flips inward near the edges. */
+  left: number;
 }
 
-export const ChartTooltip: React.FC<ChartTooltipProps> = ({
-  label,
-  value,
-  subValue,
-  color = '#58CC02',
-  visible,
-  x,
-  y,
-}) => {
-  if (!visible) return null;
-
-  return (
-    <div
-      className="pointer-events-none absolute z-30 transform -translate-x-1/2 -translate-y-full mb-2.5 transition-all duration-75 ease-out"
-      style={{
-        left: x !== undefined ? `${x}px` : undefined,
-        top: y !== undefined ? `${y}px` : undefined,
-      }}
-    >
-      <div className="bg-neutral-900/95 text-white text-[11px] rounded-lg px-2.5 py-1.5 shadow-elevated border border-neutral-700/80 backdrop-blur-xs whitespace-nowrap min-w-[100px]">
-        <div className="text-neutral-400 font-medium text-[10px] pb-0.5 mb-1 border-b border-neutral-800">
-          {label}
-        </div>
-        <div className="flex items-center gap-1.5 font-semibold text-white">
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: color }}
-          />
-          <span className="font-mono">{value}</span>
-        </div>
-        {subValue && (
-          <div className="text-[10px] text-neutral-400 mt-0.5">
-            {subValue}
-          </div>
-        )}
+export const ChartTooltip: React.FC<ChartTooltipProps> = ({ title, rows, detail, left }) => (
+  <div
+    className="pointer-events-none absolute top-0 z-30 min-w-[120px] whitespace-nowrap rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs shadow-elevated"
+    style={{ left: `${left}%`, transform: left < 15 ? 'translateX(8px)' : left > 85 ? 'translateX(calc(-100% - 8px))' : 'translateX(-50%)' }}
+  >
+    <div className="mb-0.5 text-2xs text-text-muted">{title}</div>
+    {rows.map((r) => (
+      <div key={r.name} className="flex items-center gap-1.5">
+        <span className="h-0.5 w-2.5 shrink-0 rounded" style={{ backgroundColor: r.color }} />
+        {rows.length > 1 && <span className="text-text-muted">{r.name}</span>}
+        <span className="ml-auto font-semibold tabular-nums text-text">{r.value}</span>
       </div>
-    </div>
-  );
-};
+    ))}
+    {detail && <div className="mt-0.5 text-2xs text-text-muted">{detail}</div>}
+  </div>
+);

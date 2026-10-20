@@ -19,7 +19,7 @@ const VARIANT: Record<ButtonVariant, string> = {
 
 const SIZE: Record<ButtonSize, { box: string; iconOnly: string; icon: number }> = {
   sm: { box: 'h-8 px-3 text-xs', iconOnly: 'h-8 w-8', icon: 14 },
-  md: { box: 'h-9 px-3.5 text-[13px]', iconOnly: 'h-9 w-9', icon: 16 },
+  md: { box: 'h-9 px-3.5 text-body', iconOnly: 'h-9 w-9', icon: 16 },
   lg: { box: 'h-10 px-4 text-sm', iconOnly: 'h-10 w-10', icon: 16 },
 };
 

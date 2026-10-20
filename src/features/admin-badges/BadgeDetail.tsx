@@ -34,7 +34,7 @@ export function BadgeDetail({ badge, all, onBack }: { badge: AdminBadge; all: Ad
         <div className="flex items-center gap-3">
           <Button size="sm" icon={<ArrowLeft />} label="Quay lại danh sách" onClick={onBack} />
           <div>
-            <h1 ref={heading} tabIndex={-1} className="text-xl font-extrabold tracking-tight">{badge.name}</h1>
+            <h1 ref={heading} tabIndex={-1} className="text-xl font-semibold tracking-tight">{badge.name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
               <ActiveBadge active={badge.isActive} />
               {badge.version !== null && <span>Phiên bản {badge.version}</span>}
@@ -46,18 +46,18 @@ export function BadgeDetail({ badge, all, onBack }: { badge: AdminBadge; all: Ad
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
         <div className="min-w-0 space-y-4">
-          <section aria-labelledby="bdg-rule" className="space-y-3 rounded-xl border border-border bg-surface p-4 shadow-card">
+          <section aria-labelledby="bdg-rule" className="space-y-3 rounded-lg border border-border bg-surface p-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 id="bdg-rule" className="text-sm font-bold">Điều kiện đạt</h2>
-              <span className="flex items-center gap-1 text-[11px] text-text-muted"><Lock size={12} />Khóa sau khi tạo</span>
+              <h2 id="bdg-rule" className="text-sm font-semibold">Điều kiện đạt</h2>
+              <span className="flex items-center gap-1 text-xs text-text-muted"><Lock size={12} />Khóa sau khi tạo</span>
             </div>
             <div className="space-y-1.5 rounded-lg bg-surface-subtle p-3">
-              <p className="text-[11px] text-text-muted">Người học nhận khi</p>
-              <p className="text-[15px] font-extrabold">{ruleSentence(badge)}</p>
+              <p className="text-xs text-text-muted">Người học nhận khi</p>
+              <p className="text-base font-semibold">{ruleSentence(badge)}</p>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-text-muted">
-                <span>Chuỗi: <strong className="text-text">{info?.title ?? 'Chỉ số chưa hỗ trợ'}</strong> <span className="font-mono text-[11px]">{badge.metric}</span></span>
+                <span>Chuỗi: <strong className="text-text">{info?.title ?? 'Chỉ số chưa hỗ trợ'}</strong> <span className="font-mono text-2xs">{badge.metric}</span></span>
                 <span>Ngưỡng: <strong className="text-text tabular-nums">≥ {badge.threshold.toLocaleString('vi-VN')}{info ? ` ${info.unit}` : ''}</strong></span>
-                <span className="flex items-center gap-1">Mã: <strong className="font-mono text-[11px] text-text">{badge.code}</strong>
+                <span className="flex items-center gap-1">Mã: <strong className="font-mono text-2xs text-text">{badge.code}</strong>
                   <Button variant="ghost" size="sm" className="h-6 w-6" icon={copied ? <Check /> : <Copy />} label="Sao chép mã" onClick={copyCode} />
                 </span>
               </div>
@@ -68,22 +68,22 @@ export function BadgeDetail({ badge, all, onBack }: { badge: AdminBadge; all: Ad
             <p className="text-xs text-text-muted">Mã, chuỗi và ngưỡng không đổi được, kể cả khi huy hiệu đang tắt.</p>
           </section>
 
-          <section aria-labelledby="bdg-show" className="space-y-3 rounded-xl border border-border bg-surface p-4 shadow-card">
-            <h2 id="bdg-show" className="text-sm font-bold">Hiển thị cho người học</h2>
+          <section aria-labelledby="bdg-show" className="space-y-3 rounded-lg border border-border bg-surface p-4">
+            <h2 id="bdg-show" className="text-sm font-semibold">Hiển thị cho người học</h2>
             <dl className="m-0 space-y-3">
               <Row label="Tên hiển thị">{badge.name}</Row>
               <Row label="Mô tả (điều kiện người học đọc)">{badge.description}</Row>
               <Row label="Biểu tượng">
                 <span className="inline-flex items-center gap-2">
-                  {knownIcon ? EMBLEM_LABELS[badge.iconKey] : 'Không hỗ trợ'} <span className="font-mono text-[11px] text-text-muted">{badge.iconKey}</span>
+                  {knownIcon ? EMBLEM_LABELS[badge.iconKey] : 'Không hỗ trợ'} <span className="font-mono text-2xs text-text-muted">{badge.iconKey}</span>
                 </span>
                 {!knownIcon && <p className="mt-1 text-xs font-semibold text-warning-dark">Ứng dụng sẽ hiện biểu tượng mặc định vì “{badge.iconKey}” không có trong bộ biểu tượng.</p>}
               </Row>
             </dl>
           </section>
 
-          <details className="rounded-xl border border-border bg-surface p-4">
-            <summary className="cursor-pointer text-sm font-bold">Cấu hình nâng cao</summary>
+          <details className="rounded-lg border border-border bg-surface p-4">
+            <summary className="cursor-pointer text-sm font-semibold">Cấu hình nâng cao</summary>
             <dl className="m-0 mt-3">
               <Row label="Thứ tự hiển thị"><span className="tabular-nums">{badge.sortOrder}</span>
                 <p className="mt-1 text-xs text-text-muted">Quyết định thứ tự giữa các kệ (theo số nhỏ nhất của chuỗi) và thứ tự phụ trên Hồ sơ. Trong chuỗi, mốc luôn xếp theo ngưỡng.</p>
@@ -93,16 +93,16 @@ export function BadgeDetail({ badge, all, onBack }: { badge: AdminBadge; all: Ad
         </div>
 
         <aside className="min-w-0 space-y-3 lg:sticky lg:top-20" aria-label="Xem trước trên ứng dụng">
-          <div className="space-y-3 rounded-xl border border-border bg-surface p-4 shadow-card">
+          <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
             <p className="text-xs font-bold tracking-wide text-text-muted">XEM TRƯỚC TRÊN ỨNG DỤNG</p>
             <div className="flex justify-around">
-              <figure className="m-0 grid justify-items-center gap-1"><BadgeArtifact metric={badge.metric} iconKey={badge.iconKey} size={64} threshold={badge.threshold} /><figcaption className="text-[11px] text-text-muted">Người học đã đạt</figcaption></figure>
-              <figure className="m-0 grid justify-items-center gap-1"><BadgeArtifact metric={badge.metric} iconKey={badge.iconKey} state="locked" size={64} threshold={badge.threshold} /><figcaption className="text-[11px] text-text-muted">Người học chưa đạt</figcaption></figure>
+              <figure className="m-0 grid justify-items-center gap-1"><BadgeArtifact metric={badge.metric} iconKey={badge.iconKey} size={64} threshold={badge.threshold} /><figcaption className="text-xs text-text-muted">Người học đã đạt</figcaption></figure>
+              <figure className="m-0 grid justify-items-center gap-1"><BadgeArtifact metric={badge.metric} iconKey={badge.iconKey} state="locked" size={64} threshold={badge.threshold} /><figcaption className="text-xs text-text-muted">Người học chưa đạt</figcaption></figure>
             </div>
             <p className="text-xs font-semibold">Kệ “{info?.title ?? badge.metric}” của người học chưa đạt mốc nào</p>
             <div className="flex items-end justify-center gap-4 overflow-x-auto rounded-lg bg-surface-subtle px-2 pb-1.5 pt-3">
               {shelf.map(b => (
-                <div key={b.id} className={`grid justify-items-center gap-1 text-[11px] tabular-nums ${b.id === badge.id ? 'font-bold text-text' : 'text-text-muted'}`}>
+                <div key={b.id} className={`grid justify-items-center gap-1 text-xs tabular-nums ${b.id === badge.id ? 'font-bold text-text' : 'text-text-muted'}`}>
                   <BadgeArtifact metric={b.metric} iconKey={b.iconKey} state="locked" size={40} focused={b.id === badge.id} />
                   {b.threshold.toLocaleString('vi-VN')}
                 </div>
@@ -110,13 +110,13 @@ export function BadgeDetail({ badge, all, onBack }: { badge: AdminBadge; all: Ad
             </div>
             {!badge.isActive && <p className="text-xs text-text-muted">Người học chưa đạt hiện không thấy huy hiệu này; kệ trên là khi huy hiệu được bật.</p>}
             {shelf.length >= 4 && <p className="text-xs text-text-muted">Chuỗi có {shelf.length} mốc: app chuyển kệ sang dạng cuộn ngang.</p>}
-            <div className="space-y-1 rounded-xl border border-border p-3">
-              <p className="text-sm font-extrabold">{badge.name}</p>
+            <div className="space-y-1 rounded-lg border border-border p-3">
+              <p className="text-sm font-semibold">{badge.name}</p>
               <p className="text-xs text-text-muted">{badge.description}</p>
-              {info?.sheetNote && <p className="rounded-md bg-surface-subtle p-2 text-[11px] text-text-muted">{info.sheetNote}</p>}
+              {info?.sheetNote && <p className="rounded-md bg-surface-subtle p-2 text-xs text-text-muted">{info.sheetNote}</p>}
             </div>
           </div>
-          <p className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-text-muted">
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
             <span>ID #{badge.id}</span><span>Tạo {date(badge.createdAt)}</span><span>Cập nhật {date(badge.updatedAt)}</span>
           </p>
         </aside>

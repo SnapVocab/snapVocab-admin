@@ -6,13 +6,13 @@ export const inputClass = 'w-full rounded-lg border border-border bg-surface px-
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     const messages: Record<string, string> = {
-      VERSION_CONFLICT: 'Template đã được người khác cập nhật. Giữ lại nội dung đang nhập và tải bản mới để đối chiếu.',
-      MISSION_POOL_INSUFFICIENT: 'Thao tác làm catalog thiếu mẫu theo invariant. Cần ít nhất 4 mẫu cốt lõi NONE và 1 mẫu slot 5 NONE, hoặc 5 mẫu cốt lõi NONE.',
-      MISSION_TEMPLATE_CODE_EXISTS: 'Mã nhiệm vụ đã tồn tại.', REWARD_ITEM_NOT_ELIGIBLE: 'Vật phẩm thưởng phải tồn tại và ở trạng thái PUBLISHED.',
-      FIELD_LOCKED: 'Mã nhiệm vụ không thể thay đổi sau khi tạo.', MISSION_TEMPLATE_NOT_FOUND: 'Không tìm thấy template này.',
+      VERSION_CONFLICT: 'Mẫu nhiệm vụ đã được người khác cập nhật. Nội dung đang nhập được giữ; tải bản mới để đối chiếu.',
+      MISSION_POOL_INSUFFICIENT: 'Thao tác làm catalog không đủ cấp 5 nhiệm vụ mỗi ngày. Cần ít nhất 4 mẫu cốt lõi và 1 mẫu slot 5 không có điều kiện cấp, hoặc 5 mẫu cốt lõi không có điều kiện cấp.',
+      MISSION_TEMPLATE_CODE_EXISTS: 'Mã nhiệm vụ đã tồn tại.', REWARD_ITEM_NOT_ELIGIBLE: 'Vật phẩm thưởng phải tồn tại và ở trạng thái Đã phát hành.',
+      FIELD_LOCKED: 'Mã nhiệm vụ không thể thay đổi sau khi tạo.', MISSION_TEMPLATE_NOT_FOUND: 'Không tìm thấy mẫu nhiệm vụ này.',
     };
     if (messages[error.code]) return messages[error.code];
-    if (error.statusCode === 404) return 'API quản trị nhiệm vụ chưa sẵn sàng hoặc tài nguyên không tồn tại. Hãy kiểm tra backend.';
+    if (error.statusCode === 404) return 'Không tìm thấy dữ liệu nhiệm vụ trên máy chủ (API quản trị nhiệm vụ chưa sẵn sàng hoặc mục này đã bị xóa).';
     return error.message;
   }
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác. Vui lòng thử lại.';

@@ -13,6 +13,9 @@ import {
   buildUpdatePayload,
   readImageHeader,
   checkAssetHeader,
+  priceBand,
+  priceHint,
+  formatFullDays,
 } from '../src/domains/shop/mappers';
 import {
   ShopItemStatus,
@@ -596,4 +599,38 @@ test('R5. asset header: icon square ≥256; frame 512×512 with alpha; magic mus
   assert.equal(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/webp', 'frame'), null);
   assert.match(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/png', 'frame')!, /hợp lệ/);
   assert.equal(readImageHeader(new Uint8Array(40)), null);
+});
+
+test('G1. price guardrail: band covers only items of the type on sale now; hint flags prices outside it', () => {
+  const now = new Date('2026-10-18T00:00:00Z');
+  const item = (id: number, type: ShopItemType, price: number | null, extra: Partial<AdminShopItemDTO> = {}) =>
+    ({ id, type, price, status: 'PUBLISHED', purchasable: true, availableFrom: null, availableUntil: null, ...extra }) as AdminShopItemDTO;
+  const catalog = [
+    item(1, 'AVATAR_FRAME', 350),
+    item(2, 'AVATAR_FRAME', 950),
+    item(3, 'AVATAR_FRAME', 600),
+    item(4, 'AVATAR_FRAME', 5000, { status: 'DRAFT' }), // not on sale
+    item(5, 'AVATAR_FRAME', 10, { availableUntil: '2026-10-01T00:00:00Z' }), // ended
+    item(6, 'AVATAR_FRAME', null, { purchasable: false }), // reward only
+    item(7, 'XP_BOOSTER', 100),
+  ];
+  assert.deepEqual(priceBand(catalog, 'AVATAR_FRAME', undefined, now), { min: 350, max: 950, median: 600, count: 3 });
+  // The item being edited is excluded from its own comparison; even count takes the mean of the middle two.
+  assert.deepEqual(priceBand(catalog, 'AVATAR_FRAME', 3, now), { min: 350, max: 950, median: 650, count: 2 });
+  assert.equal(priceBand(catalog, 'THEME', undefined, now), null);
+
+  const band = priceBand(catalog, 'AVATAR_FRAME', undefined, now);
+  // Tolerance ×1.5 around 350–950: the top or bottom tier itself is not flagged.
+  assert.equal(priceHint(5000, band), 'ABOVE');
+  assert.equal(priceHint(1426, band), 'ABOVE');
+  assert.equal(priceHint(1425, band), null);
+  assert.equal(priceHint(200, band), 'BELOW');
+  assert.equal(priceHint(950, band), null);
+  assert.equal(priceHint(null, band), null);
+  assert.equal(priceHint(5000, null), null);
+  // Fewer than 3 items on sale is too thin to call anything unusual.
+  assert.equal(priceHint(5000, priceBand(catalog, 'AVATAR_FRAME', 3, now)), null);
+
+  assert.equal(formatFullDays(850), '≈ 10 ngày');
+  assert.equal(formatFullDays(350), '≈ 4,1 ngày');
 });

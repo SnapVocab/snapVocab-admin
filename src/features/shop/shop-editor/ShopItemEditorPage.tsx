@@ -28,11 +28,21 @@ import {
   changedFields,
   buildUpdatePayload,
   SHOP_FIELD_LABELS as FIELD_LABELS,
+  MAX_COIN_PER_DAY,
+  PRICE_HINT_FACTOR,
+  PriceBand,
+  formatFullDays,
+  formatShopItemTypeLabel,
+  formatVnDateTime,
+  priceBand,
+  priceHint,
 } from '../../../domains/shop/mappers';
+import { useShopCatalog } from '../../../domains/shop/queries';
+import { BoosterIcon, CoinIcon, FrameIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
-import { Badge, Button } from '../../../components/ui';
+import { Badge, Button, ConfirmModal, SectionLabel } from '../../../components/ui';
 import { AssetUploadField } from '../components/AssetUploadField';
 import {
   PublishConfirmationModal,
@@ -48,12 +58,9 @@ import {
   Archive,
   Trash2,
   Lock,
-  Coins,
-  Sparkles,
-  Zap,
   AlertCircle,
+  AlertTriangle,
   Calendar,
-  Image as ImageIcon,
   Loader2,
 } from 'lucide-react';
 
@@ -91,21 +98,68 @@ const TYPE_OPTIONS: {
     type: 'THEME',
     label: 'Giao diện cửa hàng',
     desc: 'Đổi giao diện Cửa hàng, Kho đồ và Ví Coin',
-    icon: <Sparkles size={16} />,
+    icon: <ThemeIcon size={20} />,
   },
   {
     type: 'AVATAR_FRAME',
     label: 'Khung avatar',
     desc: 'Trang trí hồ sơ người học',
-    icon: <ImageIcon size={16} />,
+    icon: <FrameIcon size={20} />,
   },
   {
     type: 'XP_BOOSTER',
     label: 'XP Booster',
     desc: 'Nhân đôi XP trong thời gian giới hạn',
-    icon: <Zap size={16} />,
+    icon: <BoosterIcon size={20} />,
   },
 ];
+
+const fmt = (n: number) => n.toLocaleString('vi-VN');
+
+/**
+ * LiveOps guardrail for price: mission-days and the band the same type sells at today.
+ * A hint only (UI warning ≠ business rule); the server enforces 1–100,000 Coin.
+ */
+const PriceGuard: React.FC<{ price: number | null | undefined; band: PriceBand | null; typeLabel: string }> = ({ price, band, typeLabel }) => {
+  const hint = priceHint(price, band);
+  const what = /^[A-Z]{2}/.test(typeLabel) ? typeLabel : typeLabel.toLowerCase();
+  const factor = PRICE_HINT_FACTOR.toLocaleString('vi-VN');
+  return (
+    <div className="mt-2 p-2.5 rounded-lg border border-border/80 bg-surface-subtle/50 space-y-1.5 text-xs text-text-muted">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold text-text">Kiểm tra giá</span>
+        <span className="tabular-nums text-text-muted">Trần 100.000 Coin</span>
+      </div>
+      <p>
+        {price ? (
+          <>
+            Quy đổi: <strong className="font-bold text-text tabular-nums">{formatFullDays(price)}</strong> hoàn thành đủ 5 nhiệm vụ ngày (tối đa {MAX_COIN_PER_DAY} Coin/ngày).
+          </>
+        ) : (
+          'Khoảng hợp lệ: 1 đến 100,000 Coin.'
+        )}
+      </p>
+      <p className="text-xs">
+        {!band
+          ? `Chưa có ${what} nào khác đang bán để so sánh thị trường.`
+          : band.count === 1
+          ? `${typeLabel} khác đang bán: ${fmt(band.min)} Coin (1 vật phẩm).`
+          : `${typeLabel} đang bán: ${fmt(band.min)}–${fmt(band.max)} Coin, trung vị ${fmt(band.median)} Coin (${band.count} vật phẩm).`}
+      </p>
+      {hint && (
+        <div role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-warning-dark text-xs font-medium">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          <span>
+            {hint === 'ABOVE'
+              ? `Cảnh báo giá cao bất thường: Vượt hơn ${factor}× giá cao nhất của ${what} đang bán.`
+              : `Cảnh báo giá thấp bất thường: Thấp hơn ${factor}× so với giá thấp nhất của ${what} đang bán.`}{' '}
+            Gợi ý rà soát để tránh lạm phát/phá giá kinh tế.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /** "Khóa" with the reason on hover, so operators know why a field cannot change. */
 const LockTag: React.FC<{ archived: boolean }> = ({ archived }) => (
@@ -137,6 +191,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     refetch: refetchItem,
     isFetching: isItemFetching,
   } = useAdminShopItem(itemId);
+  // Same query as the storefront list (cached), for the price guardrail.
+  const { data: catalog } = useShopCatalog();
 
   // 2. Form state
   const [formData, setFormData] = useState<ShopItemForm>(DEFAULT_FORM_DATA);
@@ -238,8 +294,13 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     return () => window.removeEventListener('beforeunload', warn);
   }, [isDirty]);
 
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
   const handleBack = () => {
-    if (isDirty && !window.confirm('Bạn có thay đổi chưa lưu. Rời màn này và bỏ các thay đổi?')) return;
+    if (isDirty) {
+      setShowLeaveConfirm(true);
+      return;
+    }
     onBack();
   };
 
@@ -524,6 +585,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     availableFrom: vnInputToIso(formData.availableFrom),
     availableUntil: vnInputToIso(formData.availableUntil),
   });
+  const band = priceBand(catalog?.data ?? [], formData.type ?? 'THEME', itemId);
 
 
   if (mode === 'edit' && !existingItem && itemError) {
@@ -531,7 +593,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     return (
       <div role="alert" className="flex flex-col items-center justify-center gap-3 py-16 text-center">
         <AlertCircle size={28} className="text-danger" />
-        <span className="text-[13px] font-semibold text-text">
+        <span className="text-body font-semibold text-text">
           {notFound ? 'Vật phẩm không còn tồn tại.' : 'Không tải được thông tin vật phẩm.'}
         </span>
         <div className="flex gap-2">
@@ -548,45 +610,30 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
         <Loader2 size={28} className="animate-spin text-primary" />
-        <span className="text-[13px] font-semibold text-text-muted">Đang tải thông tin vật phẩm...</span>
+        <span className="text-body font-semibold text-text-muted">Đang tải thông tin vật phẩm...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 pb-12">
-      {/* BREADCRUMB */}
-      <div className="flex items-center gap-2 text-xs text-text-muted">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="hover:text-text hover:underline cursor-pointer transition-colors"
-        >
-          Cửa hàng
-        </button>
-        <span>/</span>
-        <span className="text-text font-medium">
-          {mode === 'create' ? 'Tạo vật phẩm mới' : (formData.name || 'Chỉnh sửa vật phẩm')}
-        </span>
-      </div>
-
-      {/* EDITOR HEADER */}
+      {/* EDITOR HEADER — the back button is the way out; the title already names the item. */}
       <div className="sticky -top-4 sm:-top-6 z-20 bg-background pt-4 sm:pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/70">
         <div className="flex items-center gap-3">
           {/* Back button */}
           <Button icon={<ArrowLeft />} label="Quay lại danh sách" onClick={handleBack} />
 
           <div>
-            <h2 className="text-lg font-extrabold text-text tracking-tight flex items-center gap-2.5">
+            <h2 className="flex items-center gap-2.5 text-xl font-semibold tracking-tight text-text">
               <span>
                 {mode === 'create'
                   ? 'Tạo vật phẩm mới'
                   : (formData.name || formData.code || `#${itemId}`)}
               </span>
               <ShopItemStatusBadge status={itemStatus} />
-              {currentVersion !== null && <Badge className="font-mono">v{currentVersion}</Badge>}
+              {currentVersion !== null && <span className="text-xs font-normal tabular-nums text-text-muted">phiên bản {currentVersion}</span>}
             </h2>
-            <p className="text-[13px] mt-0.5" aria-live="polite">
+            <p className="mt-0.5 text-body" aria-live="polite">
               {isDirty ? (
                 <Badge tone="warning">Có thay đổi chưa lưu</Badge>
               ) : mode === 'edit' ? (
@@ -652,7 +699,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
 
       {/* EDITS KEPT ACROSS A VERSION-CONFLICT RELOAD */}
       {stashedEdits && (
-        <div className="p-3 bg-info-light border border-info/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px] text-info-dark">
+        <div className="p-3 bg-info-light border border-info/30 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-body text-info-dark">
           <span>
             Đã tải bản mới nhất. Bạn còn thay đổi chưa lưu ở:{' '}
             <strong>{Object.keys(stashedEdits).map((k) => FIELD_LABELS[k] ?? k).join(', ')}</strong>.
@@ -667,7 +714,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       )}
 
       {isMetadataError && !metadata && (
-        <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-xl flex items-center justify-between gap-2 text-[13px] text-danger-dark">
+        <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-center justify-between gap-2 text-body text-danger-dark">
           <span className="flex items-center gap-2">
             <AlertCircle size={16} className="shrink-0" />
             Không tải được cấu hình biểu mẫu (bộ giao diện còn trống, trường được phép sửa).
@@ -678,27 +725,25 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
 
       {/* GENERAL ERROR BANNER */}
       {generalError && (
-        <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-xl flex items-center gap-2 text-[13px] text-danger-dark">
+        <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-center gap-2 text-body text-danger-dark">
           <AlertCircle size={16} className="shrink-0" />
           <span>{generalError}</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
-      {/* FORM BODY — 3 CONSOLIDATED SECTIONS */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden divide-y divide-border">
+      {/* FORM BODY — builder sections, top to bottom in the order an item is made */}
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
 
-        {/* SECTION 1: THÔNG TIN VẬT PHẨM (Code, Name, Description, Type & Type-specific Config) */}
-        <div className="px-5 py-4 space-y-4">
-          <h3 className="text-sm font-bold text-text">
-            1. Thông tin vật phẩm
-          </h3>
+        {/* CƠ BẢN: code, name, description */}
+        <div className="px-5 pt-5 pb-3 space-y-4">
+          <SectionLabel>Cơ bản</SectionLabel>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Mã vật phẩm (Code) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label htmlFor="shop-code" className="text-[13px] font-semibold text-text">
+                <label htmlFor="shop-code" className="text-body font-semibold text-text">
                   Mã vật phẩm <span className="text-danger">*</span>
                 </label>
                 {!isEditable('code') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -710,7 +755,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 onChange={(e) => handleFieldChange('code', e.target.value.toUpperCase())}
                 disabled={!isEditable('code') || isSaving}
                 placeholder="VD: THEME_NEON_NIGHT"
-                className={`w-full px-3 py-2 text-[13px] font-mono rounded-lg border bg-surface text-text ${
+                className={`w-full px-3 py-2 text-body font-mono rounded-lg border bg-surface text-text ${
                   fieldErrors.code
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                     : !isEditable('code')
@@ -730,7 +775,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             {/* Tên vật phẩm (Name) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label htmlFor="shop-name" className="text-[13px] font-semibold text-text">
+                <label htmlFor="shop-name" className="text-body font-semibold text-text">
                   Tên vật phẩm <span className="text-danger">*</span>
                 </label>
                 {!isEditable('name') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -743,7 +788,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 disabled={!isEditable('name') || isSaving}
                 placeholder="VD: Giao diện Neon Dạ Quang"
-                className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                   fieldErrors.name
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                     : !isEditable('name')
@@ -758,7 +803,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
 
             {/* Mô tả (Description) */}
             <div className="sm:col-span-2 space-y-1">
-              <label htmlFor="shop-description" className="text-[13px] font-semibold text-text">Mô tả</label>
+              <label htmlFor="shop-description" className="text-body font-semibold text-text">Mô tả</label>
               <textarea
                 {...a11y('description')}
                 maxLength={500}
@@ -767,7 +812,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 disabled={!isEditable('description') || isSaving}
                 rows={2}
                 placeholder="Mô tả công dụng hoặc đặc điểm nổi bật của vật phẩm..."
-                className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text resize-none ${
+                className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text resize-none ${
                   fieldErrors.description
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                     : !isEditable('description')
@@ -781,10 +826,14 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             </div>
           </div>
 
-          {/* Chọn Loại Vật Phẩm */}
-          <div className="space-y-2 pt-2 border-t border-border/70">
+        </div>
+
+        {/* LOẠI & CẤU HÌNH: type picker and its fields */}
+        <div className="px-5 pt-3 pb-3 space-y-4">
+          <SectionLabel>Loại &amp; cấu hình</SectionLabel>
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[13px] font-semibold text-text">
+              <label className="text-body font-semibold text-text">
                 Loại vật phẩm
               </label>
               {!isEditable('type') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -812,7 +861,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                       {opt.icon}
                     </span>
                     <div className="min-w-0">
-                      <div className={`font-semibold text-[13px] ${isSelected ? 'text-primary-dark' : 'text-text'}`}>
+                      <div className={`font-semibold text-body ${isSelected ? 'text-primary-dark' : 'text-text'}`}>
                         {opt.label}
                       </div>
                       <div className="text-xs text-text-muted mt-0.5 leading-snug">
@@ -830,7 +879,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           {formData.type === 'THEME' && (
             <div className="space-y-1.5 max-w-md pt-3 border-t border-border/70">
               <div className="flex items-center justify-between">
-                <label htmlFor="shop-themeKey" className="text-[13px] font-semibold text-text">
+                <label htmlFor="shop-themeKey" className="text-body font-semibold text-text">
                   Bộ giao diện <span className="text-danger">*</span>
                 </label>
                 {!isEditable('themeKey') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -846,7 +895,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     value={formData.themeKey || ''}
                     onChange={(e) => handleFieldChange('themeKey', e.target.value)}
                     disabled={!isEditable('themeKey') || isSaving}
-                    className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text cursor-pointer ${
+                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text cursor-pointer ${
                       fieldErrors.themeKey
                         ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                         : !isEditable('themeKey')
@@ -900,8 +949,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           {/* TYPE: XP_BOOSTER */}
           {formData.type === 'XP_BOOSTER' && (
             <div className="space-y-4 pt-3 border-t border-border/70">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-800">
-                <Zap size={14} className="text-amber-600" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning-light border border-warning/40 text-xs font-semibold text-warning-dark">
+                <BoosterIcon size={14} />
                 <span>Hiệu ứng cố định: ×2 XP</span>
               </div>
 
@@ -909,7 +958,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 {/* boostDurationMinutes */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="shop-boostDurationMinutes" className="text-[13px] font-semibold text-text">
+                    <label htmlFor="shop-boostDurationMinutes" className="text-body font-semibold text-text">
                       Thời lượng hiệu lực (phút) <span className="text-danger">*</span>
                     </label>
                     {!isEditable('boostDurationMinutes') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -922,7 +971,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     value={formData.boostDurationMinutes ?? 30}
                     onChange={(e) => handleFieldChange('boostDurationMinutes', parseInt(e.target.value, 10) || 0)}
                     disabled={!isEditable('boostDurationMinutes') || isSaving}
-                    className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                       fieldErrors.boostDurationMinutes
                         ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                         : !isEditable('boostDurationMinutes')
@@ -940,7 +989,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 {/* maxQuantity */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="shop-maxQuantity" className="text-[13px] font-semibold text-text">
+                    <label htmlFor="shop-maxQuantity" className="text-body font-semibold text-text">
                       Số lượng tối đa trong túi đồ <span className="text-danger">*</span>
                     </label>
                     {!isEditable('maxQuantity') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -953,7 +1002,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     value={formData.maxQuantity ?? 5}
                     onChange={(e) => handleFieldChange('maxQuantity', parseInt(e.target.value, 10) || 0)}
                     disabled={!isEditable('maxQuantity') || isSaving}
-                    className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                       fieldErrors.maxQuantity
                         ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                         : !isEditable('maxQuantity')
@@ -972,17 +1021,33 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           )}
         </div>
 
-        {/* SECTION 2: BÁN TRONG CỬA HÀNG (Purchasable, Price, Sort Order & Availability Window) */}
-        <div className="px-5 py-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-text">
-              2. Bán trong cửa hàng
-            </h3>
-          </div>
+        {/* HÌNH ẢNH: icon shown on the Shop / Kho đồ card */}
+        <div className="px-5 pt-3 pb-3 space-y-3">
+          <SectionLabel>Hình ảnh</SectionLabel>
+
+          <AssetUploadField
+            label="Icon vật phẩm"
+            helperText="Hiển thị trên card trong Cửa hàng và Kho đồ."
+            type="icon"
+            valueKey={formData.iconKey}
+            previewUrl={previewUrls.iconUrl}
+            disabled={!isEditable('iconKey') || isSaving}
+            error={fieldErrors.iconKey}
+            onUploadingChange={handleUploadingChange}
+            onChange={(objectName, localUrl) => {
+              handleFieldChange('iconKey', objectName);
+              setPreviewUrls((prev) => ({ ...prev, iconUrl: localUrl }));
+            }}
+          />
+        </div>
+
+        {/* BÁN TRONG CỬA HÀNG: purchasable, price (with guardrail), sort order, sale window */}
+        <div className="px-5 pt-3 pb-5 space-y-4">
+          <SectionLabel>Bán trong cửa hàng</SectionLabel>
 
           {/* Live conclusion: status + purchasable + window, so the operator never has to combine them. */}
           <div className="flex flex-wrap items-start gap-2 p-3 rounded-lg bg-surface-subtle">
-            <span className="text-[13px] font-semibold text-text pt-0.5">
+            <span className="text-body font-semibold text-text pt-0.5">
               {itemStatus === 'DRAFT' ? 'Sau khi phát hành:' : 'Trạng thái bán:'}
             </span>
             <SaleStateBadge sale={saleOutcome} />
@@ -991,7 +1056,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           {/* Cho phép mua trong cửa hàng setting row with switch */}
           <div className="flex items-center justify-between gap-4 py-1">
             <div>
-              <div id="shop-purchasable-label" className="text-[13px] font-semibold text-text">
+              <div id="shop-purchasable-label" className="text-body font-semibold text-text">
                 Cho phép mua trong cửa hàng
               </div>
               <p className="text-xs text-text-muted mt-0.5">
@@ -1026,17 +1091,14 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             {/* Giá bán */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label htmlFor="shop-price" className="text-[13px] font-semibold text-text">
+                <label htmlFor="shop-price" className="text-body font-semibold text-text">
                   Giá bán (Coin) {formData.purchasable && <span className="text-danger">*</span>}
                 </label>
                 {!isEditable('price') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
               </div>
 
               <div className="relative">
-                <Coins
-                  size={14}
-                  className={`absolute left-3 top-2.5 ${formData.purchasable ? 'text-amber-500' : 'text-text-muted/40'}`}
-                />
+                <CoinIcon size={16} className={`absolute left-3 top-2.5 ${formData.purchasable ? '' : 'opacity-30 grayscale'}`} />
                 {formData.purchasable ? (
                   <input
                     {...a11y('price')}
@@ -1047,7 +1109,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     onChange={(e) => handleFieldChange('price', e.target.value === '' ? null : parseInt(e.target.value, 10) || 0)}
                     disabled={!isEditable('price') || isSaving}
                     placeholder="100"
-                    className={`w-full pl-9 pr-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                    className={`w-full pl-9 pr-3 py-2 text-body rounded-lg border bg-surface text-text ${
                       fieldErrors.price
                         ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                         : !isEditable('price')
@@ -1061,24 +1123,24 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     disabled
                     value=""
                     placeholder="Bật “Cho phép mua” để đặt giá"
-                    className="w-full pl-9 pr-3 py-2 text-[13px] rounded-lg border border-border bg-surface-subtle text-text-muted cursor-not-allowed italic"
+                    className="w-full pl-9 pr-3 py-2 text-body rounded-lg border border-border bg-surface-subtle text-text-muted cursor-not-allowed"
                   />
                 )}
               </div>
 
               {fieldErrors.price ? (
                 <p id="shop-price-error" className="text-xs text-danger-dark">{fieldErrors.price}</p>
+              ) : formData.purchasable ? (
+                <PriceGuard price={formData.price} band={band} typeLabel={formatShopItemTypeLabel(formData.type)} />
               ) : (
-                <p className="text-xs text-text-muted">
-                  {formData.purchasable ? '1 đến 100,000 Coin.' : 'Chỉ áp dụng khi vật phẩm được mở bán.'}
-                </p>
+                <p className="text-xs text-text-muted">Chỉ áp dụng khi vật phẩm được mở bán.</p>
               )}
             </div>
 
             {/* Thứ tự hiển thị (Sort Order) - secondary operational field */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label htmlFor="shop-sortOrder" className="text-[13px] font-semibold text-text">
+                <label htmlFor="shop-sortOrder" className="text-body font-semibold text-text">
                   Thứ tự hiển thị
                 </label>
                 {!isEditable('sortOrder') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
@@ -1091,7 +1153,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 value={formData.sortOrder}
                 onChange={(e) => handleFieldChange('sortOrder', e.target.value === '' ? 0 : Number(e.target.value))}
                 disabled={!isEditable('sortOrder') || isSaving}
-                className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                   fieldErrors.sortOrder
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                     : !isEditable('sortOrder')
@@ -1110,7 +1172,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           {/* Thời gian bán */}
           <div className="space-y-3 pt-2 border-t border-border/70">
             <div className="flex items-center justify-between">
-              <label className="text-[13px] font-semibold text-text">
+              <label className="text-body font-semibold text-text">
                 Thời gian bán
               </label>
             </div>
@@ -1146,7 +1208,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             {availabilityMode === 'SCHEDULED' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 animate-in fade-in-50 duration-150">
                 <div className="space-y-1">
-                  <label htmlFor="shop-availableFrom" className="text-[13px] font-semibold text-text flex items-center gap-1.5">
+                  <label htmlFor="shop-availableFrom" className="text-body font-semibold text-text flex items-center gap-1.5">
                     <Calendar size={12} className="text-text-muted" />
                     Bắt đầu bán từ ({SHOP_TZ_LABEL})
                   </label>
@@ -1156,7 +1218,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     value={formData.availableFrom || ''}
                     onChange={(e) => handleFieldChange('availableFrom', e.target.value || null)}
                     disabled={!isEditable('availableFrom') || isSaving}
-                    className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                       fieldErrors.availableFrom
                         ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                         : !isEditable('availableFrom')
@@ -1170,7 +1232,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="shop-availableUntil" className="text-[13px] font-semibold text-text flex items-center gap-1.5">
+                  <label htmlFor="shop-availableUntil" className="text-body font-semibold text-text flex items-center gap-1.5">
                     <Calendar size={12} className="text-text-muted" />
                     Kết thúc bán lúc ({SHOP_TZ_LABEL})
                   </label>
@@ -1180,7 +1242,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     value={formData.availableUntil || ''}
                     onChange={(e) => handleFieldChange('availableUntil', e.target.value || null)}
                     disabled={!isEditable('availableUntil') || isSaving}
-                    className={`w-full px-3 py-2 text-[13px] rounded-lg border bg-surface text-text ${
+                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                       fieldErrors.availableUntil
                         ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
                         : !isEditable('availableUntil')
@@ -1196,46 +1258,36 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             )}
           </div>
         </div>
-
-        {/* SECTION 3: HÌNH ẢNH (Icon) */}
-        <div className="px-5 py-4 space-y-3">
-          <h3 className="text-sm font-bold text-text">
-            3. Hình ảnh
-          </h3>
-
-          <AssetUploadField
-            label="Icon vật phẩm"
-            helperText="Hiển thị trên card trong Cửa hàng và Kho đồ."
-            type="icon"
-            valueKey={formData.iconKey}
-            previewUrl={previewUrls.iconUrl}
-            disabled={!isEditable('iconKey') || isSaving}
-            error={fieldErrors.iconKey}
-            onUploadingChange={handleUploadingChange}
-            onChange={(objectName, localUrl) => {
-              handleFieldChange('iconKey', objectName);
-              setPreviewUrls((prev) => ({ ...prev, iconUrl: localUrl }));
-            }}
-          />
-        </div>
       </div>
 
-        <div className="xl:sticky xl:top-20 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto">
+        {/* RIGHT RAIL: learner preview, then lifecycle */}
+        <div className="space-y-4 xl:sticky xl:top-20 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto">
           <ShopItemPreview form={formData} iconUrl={previewUrls.iconUrl} frameUrl={previewUrls.frameAssetUrl} />
-        </div>
-      </div>
 
-      {/* METADATA FOOTER — compact */}
-      {mode === 'edit' && existingItem && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-text-muted px-1">
-          <span>ID: <span className="font-mono text-text">#{existingItem.id}</span></span>
-          <span>Tạo: <span className="font-mono text-text">{new Date(existingItem.createdAt).toLocaleDateString('vi-VN')}</span></span>
-          <span>Cập nhật: <span className="font-mono text-text">{new Date(existingItem.updatedAt).toLocaleDateString('vi-VN')}</span></span>
-          {existingItem.publishedAt && (
-            <span>Phát hành: <span className="font-mono text-emerald-700">{new Date(existingItem.publishedAt).toLocaleDateString('vi-VN')}</span></span>
+          {mode === 'edit' && existingItem && (
+            <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+              <SectionLabel>Vòng đời</SectionLabel>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
+                <dt className="text-text-muted">Tạo</dt>
+                <dd className="tabular-nums text-text">{formatVnDateTime(existingItem.createdAt)}</dd>
+                {existingItem.publishedAt && (
+                  <>
+                    <dt className="text-text-muted">Phát hành</dt>
+                    <dd className="tabular-nums text-text">{formatVnDateTime(existingItem.publishedAt)}</dd>
+                  </>
+                )}
+                <dt className="text-text-muted">Sửa gần nhất</dt>
+                <dd className="tabular-nums text-text">{formatVnDateTime(existingItem.updatedAt)}, phiên bản {existingItem.version}</dd>
+                <dt className="text-text-muted">ID</dt>
+                <dd className="tabular-nums text-text">{existingItem.id}</dd>
+              </dl>
+              <p className="border-t border-border pt-2.5 text-xs text-text-muted">
+                Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
+              </p>
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* CONFIRMATION MODALS */}
       {existingItem && (
@@ -1277,6 +1329,30 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           onConfirm={handleConfirmTypeChange}
         />
       )}
+
+      {/* Leave confirmation modal when navigating back with unsaved edits */}
+      <ConfirmModal
+        isOpen={showLeaveConfirm}
+        tone="warning"
+        title="Rời màn hình soạn thảo?"
+        description="Bạn có thay đổi chưa lưu trong vật phẩm này. Rời màn hình sẽ hủy bỏ toàn bộ chỉnh sửa vừa nhập."
+        confirmLabel="Bỏ thay đổi & Quay lại"
+        cancelLabel="Ở lại tiếp tục"
+        confirmVariant="danger"
+        onConfirm={() => {
+          setShowLeaveConfirm(false);
+          onDirtyChange?.(false);
+          onBack();
+        }}
+        onClose={() => setShowLeaveConfirm(false)}
+      >
+        <div className="rounded-lg border border-warning/30 bg-warning-light/70 p-3 text-xs text-warning-dark leading-relaxed">
+          <p className="font-semibold mb-0.5">Mẹo lưu dữ liệu:</p>
+          <p>
+            Nhấn <span className="font-bold underline">"Lưu bản nháp"</span> ở góc trên bên phải nếu bạn muốn lưu lại tiến độ trước khi quay lại danh sách.
+          </p>
+        </div>
+      </ConfirmModal>
     </div>
   );
 };

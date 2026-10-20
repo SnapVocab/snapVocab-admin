@@ -36,6 +36,7 @@ import {
   FileSpreadsheet,
   RotateCw,
 } from 'lucide-react';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 interface TopicsDecksPageProps {
   onNavigate?: (navId: string) => void;
@@ -72,6 +73,7 @@ export const TopicsDecksPage: React.FC<TopicsDecksPageProps> = ({
 
   // Modal States
   const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
+  const [topicToArchiveId, setTopicToArchiveId] = useState<string | null>(null);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [modalDefaultParentId, setModalDefaultParentId] = useState<string | undefined>();
   const [modalDefaultCollectionId, setModalDefaultCollectionId] = useState<string | undefined>();
@@ -136,11 +138,15 @@ export const TopicsDecksPage: React.FC<TopicsDecksPageProps> = ({
   };
 
   const handleDeleteTopic = (topicId: string) => {
-    if (confirm('Bạn có chắc chắn muốn lưu trữ chủ đề này? (Soft-delete không ảnh hưởng đến thẻ của học viên)')) {
-      setTopics((prev) =>
-        prev.map((t) => (t.id === topicId ? { ...t, status: 'archived' } : t))
-      );
-    }
+    setTopicToArchiveId(topicId);
+  };
+
+  const handleConfirmArchiveTopic = () => {
+    if (!topicToArchiveId) return;
+    setTopics((prev) =>
+      prev.map((t) => (t.id === topicToArchiveId ? { ...t, status: 'archived' } : t))
+    );
+    setTopicToArchiveId(null);
   };
 
   const handleSaveTopic = (topicData: Partial<Topic>) => {
@@ -495,6 +501,19 @@ export const TopicsDecksPage: React.FC<TopicsDecksPageProps> = ({
         onClose={() => setIsAddWordModalOpen(false)}
         currentTopic={currentTopic}
         onAddWord={handleAddWordToTopic}
+      />
+
+      {/* Archive Topic Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(topicToArchiveId)}
+        tone="warning"
+        title="Lưu trữ chủ đề này?"
+        description="Bạn có chắc chắn muốn lưu trữ chủ đề này? Hành động soft-delete sẽ ẩn chủ đề khỏi danh mục chọn mới nhưng vẫn bảo toàn đầy đủ các thẻ từ vựng và tiến độ học của học viên."
+        confirmLabel="Lưu trữ chủ đề"
+        cancelLabel="Hủy"
+        confirmVariant="danger"
+        onConfirm={handleConfirmArchiveTopic}
+        onClose={() => setTopicToArchiveId(null)}
       />
     </div>
   );

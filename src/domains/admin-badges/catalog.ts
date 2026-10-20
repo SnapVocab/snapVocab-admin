@@ -42,7 +42,7 @@ export const METRICS: Record<BadgeMetric, MetricInfo> = {
   },
   DISTINCT_WORDS_ADDED: {
     title: 'Vốn từ tự xây', unit: 'từ',
-    rule: 'Đếm từ khác nhau người học tự thêm, có đủ từ và nghĩa; fork/import không tính; chỉ tính từ ngày bật theo dõi.',
+    rule: 'Đếm từ khác nhau người học tự thêm, có đủ từ và nghĩa; từ sao chép hay nhập hàng loạt không tính; chỉ tính từ ngày bật theo dõi.',
     sheetNote: 'Chỉ tính các từ thêm sau ngày ra mắt huy hiệu; mỗi từ tính một lần',
     sentence: n => `Tự thêm ${n} từ khác nhau`,
   },

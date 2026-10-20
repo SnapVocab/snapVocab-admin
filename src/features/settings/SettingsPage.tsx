@@ -23,7 +23,8 @@ import { SecurityAccessTab } from './components/SecurityAccessTab';
 import { SystemMaintenanceTab } from './components/SystemMaintenanceTab';
 import { SettingsAuditDiffModal } from './components/SettingsAuditDiffModal';
 import { SettingsUnsavedBar } from './components/SettingsUnsavedBar';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 interface SettingsPageProps {
   onNavigate?: (navId: string) => void;
@@ -37,6 +38,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   // 1. Navigation & Modal States
   const [activeTab, setActiveTab] = useState<SettingsTabNavId>('ai-pipeline');
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // 2. Data Snapshots (Committed vs Working State)
@@ -129,10 +131,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   // Reset to Factory Default
   const handleResetToDefault = () => {
-    if (window.confirm('Bạn có chắc chắn muốn khôi phục toàn bộ tham số về mặc định xuất xưởng?')) {
-      setSettings(DEFAULT_SETTINGS);
-      showToast('Đã khôi phục các giá trị tham số về mặc định ban đầu.');
-    }
+    setShowResetConfirm(true);
   };
 
   // Import JSON snapshot
@@ -236,6 +235,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         diffs={diffs}
         onClose={() => setIsAuditModalOpen(false)}
         onConfirm={handleConfirmSave}
+      />
+
+      {/* Factory Reset Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showResetConfirm}
+        tone="danger"
+        title="Khôi phục mặc định xuất xưởng?"
+        description="Toàn bộ các tham số cấu hình hệ thống (AI Pipeline, SRS, Economy Guardrails, Security) sẽ được khôi phục về giá trị mặc định ban đầu. Thao tác này không thể hoàn tác."
+        confirmLabel="Khôi phục mặc định"
+        cancelLabel="Hủy bỏ"
+        confirmVariant="danger"
+        onConfirm={() => {
+          setSettings(DEFAULT_SETTINGS);
+          setShowResetConfirm(false);
+          showToast('Đã khôi phục các giá trị tham số về mặc định ban đầu.');
+        }}
+        onClose={() => setShowResetConfirm(false)}
       />
 
       {/* Toast Notification */}

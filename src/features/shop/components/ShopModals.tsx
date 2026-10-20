@@ -45,8 +45,8 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
   const afterPublish = deriveSaleState({ ...item, status: 'PUBLISHED' });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
           <div className="flex items-center gap-2 text-primary">
@@ -58,22 +58,22 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
 
         {/* Content */}
         <div className="p-6 space-y-4 overflow-y-auto">
-          <div className="p-3 border border-border rounded-xl space-y-1.5">
-            <p className="text-[13px] font-semibold text-text">Sau khi phát hành, vật phẩm sẽ:</p>
+          <div className="p-3 border border-border rounded-lg space-y-1.5">
+            <p className="text-body font-semibold text-text">Sau khi phát hành, vật phẩm sẽ:</p>
             <SaleStateBadge sale={afterPublish} />
             <p className="text-xs text-text-muted">
               Phát hành khác mở bán: vật phẩm dùng được làm phần thưởng ngay; người học chỉ mua được khi bật "Cho phép mua" và đang trong thời gian bán.
             </p>
           </div>
 
-          <div className="p-3 bg-reward-light border border-reward/40 rounded-xl flex items-start gap-2.5 text-[13px] text-reward-dark">
+          <div className="p-3 bg-reward-light border border-reward/40 rounded-lg flex items-start gap-2.5 text-body text-reward-dark">
             <AlertTriangle size={16} className="shrink-0 mt-0.5" />
             <p>
               Mã, loại và cấu hình theo loại sẽ bị khóa vĩnh viễn vì phần thưởng và vật phẩm đã bán tham chiếu tới chúng.
             </p>
           </div>
 
-          <div className="border border-border rounded-xl divide-y divide-border text-xs">
+          <div className="border border-border rounded-lg divide-y divide-border text-xs">
             <div className="px-4 py-2.5 flex justify-between">
               <span className="text-text-muted font-medium">Tên vật phẩm:</span>
               <span className="font-bold text-text">{item.name}</span>
@@ -89,7 +89,7 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
             <div className="px-4 py-2.5 flex justify-between items-center">
               <span className="text-text-muted font-medium">Giá bán:</span>
               <span className="font-bold text-reward flex items-center gap-1">
-                <Coins size={13} className="text-amber-500" />
+                <Coins size={13} className="text-reward-dark" />
                 {item.purchasable ? `${(item.price ?? 0).toLocaleString('vi-VN')} Coin` : 'Không bán'}
               </span>
             </div>
@@ -115,7 +115,7 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
             )}
           </div>
           {errorMessage && (
-            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-xl flex items-start gap-2 text-[13px] text-danger-dark">
+            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
               <AlertTriangle size={16} className="shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -159,8 +159,8 @@ export const ArchiveConfirmationModal: React.FC<ArchiveConfirmationModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
           <div className="flex items-center gap-2 text-danger">
             <Archive size={20} />
@@ -170,16 +170,16 @@ export const ArchiveConfirmationModal: React.FC<ArchiveConfirmationModalProps> =
         </div>
 
         <div className="p-6 space-y-3">
-          <p className="text-[13px] text-text leading-relaxed">
+          <p className="text-body text-text leading-relaxed">
             Ngừng bán vĩnh viễn <strong className="font-bold">{itemName}</strong> (lưu trữ)? <strong className="text-danger-dark">Không thể hoàn tác</strong>: không phát hành hay mở bán lại được.
           </p>
-          <ul className="p-3 bg-danger-light border border-danger/30 rounded-xl list-disc list-inside space-y-1 text-[13px] text-danger-dark">
+          <ul className="p-3 bg-danger-light border border-danger/30 rounded-lg list-disc list-inside space-y-1 text-body text-danger-dark">
             <li>Ngừng bán trong Cửa hàng ngay lập tức.</li>
             <li>Người đã sở hữu vẫn giữ và dùng bình thường.</li>
             <li>Không chọn được làm phần thưởng mới; phần thưởng đã cấu hình trước đó giữ nguyên.</li>
           </ul>
           {errorMessage && (
-            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-xl flex items-start gap-2 text-[13px] text-danger-dark">
+            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
               <AlertTriangle size={16} className="shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -222,8 +222,8 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
           <div className="flex items-center gap-2 text-danger">
             <Trash2 size={20} />
@@ -233,12 +233,12 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
         </div>
 
         <div className="p-6 space-y-3">
-          <p className="text-[13px] text-text leading-relaxed">
+          <p className="text-body text-text leading-relaxed">
             Xóa bản nháp <strong className="font-bold">{itemName}</strong>?
           </p>
-          <p className="text-[13px] text-text-muted">Vật phẩm sẽ bị xóa vĩnh viễn. Không thể hoàn tác.</p>
+          <p className="text-body text-text-muted">Vật phẩm sẽ bị xóa vĩnh viễn. Không thể hoàn tác.</p>
           {errorMessage && (
-            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-xl flex items-start gap-2 text-[13px] text-danger-dark">
+            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
               <AlertTriangle size={16} className="shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -277,10 +277,10 @@ export const TypeChangeConfirmationModal: React.FC<TypeChangeConfirmationModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
-          <div className="flex items-center gap-2 text-amber-600">
+          <div className="flex items-center gap-2 text-warning-dark">
             <AlertTriangle size={20} />
             <h3 id={titleId} className="text-sm font-bold text-text">Thay Đổi Loại Vật Phẩm</h3>
           </div>
@@ -291,9 +291,9 @@ export const TypeChangeConfirmationModal: React.FC<TypeChangeConfirmationModalPr
           <p className="text-xs text-text leading-relaxed">
             Bạn đang chuyển sang loại <strong className="text-text font-bold">{formatShopItemTypeLabel(newType)}</strong>.
           </p>
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+          <div className="p-3 bg-warning-light border border-warning/40 rounded-lg text-xs text-warning-dark">
             <p className="font-semibold">Cấu hình riêng của loại hiện tại sẽ bị xóa.</p>
-            <p className="mt-0.5 text-amber-800">
+            <p className="mt-0.5 text-warning-dark">
               Các thông tin đặc thù của loại cũ sẽ bị đặt lại về giá trị mặc định của loại mới.
             </p>
           </div>
@@ -325,19 +325,19 @@ export const VersionConflictBanner: React.FC<VersionConflictBannerProps> = ({
   isReloading = false,
 }) => {
   return (
-    <div className="p-4 bg-rose-50 border border-rose-300 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+    <div className="p-4 bg-danger-light border border-danger/40 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
       <div className="flex items-start gap-3">
-        <AlertTriangle size={20} className="text-rose-600 shrink-0 mt-0.5" />
+        <AlertTriangle size={20} className="text-danger-dark shrink-0 mt-0.5" />
         <div>
-          <h4 className="text-xs font-bold text-rose-900">
+          <h4 className="text-xs font-bold text-danger-dark">
             Xung đột phiên bản
           </h4>
-          <p className="text-xs text-rose-800 mt-0.5 leading-relaxed">
+          <p className="text-xs text-danger-dark mt-0.5 leading-relaxed">
             Vật phẩm này đã được chỉnh sửa ở phiên khác. Phiên bản hiện tại trên máy chủ là{' '}
             <strong>v{serverVersion ?? '?'}</strong>, phiên bản cục bộ đang giữ là{' '}
             <strong>v{localVersion ?? '?'}</strong>.
           </p>
-          <p className="text-[11px] text-rose-700 mt-1 italic">
+          <p className="text-xs text-danger-dark mt-1">
             Phần bạn đang nhập được giữ lại: sau khi tải, bạn có thể áp dụng lại hoặc bỏ thay đổi.
           </p>
         </div>

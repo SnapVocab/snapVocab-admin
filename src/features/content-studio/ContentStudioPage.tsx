@@ -15,6 +15,7 @@ import { WordEditor } from './WordEditor';
 import { MobileSimulator } from '../../components/preview/MobileSimulator';
 import { INITIAL_VOCABULARY } from '../../domains/vocabulary/mock-data';
 import { CardViewModel, VocabStatus } from '../../domains/flashcard/types';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 interface ContentStudioPageProps {
   onWordChange?: (wordName: string) => void;
@@ -48,6 +49,7 @@ export const ContentStudioPage: React.FC<ContentStudioPageProps> = ({ onWordChan
   // Responsive panel visibility
   const [showWordList, setShowWordList] = useState(true);
   const [showMobileSimulator, setShowMobileSimulator] = useState(true);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Persistence status
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -125,23 +127,23 @@ export const ContentStudioPage: React.FC<ContentStudioPageProps> = ({ onWordChan
 
   // Reset to initial mock data
   const handleResetToInitial = () => {
-    const confirmed = window.confirm(
-      'Bạn có chắc chắn muốn khôi phục dữ liệu mẫu gốc? Mọi thay đổi lưu tạm trên trình duyệt sẽ được làm mới.'
-    );
-    if (confirmed) {
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch (e) {
-        // ignore
-      }
-      setVocabulary(INITIAL_VOCABULARY);
-      setSelectedWordId(INITIAL_VOCABULARY[0]?.id || '');
-      setSaveStatus('saved');
-      setLastSavedAt(new Date());
-      if (onWordChange && INITIAL_VOCABULARY[0]) {
-        onWordChange(INITIAL_VOCABULARY[0].word);
-      }
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      // ignore
     }
+    setVocabulary(INITIAL_VOCABULARY);
+    setSelectedWordId(INITIAL_VOCABULARY[0]?.id || '');
+    setSaveStatus('saved');
+    setLastSavedAt(new Date());
+    if (onWordChange && INITIAL_VOCABULARY[0]) {
+      onWordChange(INITIAL_VOCABULARY[0].word);
+    }
+    setShowResetConfirm(false);
   };
 
   const handleSelectWord = (id: string) => {
@@ -386,6 +388,19 @@ export const ContentStudioPage: React.FC<ContentStudioPageProps> = ({ onWordChan
           </div>
         )}
       </div>
+
+      {/* Reset Mock Data Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showResetConfirm}
+        tone="warning"
+        title="Khôi phục dữ liệu mẫu gốc?"
+        description="Mọi thay đổi từ vựng lưu tạm trên trình duyệt sẽ được làm mới về bộ thẻ mẫu tiêu chuẩn của hệ thống."
+        confirmLabel="Khôi phục mẫu gốc"
+        cancelLabel="Hủy"
+        confirmVariant="danger"
+        onConfirm={handleConfirmReset}
+        onClose={() => setShowResetConfirm(false)}
+      />
     </div>
   );
 };

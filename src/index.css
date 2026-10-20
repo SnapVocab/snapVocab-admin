@@ -1,131 +1,21 @@
-/* Import Tailwind base styles */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
- * SnapVocab Master Design Tokens — CSS Variables Specification
- * Source of Truth: docs/design.md
- * Đồng bộ trực tiếp với docs/colors.js và tailwind.config.js.
+ * Design tokens live in tailwind.config.js only (design.md §3). This file holds base styles the utilities cannot express.
+ * The admin is light-only (design.md §10), so there is no dark palette here.
  */
 
-:root {
-  /* Font Families — design.md §04 */
-  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-display: 'Nunito', 'Inter', system-ui, sans-serif;
-  --font-family-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-  /* 1. Canvas & Surfaces (Data-Dense Operator Layout) */
-  --color-background: #F8F9F7;
-  --color-surface: #FFFFFF;
-  --color-surface-subtle: #F3F4F6;
-  --color-border: #E5E7EB;
-  --color-border-strong: #D1D5DB;
-
-  /* 2. Text Hierarchy */
-  --color-text: #171717;
-  --color-text-muted: #6B7280;
-  --color-text-light: #9CA3AF;
-  --color-text-inverse: #FFFFFF;
-
-  /* 3. Primary Green — #58CC02: CTA, Approve/Publish, Tiêu chuẩn chất lượng */
-  --color-primary-50: #F0FCE4;
-  --color-primary-100: #DEF7C4;
-  --color-primary-200: #C2EE96;
-  --color-primary-300: #A0E063;
-  --color-primary-400: #7DD634;
-  --color-primary-500: #58CC02;
-  --color-primary-600: #46A302;
-  --color-primary-700: #3C8C00;
-  --color-primary-800: #2F6E00;
-  --color-primary-900: #1F4A00;
-
-  /* 4. Mascot & Snapy Orange — #FF8A00: Mascot, Streak Flame, AI Camera Scan */
-  --color-mascot-50: #FFF8EF;
-  --color-mascot-100: #FFF3E0;
-  --color-mascot-200: #FFDDB3;
-  --color-mascot-300: #FFC685;
-  --color-mascot-400: #FFB65C;
-  --color-mascot-500: #FF8A00;
-  --color-mascot-600: #E07A00;
-  --color-mascot-700: #B35F00;
-  --color-mascot-800: #A75C21;
-  --color-mascot-900: #663700;
-
-  /* 5. Reward Gold — #FFC42E: Kinh tế ảo (Coins/Gems), Shop, Rewards, Chest */
-  --color-reward-50: #FFF9E6;
-  --color-reward-100: #FFEFB8;
-  --color-reward-200: #FFE594;
-  --color-reward-300: #FFDA6B;
-  --color-reward-400: #FFCF4A;
-  --color-reward-500: #FFC42E;
-  --color-reward-600: #E0AB26;
-  --color-reward-700: #B37F00;
-  --color-reward-800: #805B00;
-  --color-reward-900: #4D3700;
-
-  /* 6. Info Blue — #1CB0F6: In Review, Hints, CEFR Guidance, Pronunciation audio */
-  --color-info-50: #E8F7FE;
-  --color-info-100: #C7ECFC;
-  --color-info-200: #9BDDFA;
-  --color-info-300: #5CC4F8;
-  --color-info-400: #3ABAF7;
-  --color-info-500: #1CB0F6;
-  --color-info-600: #1899D6;
-  --color-info-700: #0B6E9C;
-  --color-info-800: #084F70;
-  --color-info-900: #053347;
-
-  /* 7. Danger Red — #EF4444: Hủy, Xóa, Lưu trữ (Archive), Sự cố báo lỗi scan */
-  --color-danger-50: #FEF2F2;
-  --color-danger-100: #FEE2E2;
-  --color-danger-200: #FECACA;
-  --color-danger-300: #FCA5A5;
-  --color-danger-400: #F87171;
-  --color-danger-500: #EF4444;
-  --color-danger-600: #DC2626;
-  --color-danger-700: #B91C1C;
-  --color-danger-800: #991B1B;
-  --color-danger-900: #7F1D1D;
-
-  /* 8. Content Studio State Machine Badges */
-  --color-status-draft-text: #4B5563;
-  --color-status-draft-bg: #F3F4F6;
-  --color-status-draft-border: #E5E7EB;
-
-  --color-status-review-text: #0B8FCE;
-  --color-status-review-bg: #E8F7FE;
-  --color-status-review-border: #9BDDFA;
-
-  --color-status-published-text: #3C8C00;
-  --color-status-published-bg: #F0FCE4;
-  --color-status-published-border: #C2EE96;
-
-  --color-status-archived-text: #DC2626;
-  --color-status-archived-bg: #FEE2E2;
-  --color-status-archived-border: #FECACA;
-
-  /* 9. CEFR Level Badges */
-  --color-cefr-a1: #10B981;
-  --color-cefr-a2: #14B8A6;
-  --color-cefr-b1: #F59E0B;
-  --color-cefr-b2: #F97316;
-  --color-cefr-c1: #8B5CF6;
-  --color-cefr-c2: #F43F5E;
-}
-
-/* Base Body Styling */
 body {
-  background-color: var(--color-background);
-  color: var(--color-text);
-  font-family: var(--font-family-sans);
   margin: 0;
-  padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Inter: tailed l and serifed I, so codes, emails and IDs never mix up l / I / 1. */
+  font-feature-settings: 'cv05', 'cv08';
 }
 
-/* Custom Thin Scrollbar for Data-Dense Panels */
+/* Thin scrollbars for data-dense panels. */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -142,26 +32,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #9CA3AF;
-}
-
-/* Dark Mode Tokens — design.md §14 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: #0F172A;
-    --color-surface: #1E293B;
-    --color-surface-subtle: #334155;
-    --color-border: #334155;
-    --color-border-strong: #475569;
-
-    --color-text: #F8FAFC;
-    --color-text-muted: #94A3B8;
-    --color-text-light: #64748B;
-    --color-text-inverse: #0F172A;
-
-    --color-primary-500: #7DD634;
-    --color-mascot-500: #FF9A1F;
-    --color-reward-500: #FFD454;
-    --color-info-500: #3ABAF7;
-    --color-danger-500: #F87171;
-  }
 }

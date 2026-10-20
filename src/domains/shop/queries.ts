@@ -47,6 +47,13 @@ export function useAdminShopItems(params: ShopItemListParams = {}) {
 }
 
 /**
+ * The whole catalog in one page (backend MAX_PAGE_SIZE). Shared by the storefront and the editor's price guardrail.
+ * ponytail: one page covers the catalog (19 items in 2026-10); switch the list back to server paging past 100.
+ */
+export const CATALOG_PARAMS: ShopItemListParams = { page: 0, size: 100 };
+export const useShopCatalog = () => useAdminShopItems(CATALOG_PARAMS);
+
+/**
  * Hook to fetch single item detail
  */
 export function useAdminShopItem(id: number | string | null | undefined) {

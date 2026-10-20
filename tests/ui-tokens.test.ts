@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import config from '../tailwind.config.js';
+import { cn } from '../src/lib/utils';
+
+test('cn keeps custom font sizes next to text colours, and still resolves size conflicts', () => {
+  assert.equal(cn('text-body', 'text-text-muted'), 'text-body text-text-muted');
+  assert.equal(cn('text-figure tabular-nums', 'text-text-light'), 'text-figure tabular-nums text-text-light');
+  assert.equal(cn('text-2xs', 'text-text'), 'text-2xs text-text');
+  assert.equal(cn('text-xs text-text', 'text-body'), 'text-text text-body');
+  const sizes = (config.theme.extend as { fontSize: Record<string, unknown> }).fontSize;
+  for (const size of ['2xs', 'body', 'figure']) assert.ok(sizes[size], `tailwind.config.js defines text-${size}`);
+});
 
 /** WCAG 2.x contrast ratio of two #RRGGBB colors. */
 function contrast(a: string, b: string) {
