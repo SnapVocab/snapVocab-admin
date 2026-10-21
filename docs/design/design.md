@@ -1,6 +1,6 @@
 # SnapVocab Admin — Đặc tả Thiết kế & Kiến trúc Giao diện
 
-> **Rev 4 · 2026-10-20 · Trạng thái: đã áp dụng vào code, chờ PO duyệt ảnh trước/sau** (PD-ADS-15…22, §13).
+> **Rev 4 · 2026-10-20 · Trạng thái: đã áp dụng vào code, chờ PO duyệt ảnh trước/sau** (PD-ADS-15…23, §13).
 > Rev 4 thêm **§3.7 Ngôn ngữ giao diện** sau đánh giá "giao diện vẫn mang đậm chất AI" của PO. Mật độ thông tin giữ nguyên; thứ thay đổi là cách trình bày. Các điều khoản cũ sinh ra khuôn lặp đã được sửa: §2 P5, §3.3, §3.4, §3.5, §4.1, §4.2, §5.1, §5.2.
 >
 > **Rev 3 · 2026-10-19 · PO đã duyệt** (§13). Rev 3 áp [đánh giá sản phẩm 2026-10-19](../../../docs/reviews/admin_product_review_2026-10-19.md):
@@ -11,7 +11,7 @@
 >
 > Rev 2 thay toàn bộ rev 1 (bản prototype có CEFR, workflow Review, `CardViewModel` tự đặt, Gemini fine-tuning).
 >
-> Đặc tả màn đã áp dụng hướng này: [Cửa hàng](./shop_ui.md) · [Nhiệm vụ hằng ngày](./missions_ui.md).
+> Đặc tả màn đã áp dụng hướng này: [Cửa hàng](./shop_ui.md) · [Nhiệm vụ hằng ngày](./missions_ui.md) · [Huy hiệu](../../../docs/ui/admin_badges_ui.md) · [Bảng xếp hạng](./leaderboard_ui.md) · [Mẫu thẻ](./templates_ui.md).
 > Nghiệp vụ: [shop.md](../../../docs/decisions/shop.md), [daily_mission.md](../../../docs/decisions/daily_mission.md), [badges.md](../../../docs/decisions/badges.md). Khi mâu thuẫn, quyết định nghiệp vụ của PO đứng trên tài liệu này; tài liệu này đứng trên code prototype.
 
 ---
@@ -177,7 +177,7 @@ Mục tiêu: admin trông như công cụ một đội vận hành dùng hằng 
 | **G5** Lời | Tiếng Việt viết cho người vận hành. Không mã spec (F-…, PD-…, OQ-…, "design.md") trên giao diện. Enum và mã kỹ thuật đổi thành nhãn qua module dùng chung (`domains/scan/labels.ts`, `formatShopItemStatusLabel`…); mã gốc nằm trong tooltip hoặc dòng "Mã kỹ thuật". Thuật ngữ nghề giữ nguyên có chủ đích: LiveOps, Dashboard, Coin, XP, Streak, Booster, Slot, AI Scan. Không nối nhiều mệnh đề bằng chuỗi "·"; tách bằng cột, khoảng cách hoặc dấu phẩy. | `admin-analytics.test.ts` A8, `admin-overview.test.ts` O7 |
 | **G6** Kết luận | Kết luận tính từ dữ liệu được **vẽ vào dữ liệu**: thứ tự sắp xếp, dòng tô màu, dấu trên biểu đồ, meta của khối. Không có hộp 💡, "Chẩn đoán" hay "Nên làm" cuối khối. Lời khuyên hành động chỉ nằm ở "Cần xử lý". Nút chỉ hứa điều nó làm được: tính năng chưa có thì dùng link điều hướng ("Mở AI Scan"), không ghi "Gán nhãn → từ". | A8, O7 |
 | **G7** Biểu đồ | Nối các điểm theo ngày bằng đường thẳng (không bezier), nền phẳng, không chấm ở mọi điểm. Nhãn trục bằng HTML nên không bị kéo giãn. Tooltip ghi số chính xác. | `components/charts` |
-| **G8** Mỗi màn một dạng | Dashboard: danh sách việc, rồi các dải theo câu hỏi vận hành. Phân tích: so sánh và xu hướng. Người học: danh bạ và hồ sơ. Cửa hàng: kệ như trong app. Nhiệm vụ: bảng nhóm theo kết quả và mô phỏng một ngày. Từ điển, Chủ đề: bảng dữ liệu và cây. Không áp một bố cục cho mọi màn. | Ảnh chụp |
+| **G8** Mỗi màn một dạng | Dashboard: danh sách việc, rồi các dải theo câu hỏi vận hành. Phân tích: so sánh và xu hướng. Người học: danh bạ và hồ sơ. Cửa hàng: kệ như trong app. Nhiệm vụ: bảng nhóm theo kết quả và mô phỏng một ngày. Huy hiệu: kệ như màn Thành tựu và bảng bậc thang theo chuỗi. Bảng xếp hạng: đúng bảng người học thấy, kèm tín hiệu và phân bố. Từ điển, Chủ đề: bảng dữ liệu và cây. Không áp một bố cục cho mọi màn. | Ảnh chụp |
 
 **Dấu hiệu "template AI" cần tránh** (đã gỡ ở rev 4):
 
@@ -208,16 +208,16 @@ Mục tiêu: admin trông như công cụ một đội vận hành dùng hằng 
 | | Phân tích (`/analytics/:tab`) | MOCK · **NOW** (tên chủ đề, vật phẩm, giá, trạng thái bán, mẫu nhiệm vụ) · FUTURE (giữ chân theo % khi < 200 người học) | **Đã làm lại 2026-10-19**: 4 tab Học tập · Giữ chân · Kinh tế · Scan, mỗi biểu đồ có kết luận + hành động ([analytics_ui.md](./analytics_ui.md)) |
 | LEARNING | Từ điển (`/dictionary`, `/dictionary/:word`) | **NOW** (tra cứu) · MOCK (sửa) · FUTURE (ảnh hưởng, xóa mềm) | **Đã làm lại 2026-10-19** ([dictionary_ui.md](./dictionary_ui.md)) |
 | | Chủ đề (`/topics/:collectionId/:rootId/:childId`) | **NOW** (collection CRUD; tạo chủ đề; thêm mục từ; đổi mẫu thẻ) · cần API (sửa/xóa chủ đề và mục từ, Nháp/Phát hành) | **Đã làm lại 2026-10-19** ([topics_ui.md](./topics_ui.md)) |
-| | Mẫu thẻ (`/templates`) | **NOW** (sửa mẫu hệ thống qua schema) + MOCK | Bản mock cũ |
+| | Mẫu thẻ (`/templates`, `/templates/:id`) | **NOW** (đọc schema, mẫu, chủ đề, mục từ) · MOCK (sửa mẫu, đặt mặc định: chưa có API ghi; không dùng `PUT /api/schemas/{id}`) | **Đã làm lại 2026-10-21** ([templates_ui.md](./templates_ui.md)): mỗi mẫu một hàng vẽ bằng renderer của app trên từ thật, bảng thuộc tính × mẫu, editor theo §5.5 với kiểm tra Quiz, hiển thị, dữ liệu. Ghi chờ `PUT`/`POST /api/admin/templates` (§8 của đặc tả) |
 | | AI Scan (`/ai-scan`) | MOCK (Vận hành · Nhãn chưa có từ · Lịch sử) | Bản mock cũ. Gộp Scan Monitor |
 | LIVEOPS | Nhiệm vụ hằng ngày (`/missions`, `/missions/:id`) | **NOW** | Đã làm lại (rev 2). Thêm panel Hiệu quả: MOCK |
 | | Cửa hàng & Vật phẩm (`/shop`, `/shop/:id`) | **NOW** | Đã làm lại (rev 2). Thêm panel Hiệu quả: MOCK |
-| | Huy hiệu (`/badges`) | **NOW** P1 · MOCK P2 | Sau cờ `VITE_ADMIN_BADGES_ENABLED` |
+| | Huy hiệu (`/badges`, `/badges/:id`) | **NOW** P1 (xem) · MOCK P2 (sửa nội dung, Bật/Tắt, ước tính cấp bù) | **Đã làm lại 2026-10-21** ([admin_badges_ui.md](../../../docs/ui/admin_badges_ui.md) rev 3). Sau cờ `VITE_ADMIN_BADGES_ENABLED`; P2 chạy trên dữ liệu mẫu (`VITE_ADMIN_BADGES_FIXTURES`) tới khi có `PATCH` |
 | | Thông báo | **NOW** (composer, A8) · MOCK (lịch sử) | Chưa có màn |
-| | Bảng xếp hạng (xem) | FUTURE | Chờ phía người học phát hành |
+| | Bảng xếp hạng (`/leaderboard`) | MOCK (chỉ xem) | **Đã dựng 2026-10-21** ([leaderboard_ui.md](./leaderboard_ui.md)). Chờ `GET /api/admin/leaderboards` ([leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) rev 1.1); phát hành sau màn người học |
 | PEOPLE | Người học (`/learners`, `/learners/:id`) | **MOCK** | **Đã dựng 2026-10-19** ([learners_ui.md](./learners_ui.md)) |
 | | Phản hồi (bản gọn) | FUTURE | Chờ OQ-ADS-02. Tab "Thiếu từ" nằm trong AI Scan |
-| SYSTEM | Activity Log (`/activity-log`) | MOCK | Bản mock cũ. Rút gọn thành luồng sự kiện + diff |
+| SYSTEM | Nhật ký hoạt động (`/activity-log`, `/activity-log/:loại/:id`) | MOCK | **Đã làm lại 2026-10-20** ([activity_log_ui.md](./activity_log_ui.md)): dải câu hỏi kiêm bộ lọc, dải phân bố ngày · khu vực · người làm, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng. Chờ `admin_audit_logs` |
 | — | Seasons/Leagues, Decks, Settings, Admins & Roles, Báo cáo kiểu SLA | **REMOVE** | Đã gỡ khỏi route và sidebar (file prototype còn trên đĩa, chờ xóa) |
 
 ### 4.2. Quy tắc hiển thị theo bản build
@@ -304,7 +304,7 @@ Editor là trang riêng, không đặt form dài trong modal:
 
 ### 5.6. Content Studio (mục tiêu P2)
 
-Dùng cho Từ vựng và Mẫu thẻ. Chia ba cột: danh sách (280px) · editor · preview mobile (≤ 380px). Preview tuân §6. Màn này chưa được dựng, chờ API.
+Dùng cho Từ vựng. Chia ba cột: danh sách (280px) · editor · preview mobile (≤ 380px). Preview tuân §6. Màn này chưa được dựng, chờ API. (Mẫu thẻ dùng editor §5.5 với preview ở cột phải, 2026-10-21.)
 
 ### 5.7. Console hàng đợi AI Scan (mục tiêu P3)
 
@@ -353,8 +353,8 @@ Dùng cho Từ vựng và Mẫu thẻ. Chia ba cột: danh sách (280px) · edit
 | Card vật phẩm Shop, theme | `SnapVocab/src/features/shop/theme/theme-context.tsx` (bề mặt sáng/tối), card Cửa hàng/Kho đồ | `ShopItemPreview` (`ShopMobileSimulator`), `artwork.ts` | Bề mặt theme mirror tay (TD-ADS-08); khung avatar theo tỉ lệ 58% |
 | Thẻ nhiệm vụ | `SnapVocab/src/features/missions/missions-screen.tsx` (màu ô, copy CTA, "Vật phẩm: CODE") | `MissionCard`, `MissionTile` | Copy và màu giống app; tiến độ luôn 0/N (ngày mới) |
 | Bộ 5 nhiệm vụ | Backend `MissionTracker.SLOTS` / `choose` | `dailyOutlook()` | Mô phỏng cùng thuật toán (TD-ADS-09) |
-| Thẻ học (mục tiêu P2) | `SnapVocab/src/features/card-renderer/utils/data-resolver.ts` | Chưa có | Phải dùng lại logic resolver, không tự đặt `CardViewModel` |
-| Âm thanh (mục tiêu P2) | `SnapVocab/src/lib/hooks/use-tts.ts` (URL Google Translate TTS) | Chưa có | Phát đúng URL mà mobile phát. Không cho chỉnh giọng, tốc độ, cao độ khi mobile chưa hỗ trợ |
+| Thẻ học | `SnapVocab/src/features/card-renderer` (`data-resolver.ts`, `card-field-renderer.tsx`, `card-face.tsx`) và `template-builder/mappers` | `CardFace` (`features/admin-templates/CardPreview.tsx`), `domains/admin-templates/render.ts` | Port hành vi (phần, ngắt cột, dò nhóm, nút nghe, phiên âm, cỡ chữ). Khác: chữ Inter, mặt thẻ không cuộn (TD-TPL-06). Mirror tay (TD-TPL-01) |
+| Âm thanh | `SnapVocab/src/lib/hooks/use-tts.tsx` (URL Google Translate TTS) | `ttsUrl` (`domains/admin-templates/render.ts`) | Phát đúng URL mà mobile phát; trình duyệt có thể chặn. Không cho chỉnh giọng, tốc độ, cao độ khi mobile chưa hỗ trợ |
 
 Quy tắc về **ngữ cảnh mẫu** trong preview (người học mẫu, ví mẫu, vật phẩm đứng cạnh):
 
@@ -401,7 +401,7 @@ Hiển thị gợi ý: hộp `warning` có `AlertTriangle`, nêu con số so sá
 
 **Thiết kế mục tiêu (PD-ADS-10, đề xuất):**
 
-1. Một bảng `admin_audit_log` dùng chung, cùng hình dạng như trên, với `target_type` mở rộng theo từng khu vực.
+1. Một bảng `admin_audit_logs` dùng chung, cùng hình dạng như trên, với `target_type` mở rộng theo từng khu vực.
 2. Ghi audit **trong cùng transaction** với thay đổi. Audit thất bại thì thay đổi thất bại theo.
 3. Bắt buộc nhập `reason` khi: cấp Coin hoặc vật phẩm, khôi phục streak, ngừng bán vĩnh viễn, giá hoặc thưởng vượt guardrail.
 4. UI:
@@ -409,6 +409,8 @@ Hiển thị gợi ý: hộp `warning` có `AlertTriangle`, nêu con số so sá
    - Màn Activity Log (SYSTEM) lọc theo người thực hiện, khu vực và thời gian.
 
 Cho tới khi có audit, panel "Vòng đời" chỉ hiển thị mốc thời gian thật (tạo, phát hành, sửa gần nhất, version) kèm dòng "Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ."
+
+Màn Nhật ký hoạt động đã dựng trên dữ liệu mẫu (2026-10-20); contract đề xuất `GET /api/admin/audit-log` và danh mục thao tác được ghi ở [activity_log_ui.md](./activity_log_ui.md) §2. **Đặc tả triển khai backend** (bảng `admin_audit_logs`, ghi audit trong từng service, guardrail tính ở backend, API, test, nghiệm thu): [docs/sa/admin_audit_log_backend.md](../../../docs/sa/admin_audit_log_backend.md). Ở bản dev/demo, panel "Vòng đời" (Cửa hàng, Nhiệm vụ) và khối "Tài khoản" của hồ sơ người học có link "Xem nhật ký mẫu" tới lịch sử của đối tượng.
 
 ---
 
@@ -491,9 +493,10 @@ Quy tắc:
 | TD-ADS-17 | Dữ liệu lệch schema: 15.663/15.664 mục giữ giải nghĩa ở `main.meaning` (không có trong DEFAULT_ENGLISH), nhóm `meaning` bắt buộc thì trống | Migrate dữ liệu |
 | TD-ADS-18 | 2.075 cặp (chủ đề, từ) bị trùng trong nội dung hệ thống | Dọn dữ liệu |
 | TD-ADS-19 | Mục từ tải một trang 500 (đủ cho hiện tại: tối đa 500, trung bình 83) | Khi có chủ đề > 500 mục |
-| TD-ADS-20 | Ba màn bản cũ (Mẫu thẻ, AI Scan, Nhật ký hoạt động) chưa theo §3.7; vẫn sau banner "Bản mock cũ" | Khi làm lại từng màn (PD-ADS-13) |
+| TD-ADS-20 | Màn bản cũ còn lại: AI Scan, chưa theo §3.7, vẫn sau banner "Bản mock cũ". Nhật ký hoạt động làm lại 2026-10-20 (mã mock cũ đã xóa 2026-10-21); Mẫu thẻ làm lại 2026-10-21 (mã mock cũ `features/templates`, `domains/templates` còn trên đĩa, TD-TPL-05) | Khi làm lại AI Scan (PD-ADS-13) |
 | TD-ADS-21 | Fixture người học #101: chưa học lần nào nhưng kỷ lục streak 43 và có huy hiệu streak (lệch AC-LRN-05) | Nhỏ, dữ liệu mẫu |
 | TD-ADS-22 | Cảnh báo lint có sẵn: `set-state-in-effect` (CommandPaletteModal, ShopItemEditorPage), `immutability` (DonutChart, chỉ màn cũ dùng) | Nhỏ |
+| TD-ADS-23 | ~~Mock cũ `features/seasons`, `domains/seasons`, `domains/badges`~~ | **Xong** 2026-10-21: đã xóa theo đồng ý của PO (bản sao trong scratchpad) |
 
 Cập nhật 2026-10-20: **TD-ADS-05** — hộp xác nhận riêng của Nhiệm vụ và `ShopModals` đã cùng hình thức với `ConfirmModal` chung (bo `rounded-lg`, không blur, không ô icon), nhưng vẫn là component riêng. **TD-ADS-06** — đã gỡ "Bảo hiểm Streak" (Streak Freeze), "Diamond League · Top 1" và tên "Jane Doe" khỏi mô phỏng Cửa hàng, và ghi nhãn số mẫu ngay dưới khung; số ví/streak mẫu vẫn chưa lấy từ dữ liệu thật. **TD-ADS-14** — xong (thẻ Cửa hàng không còn nhãn loại 10px).
 
@@ -516,7 +519,7 @@ PO duyệt toàn bộ ngày **2026-10-19**: "đồng ý với các đề xuất 
 | PD-ADS-07 | IA và scope §4 (rev 3) |
 | PD-ADS-08 | Gộp Scan Monitor vào AI Scan |
 | PD-ADS-09 | Hợp đồng preview §6 và quy tắc ngữ cảnh mẫu |
-| PD-ADS-10 | `admin_audit_log` ghi trong cùng transaction; bắt buộc lý do cho thao tác §8 (backend FUTURE) |
+| PD-ADS-10 | `admin_audit_logs` ghi trong cùng transaction; bắt buộc lý do cho thao tác §8 (backend FUTURE) |
 | PD-ADS-11 | Stack §10 |
 | PD-ADS-12 | Bộ 5 nhiệm vụ ví dụ và thưởng/ngày tính từ catalog thật |
 | PD-ADS-13 | Thứ tự làm lại: Shell & IA → Người học → Từ điển + Chủ đề → AI Scan → Dashboard (C) → Activity Log |
@@ -534,6 +537,10 @@ Rev 4, ngày 2026-10-20. PO yêu cầu "loại bỏ cảm giác AI-generated" v�
 | PD-ADS-20 | Phân tích: bỏ "kết luận + nút" ở cuối mỗi biểu đồ; kết luận vẽ vào dữ liệu (thay [analytics_ui.md](./analytics_ui.md) §1 rev 1) |
 | PD-ADS-21 | Dashboard: "Cần xử lý" thành danh sách theo mức độ; 6 khối gộp thành 3 dải Scan · Nhịp học + Nhiệm vụ · Kinh tế + Cửa hàng ([dashboard_ui.md](./dashboard_ui.md) rev 2) |
 | PD-ADS-22 | Nhãn enum dùng chung một nguồn: `domains/scan/labels.ts` (lỗi scan, độ tin cậy), `formatShopItemStatusLabel` |
+| PD-ADS-23 | Nhật ký hoạt động theo [activity_log_ui.md](./activity_log_ui.md): tab theo phân hệ thành bộ lọc; bỏ hash, IP, tỉ lệ tuân thủ, hoàn tác; thêm lịch sử từng đối tượng, link từ "Vòng đời" (2026-10-20) |
+| PD-ADS-24 | Huy hiệu theo [admin_badges_ui.md](../../../docs/ui/admin_badges_ui.md) rev 3: dải số liệu kiêm bộ lọc, "Bộ sưu tập trên ứng dụng", bảng bậc thang có vạch người đạt, kiểm "Cần rà"; editor `/badges/:id` theo §5.5; P2 (sửa, Bật/Tắt, ước tính cấp bù) dựng MOCK trên dữ liệu mẫu (2026-10-21) |
+| PD-ADS-26 | Mẫu thẻ theo [templates_ui.md](./templates_ui.md): đọc bằng API thật; mỗi mẫu một hàng với hai mặt thẻ vẽ bằng renderer port từ app trên từ của chủ đề thật; dải số liệu Vẽ thẻ học / Quiz đang dùng / Chưa dùng / Cần rà; bảng thuộc tính × mẫu; editor `/templates/:id` (§5.5) với kiểm tra Quiz mirror `QuizContentResolver`, cảnh báo hiển thị (lộ đáp án), độ phủ dữ liệu; sửa và đặt mặc định MOCK. Bỏ kiểm duyệt mẫu tùy chỉnh, Deck, kiểu tương tác, tỉ lệ nhớ theo mẫu. Sửa mô tả hộp đổi mẫu ở màn Chủ đề: đổi mẫu của chủ đề chỉ đổi Quiz (OQ-TPL-01) (2026-10-21) |
+| PD-ADS-25 | Bảng xếp hạng theo [leaderboard_ui.md](./leaderboard_ui.md): thay mock Seasons; chỉ xem; dải số liệu, dải phân bố, bảng theo thứ tự người học thấy, drawer kèm mô phỏng app; ngưỡng "Cần xem" 1.500 XP/giờ và 1.000 XP ôn thẻ/ngày học (OQ-LBA-01); API admin thêm `rankChange` (2026-10-21) |
 
 ### 13.2. Câu hỏi đã trả lời
 
@@ -561,8 +568,11 @@ Theo đề xuất trong đánh giá 2026-10-19:
 | AI Scan | Vận hành · Nhãn chưa có từ · Lịch sử | Sau |
 | Dashboard C | 11 quy tắc "Cần xử lý" (6 NOW, 5 MOCK) + vận hành scan, nhịp học, nhiệm vụ, kinh tế, cửa hàng, thay đổi gần đây | **Xong** 2026-10-19. Chờ `GET /api/admin/overview`, OQ-DASH-01/02 |
 | Phân tích | 4 tab Học tập · Giữ chân · Kinh tế · Scan; kết luận + hành động mỗi biểu đồ; giữ chân theo % chỉ hiện khi ≥ 200 người học | **Xong** 2026-10-19. Chờ `GET /api/admin/analytics`, OQ-ANL-01…03 |
-| Activity Log | — | Sau |
-| Backend (theo thứ tự) | Admin users → dictionary → đọc scan + thống kê → bảng ánh xạ nhãn → `admin_audit_log` → overview → thống kê LiveOps | Theo đánh giá §10F |
+| Nhật ký hoạt động | Dải câu hỏi, dải phân bố, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng, xuất CSV | **Xong** 2026-10-20 (MOCK). Chờ `admin_audit_logs`, OQ-LOG-01…03 |
+| Huy hiệu (rev 3) | Danh mục theo chuỗi + kệ trên ứng dụng; editor `/badges/:id`; P2 MOCK | **Xong** 2026-10-21. P1 dùng API thật; P2 chờ `PATCH`, cột `version`, API ước tính (OQ-BDGA-01/02) |
+| Bảng xếp hạng | Dải số liệu, phân bố, bảng, "Cần xem", drawer + mô phỏng app | **Xong** 2026-10-21 (MOCK). Chờ backend (leaderboard_backend.md rev 1.1), OQ-LBA-01…03 |
+| Mẫu thẻ | Thư viện vẽ bằng renderer của app, bảng thuộc tính × mẫu, editor với kiểm tra Quiz/hiển thị/dữ liệu | **Xong** 2026-10-21 (đọc NOW, ghi MOCK). Chờ API ghi (templates_ui.md §8), OQ-TPL-01…04 |
+| Backend (theo thứ tự) | Admin users → dictionary → đọc scan + thống kê → bảng ánh xạ nhãn → `admin_audit_logs` → overview → thống kê LiveOps | Theo đánh giá §10F |
 
 ## 15. Truy vết
 
@@ -586,3 +596,7 @@ Theo đề xuất trong đánh giá 2026-10-19:
 | Từ điển, Chủ đề (NOW) | `domains/admin-content/*`, `features/admin-dictionary/*`, `features/admin-topics/*`, `components/ui/{Drawer,Field}.tsx` | `tests/admin-content.test.ts` (C1–C6), `tests/admin-content.dom.test.ts` (T1–T4, D1) |
 | Dashboard C | `domains/admin-overview/*`, `features/dashboard/*` | `tests/admin-overview.test.ts` (O1–O7) |
 | Phân tích | `domains/admin-analytics/*`, `features/analytics/*` | `tests/admin-analytics.test.ts` (A1–A8) |
+| Nhật ký hoạt động | `domains/admin-audit/*`, `features/activity-log/*`; `toCsv`, `downloadCsv` ở `lib/utils.ts` (dùng chung với Phân tích) | `tests/admin-audit.test.ts` (AU1–AU6), `tests/admin-audit.dom.test.ts` (D1–D3) |
+| Huy hiệu | `domains/admin-badges/*` (`reviewIssues`, `appShelves`, form P2, kho mẫu), `features/admin-badges/*` (BadgeCatalog, BadgeEditor, ToggleBadgeDialog) | `tests/admin-badges.test.ts`, `tests/admin-badges.dom.test.ts` |
+| Bảng xếp hạng | `domains/admin-leaderboard/*` (`flagsOf`, `ANOMALY`, `gapAbove`, `learnerView`, `xpBands`), `features/admin-leaderboard/LeaderboardPage.tsx` | `tests/admin-leaderboard.test.ts` (LB1–LB7), `tests/admin-leaderboard.dom.test.ts` (D1–D4) |
+| Mẫu thẻ | `domains/admin-templates/*` (`render.ts` port renderer app; `quizChecks`, `renderIssues`, `fieldCoverage`, draft), `features/admin-templates/*` (TemplatesPage, TemplateLibrary, TemplateEditor, CardPreview) | `tests/admin-templates.test.ts` (TP1–TP8), `tests/admin-templates.dom.test.ts` (DT1–DT4) |

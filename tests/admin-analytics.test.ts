@@ -48,6 +48,10 @@ test('A2. funnel: conversions from start and from the previous step; worst step 
   assert.equal(steps[2].lost, 45);
   assert.equal(steps[3].fromStart, 0.4);
   assert.equal(steps[worst].key, 'withWord');
+  // "saved" not measured yet (backend returns null): the step is left out, not drawn as 0 and never the worst.
+  const unmeasured = funnelSteps({ submitted: 100, done: 95, withLabels: 90, withWord: 45, saved: null });
+  assert.deepEqual(unmeasured.steps.map((s) => s.key), ['submitted', 'withLabels', 'withWord']);
+  assert.equal(unmeasured.steps[unmeasured.worst].key, 'withWord');
 });
 
 test('A3. Coin verdict bands', () => {

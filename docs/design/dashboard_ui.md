@@ -49,6 +49,8 @@ Hàm thuần `runChecks` (`src/domains/admin-overview/mappers.ts`). Mỗi quy t�
 
 `GET /api/admin/overview` → `AdminOverview` (`src/domains/admin-overview/types.ts`): người học (đã kích hoạt, 7 ngày, hôm nay, 14 ngày, hoạt động hôm nay), scan (cấu hình, hôm nay, 14 ngày, mã lỗi 7 ngày), nhãn chưa có từ, Coin vào/ra 14 ngày, hiệu quả nhiệm vụ theo `code`, lượt mua 30 ngày theo `code`. Mọi chuỗi ngày theo `Asia/Ho_Chi_Minh`.
 
+Đặc tả backend (nguồn và công thức từng trường, dữ liệu phải ghi thêm, migration, test): [admin_overview_backend.md](../../../docs/sa/admin_overview_backend.md).
+
 Chạy dữ liệu mẫu sau cờ `VITE_ADMIN_OVERVIEW_FIXTURES` (mặc định bật ở dev). Fixture khớp màn Người học (cùng 48 người, 44 đã kích hoạt), mã nhiệm vụ của `MissionCatalogSeeder`, mã lỗi `ScanErrorCode`, cấu hình `application.yaml`.
 
 ## 4. Câu hỏi mở
@@ -56,7 +58,7 @@ Chạy dữ liệu mẫu sau cờ `VITE_ADMIN_OVERVIEW_FIXTURES` (mặc định 
 | ID | Câu hỏi |
 | :--- | :--- |
 | OQ-DASH-01 | Chốt ngưỡng §2 (5% lỗi, p95 10 giây, 10 lượt nhãn, 25% hoàn thành, 7/14 ngày) |
-| OQ-DASH-02 | "Thay đổi gần đây" chỉ có mốc thời gian; ai sửa gì cần `admin_audit_log` (PD-ADS-10) |
+| OQ-DASH-02 | "Thay đổi gần đây" chỉ có mốc thời gian; ai sửa gì cần `admin_audit_logs` (PD-ADS-10) |
 
 ## 5. Truy vết
 

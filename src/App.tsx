@@ -11,7 +11,7 @@ const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage').th
 const DictionaryPage = lazy(() => import('./features/admin-dictionary/DictionaryPage').then((m) => ({ default: m.DictionaryPage })));
 const AnalyticsPage = lazy(() => import('./features/analytics/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
 const TopicsPage = lazy(() => import('./features/admin-topics/TopicsPage').then((m) => ({ default: m.TopicsPage })));
-const TemplatesPage = lazy(() => import('./features/templates/TemplatesPage').then((m) => ({ default: m.TemplatesPage })));
+const TemplatesPage = lazy(() => import('./features/admin-templates/TemplatesPage').then((m) => ({ default: m.TemplatesPage })));
 const AIScanMonitorPage = lazy(() => import('./features/ai-scan/AIScanMonitorPage').then((m) => ({ default: m.AIScanMonitorPage })));
 const ShopEconomyPage = lazy(() => import('./features/shop/ShopEconomyPage').then((m) => ({ default: m.ShopEconomyPage })));
 const AdminMissionsPage = lazy(() => import('./features/admin-missions/AdminMissionsPage').then((m) => ({ default: m.AdminMissionsPage })));
@@ -19,8 +19,9 @@ const AdminMissionsPage = lazy(() => import('./features/admin-missions/AdminMiss
 const AdminBadgesPage = import.meta.env.VITE_ADMIN_BADGES_ENABLED === 'true'
   ? lazy(() => import('./features/admin-badges/AdminBadgesPage').then((m) => ({ default: m.AdminBadgesPage })))
   : null;
+const LeaderboardPage = lazy(() => import('./features/admin-leaderboard/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const LearnersPage = lazy(() => import('./features/admin-learners/LearnersPage').then((m) => ({ default: m.LearnersPage })));
-const AuditActivityLogPage = lazy(() => import('./features/audit/AuditActivityLogPage').then((m) => ({ default: m.AuditActivityLogPage })));
+const ActivityLogPage = lazy(() => import('./features/activity-log/ActivityLogPage').then((m) => ({ default: m.ActivityLogPage })));
 // Dev-only reference page for src/components/ui; `DEV` is false in production, so the chunk is never emitted.
 const UiKitPage = import.meta.env.DEV ? lazy(() => import('./features/ui-kit/UiKitPage')) : null;
 
@@ -29,7 +30,7 @@ const LEAVE_MESSAGE = 'Trang hiện tại có thay đổi chưa lưu hoặc thao
 /** Old prototype screens still link by their old nav ids; map them onto today's routes. */
 const LEGACY_LINKS: Record<string, string> = {
   dashboard: '/', analytics: '/analytics', 'content-studio': '/dictionary', topics: '/topics', templates: '/templates',
-  'ai-queue': '/ai-scan', 'ai-monitor': '/ai-scan', shop: '/shop', missions: '/missions', badges: '/badges',
+  'ai-queue': '/ai-scan', 'ai-monitor': '/ai-scan', shop: '/shop', missions: '/missions', badges: '/badges', leaderboard: '/leaderboard',
   learners: '/learners', 'activity-log': '/activity-log',
 };
 
@@ -58,7 +59,7 @@ function LegacyScreen({ children }: { children: React.ReactNode }) {
 export function AdminWorkspace() {
   const pathname = usePathname();
   const { item, rest } = matchRoute(pathname);
-  // Set by pages with editors (Missions, Shop): unsaved edits or a write in flight.
+  // Set by pages with editors (Missions, Shop, Badges, Mẫu thẻ): unsaved edits or a write in flight.
   const [pageDirty, setPageDirty] = useState(false);
   const dirtyRef = useRef(pageDirty);
   useEffect(() => {
@@ -82,15 +83,17 @@ export function AdminWorkspace() {
     switch (item.id) {
       case 'missions': return <AdminMissionsPage onDirtyChange={setPageDirty} sub={rest[0]} />;
       case 'shop': return <ShopEconomyPage onDirtyChange={setPageDirty} sub={rest[0]} />;
-      case 'badges': return AdminBadgesPage ? <AdminBadgesPage /> : null;
+      case 'badges': return AdminBadgesPage ? <AdminBadgesPage sub={rest[0]} onDirtyChange={setPageDirty} /> : null;
+      case 'leaderboard': return <LeaderboardPage />;
       case 'learners': return <LearnersPage sub={rest[0]} />;
       case 'ui-kit': return UiKitPage ? <UiKitPage /> : null;
       case 'analytics': return <AnalyticsPage sub={rest[0]} />;
       case 'dictionary': return <DictionaryPage rest={rest} />;
       case 'topics': return <TopicsPage rest={rest} />;
-      case 'templates': return <LegacyScreen><TemplatesPage {...legacy} /></LegacyScreen>;
+      case 'templates': return <TemplatesPage sub={rest[0]} onDirtyChange={setPageDirty} />;
       case 'ai-scan': return <LegacyScreen><AIScanMonitorPage activeNav="ai-monitor" {...legacy} /></LegacyScreen>;
-      case 'activity-log': return <LegacyScreen><AuditActivityLogPage {...legacy} /></LegacyScreen>;
+      // Keyed by path: opening another object's history starts from fresh filters.
+      case 'activity-log': return <ActivityLogPage key={rest.join('/')} rest={rest} />;
       default: return <DashboardPage />;
     }
   };

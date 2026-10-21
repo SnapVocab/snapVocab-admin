@@ -1,11 +1,11 @@
 /**
  * Proposed contract for the Dashboard's MOCK blocks (admin_product_review_2026-10-19 §6, design.md §4.1 · Dashboard C).
+ * Backend implementation spec, with the source and formula of every field: docs/sa/admin_overview_backend.md.
  * NOT implemented on the backend yet: dev/demo builds run on fixtures (api.ts).
  *
  *   GET /api/admin/overview → AdminOverview   (every series: 14 days ending today, Asia/Ho_Chi_Minh, oldest first)
  *
- * Sources once built: users.last_studied_at, learning activity, scan_requests, coin_transactions,
- * user_daily_missions, user_items. "Cần xử lý" for Shop/Missions does not need it: it reads the real catalogs.
+ * "Cần xử lý" for Shop/Missions does not need it: it reads the real catalogs.
  */
 import type { ScanErrorCode } from '../admin-learners/types';
 
@@ -24,7 +24,8 @@ export interface AdminOverview {
   scan: {
     /** application.yaml `scan.*` as the server runs it. */
     config: { workers: number; queueCapacity: number; quotaPerDay: number; minReliability: 'LOW' | 'MEDIUM' | 'HIGH' };
-    today: { total: number; failed: number; p50Ms: number; p95Ms: number; queueFull: number; quotaHit: number };
+    /** p50Ms/p95Ms: null when no scan finished today. quotaHit: learners refused for quota today. */
+    today: { total: number; failed: number; p50Ms: number | null; p95Ms: number | null; queueFull: number; quotaHit: number };
     daily: { date: string; done: number; failed: number }[];
     errors7d: { code: ScanErrorCode; count: number }[];
   };

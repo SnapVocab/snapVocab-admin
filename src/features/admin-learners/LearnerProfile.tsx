@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AlertCircle, ArrowLeft, Award, BookOpen, Camera, Check, KeyRound, ListChecks, Lock, LockOpen, ShoppingBag, Target, UserRound } from 'lucide-react';
-import { Badge, Button, ConfirmModal, Mini, MiniStrip, Panel, SampleDataNotice, StatCell, SummaryStrip } from '../../components/ui';
+import { Badge, Button, ConfirmModal, Mini, MiniStrip, Panel, SampleDataNotice, StatCell, SummaryStrip, TextLink } from '../../components/ui';
+import { auditUsesFixtures } from '../../domains/admin-audit/config';
+import { historyPath } from '../../domains/admin-audit/mappers';
 import { learnersUseFixtures } from '../../domains/admin-learners/api';
 import { FIXTURE_NOW } from '../../domains/admin-learners/fixtures';
 import { banReasonError, formatAgo, formatDate, STATUS_META } from '../../domains/admin-learners/mappers';
@@ -211,7 +213,10 @@ export function LearnerProfile({ id }: { id: number }) {
               <dt className="text-text-muted">Tham gia</dt><dd className="tabular-nums">{formatDate(l.createdAt)}</dd>
               <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{l.id}</dd>
             </dl>
-            <p className="border-t border-border pt-2 text-xs text-text-muted">Chưa có nhật ký thao tác của admin trên tài khoản này: cần audit log phía máy chủ.</p>
+            <p className="border-t border-border pt-2 text-xs text-text-muted">
+              Chưa có nhật ký thao tác của admin trên tài khoản này: cần audit log phía máy chủ.
+              {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'LEARNER', id: String(l.id) })}>Xem nhật ký mẫu</TextLink></>}
+            </p>
           </Panel>
         </aside>
       </div>

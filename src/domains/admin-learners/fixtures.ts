@@ -11,7 +11,7 @@ import { activityOf, matchesQuery } from './mappers';
 export const FIXTURE_NOW = new Date('2026-10-19T09:30:00+07:00');
 const DAY = 86_400_000;
 
-function rng(seed: number) {
+export function rng(seed: number) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -145,7 +145,8 @@ function makeDetail(row: AdminLearnerRow): AdminLearnerDetail {
   recentScans.slice(0, 2).forEach((s) => timeline.push({ at: s.at, kind: 'SCAN', text: s.status === 'FAILED' ? `Scan lỗi: ${s.errorCode}` : `Scan: ${s.labels.join(', ')} · lưu ${s.savedWords} từ` }));
   recentCoins.slice(0, 3).forEach((c) => timeline.push({ at: c.at, kind: c.source === 'SHOP_PURCHASE' ? 'PURCHASE' : 'MISSION', text: `${c.note} (${c.amount > 0 ? '+' : ''}${c.amount} Coin)` }));
   badges.slice(-2).forEach((b) => timeline.push({ at: b.earnedAt, kind: 'BADGE', text: `Đạt huy hiệu ${b.name}` }));
-  const ban = row.status === 'BANNED' ? { reason: 'Tạo nhiều tài khoản trên cùng thiết bị để nhận thưởng nhiệm vụ.', at: iso(now - 3 * DAY), by: 'admin@snapvocab.vn' } : null;
+  // Hours apart per learner, so two bans never share a timestamp (the audit fixture lists them).
+  const ban = row.status === 'BANNED' ? { reason: 'Tạo nhiều tài khoản trên cùng thiết bị để nhận thưởng nhiệm vụ.', at: iso(now - 3 * DAY - (row.id % 7) * 3_600_000), by: 'admin@snapvocab.com' } : null;
   if (ban) timeline.push({ at: ban.at, kind: 'ACCOUNT', text: `Bị khóa: ${ban.reason}` });
   timeline.sort((a, b) => b.at.localeCompare(a.at));
 
@@ -221,3 +222,17 @@ export function fixtureSetBan(id: number, banned: boolean, reason: string): Prom
 }
 
 export const fixturePasswordReset = (id: number) => (rows.some((r) => r.id === id) ? wait(undefined) : Promise.reject(notFound()));
+
+/** For the audit fixture: the same sample learners and bans, so Nhật ký and the profile agree. */
+export const fixtureLearnerRows = (): readonly AdminLearnerRow[] => rows;
+export const fixtureBans = () =>
+  rows.flatMap((r) => {
+    const ban = detailOf(r).ban;
+    return ban ? [{ id: r.id, name: r.displayName, ...ban }] : [];
+  });
+/** For the badges fixture: who holds which badge and the metrics behind it, so earner counts match the profiles. */
+export const fixtureBadgeHolders = () =>
+  rows.map((r) => {
+    const d = detailOf(r);
+    return { activated: r.status !== 'PENDING', codes: d.badges.map((b) => b.code), streak: r.longestStreakDays, quizzes: d.progress.quizzesCompleted, words: r.wordsSaved };
+  });

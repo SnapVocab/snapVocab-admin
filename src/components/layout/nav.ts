@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Award, BarChart3, BookOpen, Camera, FolderTree, History, Layers, LayoutDashboard, Palette, ShoppingBag, Target, Users } from 'lucide-react';
+import { Award, BarChart3, BookOpen, Camera, FolderTree, History, Layers, LayoutDashboard, Palette, ShoppingBag, Target, Trophy, Users } from 'lucide-react';
 import { adminMissionsEnabled } from '../../domains/admin-missions/config';
 import { adminBadgesEnabled } from '../../domains/admin-badges/config';
 
@@ -28,13 +28,14 @@ const ALL: (NavItem & { enabled?: boolean })[] = [
   { id: 'analytics', path: '/analytics', label: 'Phân tích', section: 'Tổng quan', Icon: BarChart3, scope: 'MOCK' },
   { id: 'dictionary', path: '/dictionary', label: 'Từ điển', section: 'Nội dung', Icon: BookOpen, scope: 'NOW' },
   { id: 'topics', path: '/topics', label: 'Chủ đề', section: 'Nội dung', Icon: FolderTree, scope: 'NOW' },
-  { id: 'templates', path: '/templates', label: 'Mẫu thẻ', section: 'Nội dung', Icon: Layers, scope: 'LEGACY' },
+  { id: 'templates', path: '/templates', label: 'Mẫu thẻ', section: 'Nội dung', Icon: Layers, scope: 'NOW' },
   { id: 'ai-scan', path: '/ai-scan', label: 'AI Scan', section: 'Nội dung', Icon: Camera, scope: 'LEGACY' },
   { id: 'missions', path: '/missions', label: 'Nhiệm vụ hằng ngày', section: 'LiveOps', Icon: Target, scope: 'NOW', enabled: adminMissionsEnabled },
   { id: 'shop', path: '/shop', label: 'Cửa hàng & Vật phẩm', section: 'LiveOps', Icon: ShoppingBag, scope: 'NOW' },
   { id: 'badges', path: '/badges', label: 'Huy hiệu', section: 'LiveOps', Icon: Award, scope: 'NOW', enabled: adminBadgesEnabled },
+  { id: 'leaderboard', path: '/leaderboard', label: 'Bảng xếp hạng', section: 'LiveOps', Icon: Trophy, scope: 'MOCK' },
   { id: 'learners', path: '/learners', label: 'Người học', section: 'Người dùng', Icon: Users, scope: 'MOCK' },
-  { id: 'activity-log', path: '/activity-log', label: 'Nhật ký hoạt động', section: 'Hệ thống', Icon: History, scope: 'LEGACY' },
+  { id: 'activity-log', path: '/activity-log', label: 'Nhật ký hoạt động', section: 'Hệ thống', Icon: History, scope: 'MOCK' },
   { id: 'ui-kit', path: '/ui-kit', label: 'UI Kit (dev)', section: 'Hệ thống', Icon: Palette, scope: 'NOW', enabled: import.meta.env.DEV },
 ];
 

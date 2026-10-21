@@ -98,7 +98,7 @@ export function TemplateDialog({ topic, collectionId, onClose, onDone }: { topic
     <ConfirmModal title={`Mẫu thẻ của ${topic.name}`} tone="primary" confirmLabel="Áp dụng" busy={setTemplate.isPending}
       confirmDisabled={!picked || picked === topic.activeTemplateId} onClose={onClose}
       onConfirm={() => picked && setTemplate.mutate(picked, { onSuccess: onDone })}
-      description="Đổi cách người học thấy thẻ của mọi mục trong chủ đề này. Mục từ và tiến độ học giữ nguyên.">
+      description="Đổi trường mà Quiz của chủ đề này lấy làm từ, nghĩa và ví dụ. Thẻ học trên ứng dụng vẫn vẽ bằng mẫu mặc định của schema (màn Mẫu thẻ). Mục từ và tiến độ học giữ nguyên.">
       {schema.isPending || topicSchema.isPending ? <p className="text-text-muted">Đang tải mẫu thẻ…</p> : templates.length === 0 ? (
         <p className="text-text-muted">Schema của chủ đề chưa có mẫu thẻ nào.</p>
       ) : (

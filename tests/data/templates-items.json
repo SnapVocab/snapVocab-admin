@@ -1,0 +1,72 @@
+[
+ {
+  "topicItemId": 1,
+  "createdAt": "2026-09-13T06:50:05Z",
+  "main": {
+   "word": "such",
+   "meaning": "used to refer to something or someone that you were just talking about, or something or someone of that type",
+   "phonetic": "/ˈsətʃ/",
+   "translation": "như vậy",
+   "level": "C2",
+   "definition_translation": "dùng để chỉ một vật hay người bạn vừa nói tới, hoặc vật/người cùng loại"
+  },
+  "examples": [
+   {
+    "content": "Our lunch was such that we don't really need an evening meal.",
+    "translation": "Bữa trưa của chúng tôi như vậy mà buổi tối thật sự không cần ăn nữa."
+   },
+   {
+    "content": "He is an employee of this company, and should be treated as such.",
+    "translation": "Anh là nhân viên của công ty này và nên được đối xử như vậy."
+   },
+   {
+    "content": "His circumstances are such that he has no need to work.",
+    "translation": "Hoàn cảnh của anh ta như vậy nên anh không cần làm việc."
+   },
+   {
+    "content": "In my opinion the Microwave oven is the eighth wonder of the world and should be celebrated as such.",
+    "translation": "Theo tôi lò vi sóng là kỳ quan thứ tám của thế giới và nên được tôn vinh như vậy."
+   }
+  ]
+ },
+ {
+  "topicItemId": 2,
+  "createdAt": "2026-09-13T06:50:05Z",
+  "main": {
+   "word": "it",
+   "meaning": "used to emphasize one part of a sentence",
+   "phonetic": "/ˈɪt/",
+   "translation": "chính là",
+   "level": "C2",
+   "definition_translation": "dùng để nhấn mạnh một phần của câu"
+  },
+  "examples": [
+   {
+    "content": "It's the children I'm concerned about, not me.",
+    "translation": "Điều tôi lo là bọn trẻ, không phải tôi."
+   }
+  ]
+ },
+ {
+  "topicItemId": 3,
+  "createdAt": "2026-09-13T06:50:05Z",
+  "main": {
+   "word": "one",
+   "meaning": "any person in general",
+   "phonetic": "/ˈwən/",
+   "translation": "ai đó",
+   "level": "C1",
+   "definition_translation": "bất kỳ người nào nói chung"
+  },
+  "examples": [
+   {
+    "content": "One ought to respect one's parents.",
+    "translation": "Mỗi người nên kính trọng cha mẹ mình."
+   },
+   {
+    "content": "One can learn the beauty of the Greek language by simply reading the headings and will soon find that \"The Step\" is the best newspaper of all.",
+    "translation": "Người ta có thể học vẻ đẹp của tiếng Hy Lạp chỉ bằng cách đọc các tiêu đề và chẳng mấy chốc sẽ thấy “The Step” là tờ báo hay nhất."
+   }
+  ]
+ }
+]

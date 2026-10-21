@@ -138,7 +138,7 @@ export const LearningTab: React.FC<{ a: AdminAnalytics }> = ({ a }) => {
               <thead className="border-b border-border text-text-muted">
                 <tr>
                   <th className={th}>Từ</th><th className={th}>Chủ đề</th><th className={cn(th, 'text-right')}>Câu</th><th className={th}>Tỉ lệ sai</th>
-                  <th className={cn(th, 'text-right')} title="Số lần thẻ rớt khỏi vòng ôn (FSRS lapses)">Quên</th><th className="py-2 text-right font-medium">Người học</th>
+                  <th className={cn(th, 'text-right')} title="Số lần thẻ rớt khỏi vòng ôn từ trước tới nay, cộng trên mọi người học (FSRS lapses)">Quên</th><th className="py-2 text-right font-medium">Người học</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -476,6 +476,7 @@ export const ScanTab: React.FC<{ a: AdminAnalytics; now: Date }> = ({ a, now }) 
           </tbody>
         </table>
         {w && lossText[w.key] && <p className="text-xs text-text-muted">Ở bước “{w.label}”: <span className="font-semibold text-text">{n(w.lost)}</span> {lossText[w.key]}</p>}
+        {s.funnel.saved === null && <p className="text-xs text-text-muted">Bước “Lưu thành từ học” chưa đo được: máy chủ chưa ghi từ nào được lưu từ lượt scan nào.</p>}
       </Panel>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -504,7 +505,7 @@ export const ScanTab: React.FC<{ a: AdminAnalytics; now: Date }> = ({ a, now }) 
         <Panel title="Thời gian xử lý và lỗi" meta={`${a.days} ngày · từ lúc worker nhận ảnh tới khi có kết quả`}>
           <MiniStrip cols="grid-cols-3">
             <Mini value={seconds(s.latency.p50Ms)} label="p50" />
-            <Mini value={seconds(s.latency.p95Ms)} label="p95" bad={s.latency.p95Ms > THRESHOLDS.scanP95Ms} hint={`Ngưỡng gợi ý ${seconds(THRESHOLDS.scanP95Ms)}`} />
+            <Mini value={seconds(s.latency.p95Ms)} label="p95" bad={s.latency.p95Ms !== null && s.latency.p95Ms > THRESHOLDS.scanP95Ms} hint={`Ngưỡng gợi ý ${seconds(THRESHOLDS.scanP95Ms)}`} />
             <Mini value={seconds(s.latency.p99Ms)} label="p99" />
           </MiniStrip>
           <table className="w-full text-left text-xs">
@@ -520,7 +521,7 @@ export const ScanTab: React.FC<{ a: AdminAnalytics; now: Date }> = ({ a, now }) 
             </tbody>
           </table>
           {!s.errors.length && <p className="text-xs text-text-muted">Không có lượt lỗi.</p>}
-          <p className="text-xs text-text-muted">Máy chủ: {s.config.workers} worker, hàng đợi {s.config.queueCapacity} chỗ, quota {s.config.quotaPerDay} lượt/người/ngày, mô hình <span className="font-mono">{s.modelVersion}</span>.</p>
+          <p className="text-xs text-text-muted">Máy chủ: {s.config.workers} worker, hàng đợi {s.config.queueCapacity} chỗ, quota {s.config.quotaPerDay} lượt/người/ngày, mô hình <span className="font-mono">{s.modelVersion ?? '—'}</span>.</p>
         </Panel>
       </div>
 

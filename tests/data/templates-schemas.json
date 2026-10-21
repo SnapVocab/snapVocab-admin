@@ -1,0 +1,742 @@
+[
+ {
+  "id": 278,
+  "code": "DEFAULT_ENGLISH",
+  "system": true,
+  "isSystem": true,
+  "userId": null,
+  "name": "Tiếng Anh Tiêu Chuẩn",
+  "description": "Cấu trúc từ vựng tiếng Anh chuẩn gồm Từ, Phiên âm, Định nghĩa, Ví dụ, Âm thanh và Hình ảnh",
+  "createdAt": "2026-09-13T06:50:02.308637Z",
+  "updatedAt": "2026-09-13T06:50:02.308637Z",
+  "groups": [
+   {
+    "groupId": 394,
+    "name": "main",
+    "label": "Thông tin chính",
+    "multiple": false,
+    "position": 0,
+    "attributes": [
+     {
+      "attributeId": 1562,
+      "name": "word",
+      "label": "Từ vựng",
+      "dataType": "TEXT",
+      "required": true,
+      "position": 0
+     },
+     {
+      "attributeId": 1563,
+      "name": "phonetic",
+      "label": "Phiên âm",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 1
+     },
+     {
+      "attributeId": 1564,
+      "name": "audio",
+      "label": "Phát âm",
+      "dataType": "AUDIO",
+      "required": false,
+      "position": 2
+     },
+     {
+      "attributeId": 1568,
+      "name": "translation",
+      "label": "Bản dịch tiếng Việt",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 3
+     },
+     {
+      "attributeId": 1569,
+      "name": "level",
+      "label": "Cấp độ",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 4
+     },
+     {
+      "attributeId": 1570,
+      "name": "definition_translation",
+      "label": "Dịch định nghĩa",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 5
+     },
+     {
+      "attributeId": 1571,
+      "name": "base_word",
+      "label": "Từ gốc",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 6
+     },
+     {
+      "attributeId": 1572,
+      "name": "head",
+      "label": "Ký hiệu đầu từ",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 7
+     },
+     {
+      "attributeId": 1573,
+      "name": "definition",
+      "label": "Định nghĩa tiếng Anh",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 8
+     }
+    ]
+   },
+   {
+    "groupId": 395,
+    "name": "meaning",
+    "label": "Ý nghĩa & Ví dụ",
+    "multiple": false,
+    "position": 1,
+    "attributes": [
+     {
+      "attributeId": 1565,
+      "name": "meaning",
+      "label": "Giải nghĩa",
+      "dataType": "TEXT",
+      "required": true,
+      "position": 0
+     },
+     {
+      "attributeId": 1566,
+      "name": "example",
+      "label": "Ví dụ",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 1
+     },
+     {
+      "attributeId": 1567,
+      "name": "image",
+      "label": "Hình ảnh minh họa",
+      "dataType": "IMAGE",
+      "required": false,
+      "position": 2
+     }
+    ]
+   },
+   {
+    "groupId": 396,
+    "name": "examples",
+    "label": "Ví dụ câu",
+    "multiple": true,
+    "position": 2,
+    "attributes": [
+     {
+      "attributeId": 1574,
+      "name": "content",
+      "label": "Nội dung ví dụ",
+      "dataType": "TEXT",
+      "required": true,
+      "position": 0
+     },
+     {
+      "attributeId": 1575,
+      "name": "translation",
+      "label": "Dịch câu ví dụ",
+      "dataType": "TEXT",
+      "required": false,
+      "position": 1
+     }
+    ]
+   }
+  ],
+  "templates": [
+   {
+    "id": 1,
+    "schemaId": 278,
+    "code": "STANDARD",
+    "name": "Thẻ Chuẩn (Chữ -> Nghĩa)",
+    "default": true,
+    "isDefault": true,
+    "createdAt": "2026-09-13T06:50:02.799987Z",
+    "updatedAt": "2026-09-13T06:50:02.799987Z",
+    "elements": [
+     {
+      "id": 96,
+      "position": 0,
+      "type": "SECTION_BREAK",
+      "side": "FRONT",
+      "sectionLabel": "Thông tin chung",
+      "repeatable": false,
+      "field": null
+     },
+     {
+      "id": 97,
+      "position": 1,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 73,
+       "schemaAttributeId": 1562,
+       "attributeName": "word",
+       "semanticRole": "TARGET_WORD",
+       "fieldLabel": "Từ vựng",
+       "hideIfEmpty": false,
+       "audioAction": true,
+       "fontSize": 24,
+       "alignment": "CENTER",
+       "color": "#0F172A"
+      }
+     },
+     {
+      "id": 98,
+      "position": 2,
+      "type": "COLUMN_BREAK",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": null
+     },
+     {
+      "id": 99,
+      "position": 3,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 74,
+       "schemaAttributeId": 1563,
+       "attributeName": "phonetic",
+       "semanticRole": null,
+       "fieldLabel": "Phiên âm",
+       "hideIfEmpty": true,
+       "audioAction": true,
+       "fontSize": 16,
+       "alignment": "CENTER",
+       "color": "#0284C7"
+      }
+     },
+     {
+      "id": 100,
+      "position": 4,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 75,
+       "schemaAttributeId": 1569,
+       "attributeName": "level",
+       "semanticRole": null,
+       "fieldLabel": "Cấp độ",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 12,
+       "alignment": "CENTER",
+       "color": "#15803D"
+      }
+     },
+     {
+      "id": 101,
+      "position": 5,
+      "type": "SECTION_BREAK",
+      "side": "BACK",
+      "sectionLabel": "Giải nghĩa",
+      "repeatable": false,
+      "field": null
+     },
+     {
+      "id": 102,
+      "position": 6,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 76,
+       "schemaAttributeId": 1568,
+       "attributeName": "translation",
+       "semanticRole": "NATIVE_TRANSLATION",
+       "fieldLabel": "Bản dịch tiếng Việt",
+       "hideIfEmpty": false,
+       "audioAction": false,
+       "fontSize": 20,
+       "alignment": "LEFT",
+       "color": "#15803D"
+      }
+     },
+     {
+      "id": 103,
+      "position": 7,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 77,
+       "schemaAttributeId": 1565,
+       "attributeName": "meaning",
+       "semanticRole": "DEFINITION",
+       "fieldLabel": "Định nghĩa tiếng Anh",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 15,
+       "alignment": "LEFT",
+       "color": "#334155"
+      }
+     },
+     {
+      "id": 104,
+      "position": 8,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 78,
+       "schemaAttributeId": 1570,
+       "attributeName": "definition_translation",
+       "semanticRole": null,
+       "fieldLabel": "Dịch định nghĩa",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 14,
+       "alignment": "LEFT",
+       "color": "#64748B"
+      }
+     },
+     {
+      "id": 105,
+      "position": 9,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 79,
+       "schemaAttributeId": 1567,
+       "attributeName": "image",
+       "semanticRole": "IMAGE",
+       "fieldLabel": "Hình ảnh",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": null,
+       "alignment": "CENTER",
+       "color": null
+      }
+     },
+     {
+      "id": 106,
+      "position": 10,
+      "type": "SECTION_BREAK",
+      "side": "BACK",
+      "sectionLabel": "Ví dụ & Ngữ cảnh",
+      "repeatable": true,
+      "field": null
+     },
+     {
+      "id": 107,
+      "position": 11,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 80,
+       "schemaAttributeId": 1574,
+       "attributeName": "content",
+       "semanticRole": "EXAMPLE_SENTENCE",
+       "fieldLabel": "Câu ví dụ",
+       "hideIfEmpty": false,
+       "audioAction": false,
+       "fontSize": 15,
+       "alignment": "LEFT",
+       "color": "#1E293B"
+      }
+     },
+     {
+      "id": 108,
+      "position": 12,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 81,
+       "schemaAttributeId": 1575,
+       "attributeName": "translation",
+       "semanticRole": null,
+       "fieldLabel": "Dịch câu ví dụ",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 14,
+       "alignment": "LEFT",
+       "color": "#64748B"
+      }
+     }
+    ]
+   },
+   {
+    "id": 2,
+    "schemaId": 278,
+    "code": "LISTENING",
+    "name": "Luyện Nghe (Âm thanh -> Chữ)",
+    "default": false,
+    "isDefault": false,
+    "createdAt": "2026-09-13T06:50:03.494127Z",
+    "updatedAt": "2026-09-13T06:50:03.494127Z",
+    "elements": [
+     {
+      "id": 109,
+      "position": 0,
+      "type": "SECTION_BREAK",
+      "side": "FRONT",
+      "sectionLabel": "Luyện nghe",
+      "repeatable": false,
+      "field": null
+     },
+     {
+      "id": 110,
+      "position": 1,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 82,
+       "schemaAttributeId": 1562,
+       "attributeName": "word",
+       "semanticRole": "AUDIO",
+       "fieldLabel": "Nghe phát âm",
+       "hideIfEmpty": false,
+       "audioAction": true,
+       "fontSize": 32,
+       "alignment": "CENTER",
+       "color": null
+      }
+     },
+     {
+      "id": 111,
+      "position": 2,
+      "type": "SECTION_BREAK",
+      "side": "BACK",
+      "sectionLabel": "Từ vựng & Giải nghĩa",
+      "repeatable": false,
+      "field": null
+     },
+     {
+      "id": 112,
+      "position": 3,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 83,
+       "schemaAttributeId": 1562,
+       "attributeName": "word",
+       "semanticRole": "TARGET_WORD",
+       "fieldLabel": "Từ vựng",
+       "hideIfEmpty": false,
+       "audioAction": true,
+       "fontSize": 24,
+       "alignment": "CENTER",
+       "color": "#0F172A"
+      }
+     },
+     {
+      "id": 113,
+      "position": 4,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 84,
+       "schemaAttributeId": 1563,
+       "attributeName": "phonetic",
+       "semanticRole": null,
+       "fieldLabel": "Phiên âm",
+       "hideIfEmpty": true,
+       "audioAction": true,
+       "fontSize": 16,
+       "alignment": "CENTER",
+       "color": "#0284C7"
+      }
+     },
+     {
+      "id": 114,
+      "position": 5,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 85,
+       "schemaAttributeId": 1568,
+       "attributeName": "translation",
+       "semanticRole": "NATIVE_TRANSLATION",
+       "fieldLabel": "Bản dịch tiếng Việt",
+       "hideIfEmpty": false,
+       "audioAction": false,
+       "fontSize": 18,
+       "alignment": "LEFT",
+       "color": "#15803D"
+      }
+     },
+     {
+      "id": 115,
+      "position": 6,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 86,
+       "schemaAttributeId": 1565,
+       "attributeName": "meaning",
+       "semanticRole": "DEFINITION",
+       "fieldLabel": "Định nghĩa tiếng Anh",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 15,
+       "alignment": "LEFT",
+       "color": "#334155"
+      }
+     },
+     {
+      "id": 116,
+      "position": 7,
+      "type": "SECTION_BREAK",
+      "side": "BACK",
+      "sectionLabel": "Ví dụ & Ngữ cảnh",
+      "repeatable": true,
+      "field": null
+     },
+     {
+      "id": 117,
+      "position": 8,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 87,
+       "schemaAttributeId": 1574,
+       "attributeName": "content",
+       "semanticRole": "EXAMPLE_SENTENCE",
+       "fieldLabel": "Câu ví dụ",
+       "hideIfEmpty": false,
+       "audioAction": false,
+       "fontSize": 15,
+       "alignment": "LEFT",
+       "color": "#1E293B"
+      }
+     },
+     {
+      "id": 118,
+      "position": 9,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 88,
+       "schemaAttributeId": 1575,
+       "attributeName": "translation",
+       "semanticRole": null,
+       "fieldLabel": "Dịch câu ví dụ",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 14,
+       "alignment": "LEFT",
+       "color": "#64748B"
+      }
+     }
+    ]
+   },
+   {
+    "id": 3,
+    "schemaId": 278,
+    "code": "REVERSE",
+    "name": "Đảo Mặt Thẻ (Nghĩa -> Đoán từ)",
+    "default": false,
+    "isDefault": false,
+    "createdAt": "2026-09-13T06:50:04.083650Z",
+    "updatedAt": "2026-09-13T06:50:04.083650Z",
+    "elements": [
+     {
+      "id": 119,
+      "position": 0,
+      "type": "SECTION_BREAK",
+      "side": "FRONT",
+      "sectionLabel": "Giải nghĩa",
+      "repeatable": false,
+      "field": null
+     },
+     {
+      "id": 120,
+      "position": 1,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 89,
+       "schemaAttributeId": 1568,
+       "attributeName": "translation",
+       "semanticRole": "NATIVE_TRANSLATION",
+       "fieldLabel": "Bản dịch tiếng Việt",
+       "hideIfEmpty": false,
+       "audioAction": false,
+       "fontSize": 22,
+       "alignment": "CENTER",
+       "color": "#15803D"
+      }
+     },
+     {
+      "id": 121,
+      "position": 2,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 90,
+       "schemaAttributeId": 1565,
+       "attributeName": "meaning",
+       "semanticRole": "DEFINITION",
+       "fieldLabel": "Định nghĩa tiếng Anh",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 16,
+       "alignment": "CENTER",
+       "color": "#334155"
+      }
+     },
+     {
+      "id": 122,
+      "position": 3,
+      "type": "FIELD",
+      "side": "FRONT",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 91,
+       "schemaAttributeId": 1567,
+       "attributeName": "image",
+       "semanticRole": "IMAGE",
+       "fieldLabel": "Hình ảnh",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": null,
+       "alignment": "CENTER",
+       "color": null
+      }
+     },
+     {
+      "id": 123,
+      "position": 4,
+      "type": "SECTION_BREAK",
+      "side": "BACK",
+      "sectionLabel": "Từ vựng",
+      "repeatable": false,
+      "field": null
+     },
+     {
+      "id": 124,
+      "position": 5,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 92,
+       "schemaAttributeId": 1562,
+       "attributeName": "word",
+       "semanticRole": "TARGET_WORD",
+       "fieldLabel": "Từ vựng",
+       "hideIfEmpty": false,
+       "audioAction": true,
+       "fontSize": 24,
+       "alignment": "CENTER",
+       "color": "#0F172A"
+      }
+     },
+     {
+      "id": 125,
+      "position": 6,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 93,
+       "schemaAttributeId": 1563,
+       "attributeName": "phonetic",
+       "semanticRole": null,
+       "fieldLabel": "Phiên âm",
+       "hideIfEmpty": true,
+       "audioAction": true,
+       "fontSize": 16,
+       "alignment": "CENTER",
+       "color": "#0284C7"
+      }
+     },
+     {
+      "id": 126,
+      "position": 7,
+      "type": "SECTION_BREAK",
+      "side": "BACK",
+      "sectionLabel": "Ví dụ & Ngữ cảnh",
+      "repeatable": true,
+      "field": null
+     },
+     {
+      "id": 127,
+      "position": 8,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 94,
+       "schemaAttributeId": 1574,
+       "attributeName": "content",
+       "semanticRole": "EXAMPLE_SENTENCE",
+       "fieldLabel": "Câu ví dụ",
+       "hideIfEmpty": false,
+       "audioAction": false,
+       "fontSize": 15,
+       "alignment": "LEFT",
+       "color": "#1E293B"
+      }
+     },
+     {
+      "id": 128,
+      "position": 9,
+      "type": "FIELD",
+      "side": "BACK",
+      "sectionLabel": null,
+      "repeatable": null,
+      "field": {
+       "id": 95,
+       "schemaAttributeId": 1575,
+       "attributeName": "translation",
+       "semanticRole": null,
+       "fieldLabel": "Dịch câu ví dụ",
+       "hideIfEmpty": true,
+       "audioAction": false,
+       "fontSize": 14,
+       "alignment": "LEFT",
+       "color": "#64748B"
+      }
+     }
+    ]
+   }
+  ]
+ }
+]

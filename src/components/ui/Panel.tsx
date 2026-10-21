@@ -54,9 +54,9 @@ export const PanelSkeleton: React.FC<{ rows?: number; className?: string }> = ({
 );
 
 /** A data source failed: say which one, keep stale data visible when there is some (design.md §5.8). */
-export const SourceError: React.FC<{ what: string; onRetry: () => void; stale?: boolean }> = ({ what, onRetry, stale }) => (
+export const SourceError: React.FC<{ what: string; onRetry: () => void; stale?: boolean; detail?: string }> = ({ what, onRetry, stale, detail }) => (
   <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger-light px-4 py-2.5 text-xs text-danger-dark">
-    <span className="flex items-center gap-2"><AlertTriangle size={14} className="shrink-0" />{stale ? `Không làm mới được ${what}; đang hiển thị bản đã tải trước đó.` : `Không tải được ${what}.`}</span>
+    <span className="flex items-center gap-2"><AlertTriangle size={14} className="shrink-0" />{stale ? `Không làm mới được ${what}; đang hiển thị bản đã tải trước đó.` : `Không tải được ${what}.`}{detail && ` ${detail}`}</span>
     <Button size="sm" onClick={onRetry}>Thử lại</Button>
   </div>
 );

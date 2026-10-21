@@ -40,10 +40,10 @@ Dashboard trả lời "hôm nay có gì hỏng". Phân tích trả lời **"sả
 
 | Khái niệm | Định nghĩa (nguồn thật khi có API) |
 | :--- | :--- |
-| Trạng thái thẻ | `fsrs_records.state`: NEW · LEARNING · RELEARNING · REVIEW; **Thành thạo** = REVIEW và `stability ≥ 21` (`ProgressService.MASTERED_STABILITY`); SUSPENDED tính vào tổng, không có cột |
+| Trạng thái thẻ | `fsrs_records.state`: NEW · LEARNING · RELEARNING · REVIEW; **Thành thạo** = REVIEW và `stability ≥ 21` (`ProgressService.MASTERED_STABILITY`); SUSPENDED tính vào tổng, không có cột. **Mới** gồm cả từ người học tự lưu mà chưa ôn lần nào (chưa có `fsrs_records`) |
 | Độ chính xác quiz | `quiz_questions.outcome` CORRECT / (CORRECT + INCORRECT), theo `topic_item_id` → chủ đề con → nhóm gốc |
 | Chủ đề khó | Đúng < 60% khi có ≥ 20 câu trả lời. Dưới 20 câu: nhãn "mẫu nhỏ", xếp cuối, không bao giờ là "khó" |
-| Quên | `fsrs_records.lapses` tăng trong kỳ |
+| Quên | Tổng `fsrs_records.lapses` hiện tại của mục từ, cộng trên mọi người học (từ trước tới nay, không theo kỳ: backend không lưu lịch sử ôn) |
 | Cohort | Tuần đăng ký (`users.created_at`, tuần bắt đầu thứ Hai, giờ VN); ô tuần N = số người của cohort có học trong tuần N sau đăng ký |
 | Chuỗi | `longest_streak_days` (kỷ lục của mỗi người); mốc 7 và 30 ngày là huy hiệu STREAK_7, STREAK_30 |
 | Coin vào / ra | `coin_transactions`: MISSION_REWARD (gồm Coin dự phòng của quà vật phẩm) / SHOP_PURCHASE. ADMIN_ADJUSTMENT hiện 0, FUTURE (OQ-ADS-07) |
@@ -83,6 +83,8 @@ Hàm thuần trong `src/domains/admin-analytics/mappers.ts`. Ngưỡng chỉ là
 
 `GET /api/admin/analytics?days=7|30|90` → `AdminAnalytics` (`src/domains/admin-analytics/types.ts`). Chuỗi ngày có đúng `days` điểm, kết thúc hôm nay (giờ VN). `retention` cố định, không theo `days`.
 
+Đặc tả backend: [admin_analytics_backend.md](../../../docs/sa/admin_analytics_backend.md) (nền chung ở [admin_overview_backend.md](../../../docs/sa/admin_overview_backend.md) §2).
+
 Chạy dữ liệu mẫu sau cờ `VITE_ADMIN_ANALYTICS_FIXTURES` (mặc định bật ở dev). Fixture khớp màn Người học (cùng 48 người, 44 đã kích hoạt), chủ đề thật của collection hệ thống "Vocabulary" (link mở đúng chủ đề trên DB local), mã nhiệm vụ `MissionCatalogSeeder`, mã và giá `shop_items`, mã lỗi `ScanErrorCode`, cấu hình `application.yaml`. Người học tiêu khoảng 40% số Coin nhận được, khớp Dashboard.
 
 ## 4. Câu hỏi mở
@@ -90,7 +92,7 @@ Chạy dữ liệu mẫu sau cờ `VITE_ADMIN_ANALYTICS_FIXTURES` (mặc định
 | ID | Câu hỏi |
 | :--- | :--- |
 | OQ-ANL-01 | Chốt ngưỡng §2.3–2.4: 200 người học cho giữ chân theo %, 60% và 20 câu cho chủ đề khó, ±15% xu hướng, vùng 50–90% tiêu/phát |
-| OQ-ANL-02 | "Lưu" trong phễu scan cần nối lượt scan với mục từ được lưu; backend hiện chưa ghi nguồn của TopicItem |
+| OQ-ANL-02 | "Lưu" trong phễu scan cần nối lượt scan với mục từ được lưu; backend hiện chưa ghi nguồn của TopicItem. Hướng xử lý: `topic_items.source_scan_id` (đặc tả backend G3); tới lúc đó API trả `saved = null` và màn ghi "chưa đo được" |
 | OQ-ANL-03 | Nút "Xem người học" của từng nhóm cần màn Người học nhận bộ lọc từ URL (hiện mở danh sách chung) |
 
 ## 5. Truy vết

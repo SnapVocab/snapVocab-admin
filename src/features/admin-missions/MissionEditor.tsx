@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, Copy, Lock, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, SectionLabel } from '../../components/ui';
+import { Badge, Button, SectionLabel, TextLink } from '../../components/ui';
+import { auditUsesFixtures } from '../../domains/admin-audit/config';
+import { historyPath } from '../../domains/admin-audit/mappers';
 import { CoinIcon, XpIcon } from '../../components/brand/BrandIcons';
 import { MAX_COIN_PER_DAY, formatVnDateTime } from '../../domains/shop/mappers';
 import { MissionCard, MissionTile } from './MissionCard';
@@ -207,7 +209,10 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
             <dt className="text-text-muted">Sửa gần nhất</dt><dd className="tabular-nums">{formatVnDateTime(original.updatedAt)}, phiên bản {original.version}</dd>
             <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{original.id}</dd>
           </dl>
-          <p className="border-t border-border pt-2 text-text-muted">Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.</p>
+          <p className="border-t border-border pt-2 text-text-muted">
+            Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
+            {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'MISSION_TEMPLATE', id: String(original.id) })}>Xem nhật ký mẫu</TextLink></>}
+          </p>
         </div>}
       </aside>
     </div>

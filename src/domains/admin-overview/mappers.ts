@@ -48,7 +48,8 @@ const DAY = 86_400_000;
 const RANK: Record<Severity, number> = { danger: 0, warning: 1, info: 2 };
 
 export const pct = (x: number) => `${(x * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}%`;
-export const seconds = (ms: number) => `${(ms / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giây`;
+/** "2,4 giây"; "—" when there is nothing to measure (no scan finished in the range). */
+export const seconds = (ms: number | null) => (ms === null ? '—' : `${(ms / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giây`);
 const pathFor = (base: string, ids: number[]) => (ids.length === 1 ? `${base}/${ids[0]}` : base);
 const list = (xs: string[], max = 3) => xs.slice(0, max).join('; ') + (xs.length > max ? `; và ${xs.length - max} mục khác` : '');
 
@@ -156,7 +157,7 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
     },
     {
       id: 'scan-p95', area: 'SCAN', scope: 'MOCK', rule: `p95 thời gian xử lý scan ≤ ${seconds(THRESHOLDS.scanP95Ms)}`,
-      issue: t.p95Ms > THRESHOLDS.scanP95Ms ? {
+      issue: t.p95Ms !== null && t.p95Ms > THRESHOLDS.scanP95Ms ? {
         severity: 'warning', title: `Scan chậm: p95 ${seconds(t.p95Ms)}`,
         detail: `p50 ${seconds(t.p50Ms)}; máy chủ có ${o.scan.config.workers} worker xử lý lần lượt. Báo đội kỹ thuật kiểm tra dịch vụ AI.`,
         cta: 'Xem vận hành scan', path: '/ai-scan',
@@ -208,7 +209,7 @@ export interface ChangeEvent { at: string; area: 'SHOP' | 'MISSIONS'; name: stri
 
 /**
  * Latest lifecycle timestamps of Shop items and mission templates. Not an audit log: who changed what
- * needs admin_audit_log (design.md §8); this only shows when.
+ * needs admin_audit_logs (design.md §8); this only shows when.
  */
 export function recentChanges(shop: AdminShopItemDTO[] = [], missions: MissionTemplate[] = [], limit = 8): ChangeEvent[] {
   const after = (a: string, b: string | null) => !b || new Date(a).getTime() - new Date(b).getTime() > 60_000;

@@ -150,11 +150,15 @@ const FUNNEL = [
   { key: 'saved', label: 'Lưu thành từ học', hint: 'Người học lưu ít nhất một từ từ lượt scan' },
 ] as const;
 
-/** scan → có nhãn → có từ → lưu (review §3.2). `worst` = step with the lowest conversion from the previous one. */
+/**
+ * scan → có nhãn → có từ → lưu (review §3.2). `worst` = step with the lowest conversion from the previous one.
+ * A step the server cannot measure yet (null, e.g. "saved") is left out rather than drawn as 0.
+ */
 export function funnelSteps(f: AdminAnalytics['scan']['funnel']) {
-  const steps = FUNNEL.map((s, i) => {
-    const count = f[s.key];
-    const prev = i ? f[FUNNEL[i - 1].key] : count;
+  const known = FUNNEL.filter((s) => f[s.key] !== null);
+  const steps = known.map((s, i) => {
+    const count = f[s.key] ?? 0;
+    const prev = i ? f[known[i - 1].key] ?? 0 : count;
     return { ...s, count, fromStart: ratio(count, f.submitted), fromPrev: ratio(count, prev), lost: prev - count };
   });
   const worst = steps.slice(1).reduce((w, s, i) => (s.fromPrev < steps[w].fromPrev ? i + 1 : w), 1);
@@ -163,6 +167,5 @@ export function funnelSteps(f: AdminAnalytics['scan']['funnel']) {
 
 /* ── Xuất CSV ────────────────────────────────────────────────────────────── */
 
-/** RFC 4180: quote every cell, double the quotes inside. A BOM lets Excel read Vietnamese. */
-export const toCsv = (rows: (string | number)[][]) =>
-  '﻿' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+/** Shared with Nhật ký hoạt động; lives in lib/utils. */
+export { toCsv } from '../../lib/utils';

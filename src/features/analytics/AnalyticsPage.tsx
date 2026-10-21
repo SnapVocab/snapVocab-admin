@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Download, RotateCw } from 'lucide-react';
 import { Button, PageHeader, PanelSkeleton, SampleDataNotice, SourceError } from '../../components/ui';
 import { navigate } from '../../lib/router';
-import { cn } from '../../lib/utils';
+import { cn, downloadCsv } from '../../lib/utils';
 import { useAnalytics } from '../../domains/admin-analytics/queries';
 import { analyticsUsesFixtures } from '../../domains/admin-analytics/api';
 import { ANALYTICS_THRESHOLDS, cohortWeek, funnelSteps, isSmallSample, itemPerformance, toCsv, topicAccuracy } from '../../domains/admin-analytics/mappers';
@@ -30,13 +30,6 @@ function csvFor(tab: TabId, a: AdminAnalytics, shop: AdminShopItemDTO[] | undefi
     return [['Mã', 'Vật phẩm', 'Giá', 'Lượt mua', 'Coin tiêu', 'Tỉ trọng'], ...rows];
   }
   return [['Bước', 'Số lượt', 'Từ đầu phễu'], ...funnelSteps(a.scan.funnel).steps.map((s) => [s.label, s.count, s.fromStart.toFixed(3)]), [], ['Nhãn chưa có từ', 'Lượt scan', 'Người học'], ...a.scan.unmappedLabels.map((l) => [l.label, l.scans, l.learners])];
-}
-
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
-  const link = Object.assign(document.createElement('a'), { href: url, download: name });
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 /**
@@ -108,7 +101,7 @@ export function AnalyticsPage({ sub }: { sub?: string }) {
               </div>
             )}
           {q.isPlaceholderData && <span role="status" className="text-xs text-text-muted">Đang tải kỳ {days} ngày…</span>}
-          <Button size="sm" icon={<Download />} disabled={!a} onClick={() => a && download(`snapvocab-phan-tich-${tab}-${days}d.csv`, toCsv(csvFor(tab, a, items, now)))}>Xuất CSV</Button>
+          <Button size="sm" icon={<Download />} disabled={!a} onClick={() => a && downloadCsv(`snapvocab-phan-tich-${tab}-${days}d.csv`, toCsv(csvFor(tab, a, items, now)))}>Xuất CSV</Button>
         </div>
       </div>
 

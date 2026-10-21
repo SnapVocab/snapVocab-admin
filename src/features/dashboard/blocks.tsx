@@ -127,7 +127,7 @@ export const ScanBand: React.FC<{ o: AdminOverview }> = ({ o }) => {
             <Mini value={n(today.total)} label="Lượt hôm nay" />
             <Mini value={pct(1 - rate)} label="Thành công" bad={rate > THRESHOLDS.scanErrorRate} hint={`${today.failed} lượt lỗi · ngưỡng lỗi ${pct(THRESHOLDS.scanErrorRate)}`} />
             <Mini value={seconds(today.p50Ms)} label="Thời gian p50" />
-            <Mini value={seconds(today.p95Ms)} label="Thời gian p95" bad={today.p95Ms > THRESHOLDS.scanP95Ms} hint={`Ngưỡng ${seconds(THRESHOLDS.scanP95Ms)}`} />
+            <Mini value={seconds(today.p95Ms)} label="Thời gian p95" bad={today.p95Ms !== null && today.p95Ms > THRESHOLDS.scanP95Ms} hint={`Ngưỡng ${seconds(THRESHOLDS.scanP95Ms)}`} />
             <Mini value={`${today.queueFull} lần`} label="Hàng đợi đầy" bad={today.queueFull > 0} />
             <Mini value={`${today.quotaHit} người`} label="Hết lượt" hint={`Quota ${config.quotaPerDay} lượt/người/ngày`} />
           </MiniStrip>

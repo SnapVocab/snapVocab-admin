@@ -27,7 +27,7 @@ Người vận hành dựng và duy trì **nội dung hệ thống** mà ngườ
 | Schema của chủ đề | `GET /api/topics/{id}/schema` |
 | Danh sách mẫu thẻ | `GET /api/schemas/{schemaId}` |
 | Thêm mục từ | `POST /api/topics/{id}/items`, body đúng hình dạng nhóm: object cho nhóm đơn, mảng cho nhóm lặp |
-| Đổi mẫu thẻ | `PUT /api/topics/{id}/active-template/{templateId}` |
+| Đổi mẫu thẻ | `PUT /api/topics/{id}/active-template/{templateId}`. Chỉ đổi trường Quiz đọc: app vẽ thẻ học bằng mẫu mặc định của schema ([templates_ui.md](./templates_ui.md) §1, OQ-TPL-01) |
 | Điền sẵn từ từ điển | `GET /api/words/lookup?q=` |
 
 ### 2.2. Còn thiếu (UI hiện nút bị vô hiệu kèm "Cần API…")
@@ -81,7 +81,7 @@ Người vận hành dựng và duy trì **nội dung hệ thống** mà ngườ
 | Collection | Tên 2–100 ký tự (theo `CreateCollectionDTO`), tên Việt tùy chọn |
 | Xóa collection | Danger. Còn chủ đề thì nút xác nhận bị vô hiệu, kèm giải thích "xóa cứng" |
 | Chủ đề | Tên 2–100; tên Việt, mô tả, mô tả Việt tùy chọn. `parentId` = gốc đang chọn hoặc null |
-| Mẫu thẻ | Radio các mẫu của schema; "Đang dùng"; chỉ áp dụng khi đổi sang mẫu khác |
+| Mẫu thẻ | Radio các mẫu của schema; "Đang dùng"; chỉ áp dụng khi đổi sang mẫu khác. Mô tả hộp (sửa 2026-10-21): đổi trường mà Quiz lấy làm từ, nghĩa, ví dụ; thẻ học vẫn vẽ bằng mẫu mặc định |
 | **Thêm mục từ** (drawer) | Form sinh từ schema: nhóm đơn là lưới trường, nhóm lặp là các khối có [+]/[xóa]. Trường bắt buộc có \*. Kiểm tra theo kiểu dữ liệu (NUMBER/BOOLEAN/DATE). [Điền từ từ điển] chỉ điền ô **trống** (bảng dưới). Cảnh báo nếu từ đã có trong chủ đề. Payload bỏ ô trống và dòng lặp rỗng |
 
 Mapping khi điền từ từ điển:
@@ -111,6 +111,6 @@ Mapping khi điền từ từ điển:
 | Hạng mục | Trạng thái |
 | :--- | :--- |
 | Import CSV dry-run | MOCK, bước sau |
-| Preview thẻ theo mẫu (dùng `data-resolver` của mobile, design.md §6) | Bước sau |
+| Preview thẻ theo mẫu (dùng `data-resolver` của mobile, design.md §6) | Có ở màn Mẫu thẻ (2026-10-21, chọn chủ đề và từ thật); chưa nhúng vào màn này |
 | Kéo thả sắp xếp | FUTURE |
 | Bulk xóa/chuyển mục từ | Cần API |

@@ -42,7 +42,9 @@ import { BoosterIcon, CoinIcon, FrameIcon, ThemeIcon } from '../../../components
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
-import { Badge, Button, ConfirmModal, SectionLabel } from '../../../components/ui';
+import { Badge, Button, ConfirmModal, SectionLabel, TextLink } from '../../../components/ui';
+import { auditUsesFixtures } from '../../../domains/admin-audit/config';
+import { historyPath } from '../../../domains/admin-audit/mappers';
 import { AssetUploadField } from '../components/AssetUploadField';
 import {
   PublishConfirmationModal,
@@ -1283,6 +1285,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
               </dl>
               <p className="border-t border-border pt-2.5 text-xs text-text-muted">
                 Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
+                {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'SHOP_ITEM', id: String(existingItem.id) })}>Xem nhật ký mẫu</TextLink></>}
               </p>
             </div>
           )}

@@ -1,12 +1,12 @@
 /**
  * Proposed contract for the Analytics screen (admin_product_review_2026-10-19 §3.2, analytics_ui.md).
+ * Backend implementation spec, with the source and formula of every field: docs/sa/admin_analytics_backend.md.
  * NOT implemented on the backend yet: dev/demo builds run on fixtures (api.ts).
  *
  *   GET /api/admin/analytics?days=7|30|90 → AdminAnalytics
  *
  * Every daily series has `days` points ending today (Asia/Ho_Chi_Minh, oldest first). Totals cover the same window,
  * except `retention`, which is fixed (8 sign-up weeks, all-time streaks) and ignores `days`.
- * Sources once built: fsrs_records, quiz_questions.outcome, users, coin_transactions, user_items, scan_requests.
  */
 import type { ScanErrorCode } from '../admin-learners/types';
 
@@ -16,12 +16,15 @@ export interface AdminAnalytics {
   generatedAt: string;
   days: AnalyticsDays;
   learning: {
-    /** fsrs_records.state over every saved card, now. mastered = REVIEW with stability ≥ 21 (ProgressService.MASTERED_STABILITY). */
+    /**
+     * fsrs_records.state of every reviewed card (any collection), now; `new` also counts own saved words never reviewed.
+     * mastered = REVIEW with stability ≥ 21 (ProgressService.MASTERED_STABILITY). dueToday = due ≤ now, as the app's dueCount.
+     */
     cards: { new: number; learning: number; relearning: number; review: number; mastered: number; suspended: number; dueToday: number };
     daily: { date: string; reviews: number; newWords: number; quizAnswers: number; quizCorrect: number }[];
     /** quiz_questions.outcome (CORRECT / INCORRECT) per system child topic. */
     topics: { collectionId: number; rootId: number; rootName: string; topicId: number; name: string; answers: number; correct: number; learners: number }[];
-    /** Words with the most INCORRECT answers; lapses = fsrs_records.lapses gained in the window. */
+    /** Words with the most INCORRECT answers in the window; lapses = sum of fsrs_records.lapses now (all-time, not windowed). */
     hardWords: { word: string; collectionId: number; rootId: number; topicId: number; topicName: string; answers: number; wrong: number; lapses: number; learners: number }[];
   };
   retention: {
@@ -47,13 +50,18 @@ export interface AdminAnalytics {
   };
   scan: {
     config: { workers: number; queueCapacity: number; quotaPerDay: number; minReliability: 'LOW' | 'MEDIUM' | 'HIGH' };
-    modelVersion: string;
+    /** Model of the latest finished scan in the window; null when none finished. */
+    modelVersion: string | null;
     daily: { date: string; done: number; failed: number }[];
-    /** submitted = scan_requests; done = DONE; withLabels = detection_count > 0; withWord = ≥ 1 label has a dictionary entry; saved = learner saved ≥ 1 word from it. */
-    funnel: { submitted: number; done: number; withLabels: number; withWord: number; saved: number };
+    /**
+     * submitted = scan_requests; done = DONE; withLabels = detection_count > 0; withWord = ≥ 1 label has a dictionary entry;
+     * saved = learner saved ≥ 1 word from it, null until saved words record their source scan (OQ-ANL-02).
+     */
+    funnel: { submitted: number; done: number; withLabels: number; withWord: number; saved: number | null };
     /** Detections by reliability bucket (ai-service reliability_by_source). There is no confidence %. */
     reliability: { HIGH: number; MEDIUM: number; LOW: number };
-    latency: { p50Ms: number; p95Ms: number; p99Ms: number };
+    /** started_at → finished_at of DONE scans; null when none finished in the window. */
+    latency: { p50Ms: number | null; p95Ms: number | null; p99Ms: number | null };
     errors: { code: ScanErrorCode; count: number }[];
     /** Learners refused at least once with QUOTA_EXCEEDED. */
     quotaHitLearners: number;
