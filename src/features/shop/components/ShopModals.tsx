@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { auditReasonError } from '../../../domains/admin-audit/mappers';
+import { ReasonField } from '../../activity-log/reason';
 import {
   AdminShopItemDTO,
   ShopItemType,
@@ -116,38 +118,49 @@ interface ArchiveConfirmationModalProps {
   isArchiving: boolean;
   errorMessage?: string | null;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Trimmed reason, already 10–500 characters (the backend requires it, design.md §8.3). */
+  onConfirm: (reason: string) => void;
 }
 
-export const ArchiveConfirmationModal: React.FC<ArchiveConfirmationModalProps> = ({
-  isOpen,
+// Mounted only while open, so a reopened dialog starts with an empty reason.
+export const ArchiveConfirmationModal: React.FC<ArchiveConfirmationModalProps> = (props) =>
+  props.isOpen ? <ArchiveDialog {...props} /> : null;
+
+const ArchiveDialog: React.FC<ArchiveConfirmationModalProps> = ({
   itemName,
   isArchiving,
   errorMessage,
   onClose,
   onConfirm,
-}) => (
-  <ConfirmModal
-    isOpen={isOpen}
-    title="Ngừng bán vĩnh viễn"
-    tone="danger"
-    busy={isArchiving}
-    busyLabel="Đang ngừng bán…"
-    confirmLabel="Ngừng bán vĩnh viễn"
-    onClose={onClose}
-    onConfirm={onConfirm}
-  >
-    <p className="text-body text-text leading-relaxed">
-      Ngừng bán vĩnh viễn <strong className="font-bold">{itemName}</strong> (lưu trữ)? <strong className="text-danger-dark">Không thể hoàn tác</strong>: không phát hành hay mở bán lại được.
-    </p>
-    <ul className="p-3 bg-danger-light border border-danger/30 rounded-lg list-disc list-inside space-y-1 text-body text-danger-dark">
-      <li>Ngừng bán trong Cửa hàng ngay lập tức.</li>
-      <li>Người đã sở hữu vẫn giữ và dùng bình thường.</li>
-      <li>Không chọn được làm phần thưởng mới; phần thưởng đã cấu hình trước đó giữ nguyên.</li>
-    </ul>
-    <ErrorAlert message={errorMessage} />
-  </ConfirmModal>
-);
+}) => {
+  const [reason, setReason] = useState('');
+  const [touched, setTouched] = useState(false);
+  const invalid = Boolean(auditReasonError(reason));
+  return (
+    <ConfirmModal
+      title="Ngừng bán vĩnh viễn"
+      tone="danger"
+      busy={isArchiving}
+      busyLabel="Đang ngừng bán…"
+      confirmLabel="Ngừng bán vĩnh viễn"
+      confirmDisabled={touched && invalid}
+      onClose={onClose}
+      onConfirm={() => { setTouched(true); if (!invalid) onConfirm(reason.trim()); }}
+    >
+      <p className="text-body text-text leading-relaxed">
+        Ngừng bán vĩnh viễn <strong className="font-bold">{itemName}</strong> (lưu trữ)? <strong className="text-danger-dark">Không thể hoàn tác</strong>: không phát hành hay mở bán lại được.
+      </p>
+      <ul className="p-3 bg-danger-light border border-danger/30 rounded-lg list-disc list-inside space-y-1 text-body text-danger-dark">
+        <li>Ngừng bán trong Cửa hàng ngay lập tức.</li>
+        <li>Người đã sở hữu vẫn giữ và dùng bình thường.</li>
+        <li>Không chọn được làm phần thưởng mới; phần thưởng đã cấu hình trước đó giữ nguyên.</li>
+      </ul>
+      <ReasonField value={reason} onChange={setReason} touched={touched} onBlur={() => setTouched(true)}
+        placeholder="VD: Hết mùa sự kiện, thay bằng khung mới." />
+      <ErrorAlert message={errorMessage} />
+    </ConfirmModal>
+  );
+};
 
 /* =========================================================================
    3. DELETE DRAFT CONFIRMATION MODAL

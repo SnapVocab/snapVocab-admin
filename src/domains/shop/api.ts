@@ -7,6 +7,7 @@ import type {
   ShopItemTypeMetadataDTO,
   ShopItemUpdatePayload,
 } from './types';
+import type { AuditReasonInput } from '../admin-audit/types';
 import { apiClient, uploadBinaryToPresignedUrl } from '../../lib/api-client';
 
 const BASE_URL = '/api/admin/shop';
@@ -57,7 +58,7 @@ export async function getAdminShopItem(id: number | string): Promise<AdminShopIt
  * 4. POST /api/admin/shop/items
  * Creates a new DRAFT item.
  */
-export async function createShopItem(payload: ShopItemForm): Promise<AdminShopItemDTO> {
+export async function createShopItem(payload: ShopItemForm & AuditReasonInput): Promise<AdminShopItemDTO> {
   return apiClient<AdminShopItemDTO>(`${BASE_URL}/items`, {
     method: 'POST',
     body: payload,
@@ -70,7 +71,7 @@ export async function createShopItem(payload: ShopItemForm): Promise<AdminShopIt
  */
 export async function updateShopItem(
   id: number | string,
-  payload: ShopItemUpdatePayload,
+  payload: ShopItemUpdatePayload & AuditReasonInput,
 ): Promise<AdminShopItemDTO> {
   return apiClient<AdminShopItemDTO>(`${BASE_URL}/items/${id}`, {
     method: 'PATCH',
@@ -82,19 +83,21 @@ export async function updateShopItem(
  * 6. POST /api/admin/shop/items/{id}/publish
  * Moves DRAFT -> PUBLISHED after full server-side revalidation.
  */
-export async function publishShopItem(id: number | string): Promise<AdminShopItemDTO> {
+export async function publishShopItem(id: number | string, reason?: string): Promise<AdminShopItemDTO> {
   return apiClient<AdminShopItemDTO>(`${BASE_URL}/items/${id}/publish`, {
     method: 'POST',
+    body: reason ? { reason } : undefined,
   });
 }
 
 /**
  * 7. POST /api/admin/shop/items/{id}/archive
- * Moves PUBLISHED -> ARCHIVED (terminal state, ceases sales).
+ * Moves PUBLISHED -> ARCHIVED (terminal state, ceases sales). Always needs a reason (10–500 characters).
  */
-export async function archiveShopItem(id: number | string): Promise<AdminShopItemDTO> {
+export async function archiveShopItem(id: number | string, reason: string): Promise<AdminShopItemDTO> {
   return apiClient<AdminShopItemDTO>(`${BASE_URL}/items/${id}/archive`, {
     method: 'POST',
+    body: { reason },
   });
 }
 

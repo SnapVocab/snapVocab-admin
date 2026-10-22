@@ -214,7 +214,7 @@ export function LearnerProfile({ id }: { id: number }) {
               <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{l.id}</dd>
             </dl>
             <p className="border-t border-border pt-2 text-xs text-text-muted">
-              Chưa có nhật ký thao tác của admin trên tài khoản này: cần audit log phía máy chủ.
+              Khóa, mở khóa và đặt lại mật khẩu chưa ghi vào nhật ký hoạt động: chờ API admin người học.
               {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'LEARNER', id: String(l.id) })}>Xem nhật ký mẫu</TextLink></>}
             </p>
           </Panel>

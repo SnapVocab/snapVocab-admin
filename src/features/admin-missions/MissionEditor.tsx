@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, Copy, Lock, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, SectionLabel, TextLink } from '../../components/ui';
-import { auditUsesFixtures } from '../../domains/admin-audit/config';
-import { historyPath } from '../../domains/admin-audit/mappers';
+import { Badge, Button, SectionLabel } from '../../components/ui';
+import { TargetHistory } from '../activity-log/TargetHistory';
 import { CoinIcon, XpIcon } from '../../components/brand/BrandIcons';
 import { MAX_COIN_PER_DAY, formatVnDateTime } from '../../domains/shop/mappers';
 import { MissionCard, MissionTile } from './MissionCard';
@@ -17,6 +16,7 @@ import { ActiveBadge, ErrorBanner, Field } from './components';
 import { errorMessage, inputClass, isApiError } from './ui';
 import { RewardItemPicker } from './RewardItemPicker';
 import { adminShopKeys } from '../../domains/shop/queries';
+import { ReasonCancelled, useReasonPrompt } from '../activity-log/reason';
 
 interface EditorProps {
   id?: number; onBack: (notice?: string) => void; onSaved: (item: MissionTemplate) => void;
@@ -35,6 +35,8 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
   const [baseline, setBaseline] = useState(() => JSON.stringify(initial ? toForm(initial) : emptyForm()));
   const [errors, setErrors] = useState<Record<string, string>>({}); const [error, setError] = useState('');
   const [busy, setBusy] = useState(false); const flight = useRef(false);
+  // A save that pushes the daily Coin ceiling past the cap: the server asks for a reason, this re-sends with it (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
   const [confirm, setConfirm] = useState<'leave' | 'reload' | null>(null);
   const [conflict, setConflict] = useState(false); const [uncertain, setUncertain] = useState(false); const [copied, setCopied] = useState(false);
   const [presetNote, setPresetNote] = useState(''); const [server, setServer] = useState<MissionTemplate | null>(null); const root = useRef<HTMLDivElement>(null);
@@ -60,10 +62,12 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
     const invalid = validateForm(form); setErrors(invalid); if (Object.keys(invalid).length) { setError('Kiểm tra các trường được đánh dấu trước khi lưu.'); focusInvalid(); return; }
     flight.current = true; setBusy(true); setError('');
     try {
-      const item = original ? await patchTemplate(original.id, savePayload(form, original)) : await createMissionTemplate(createPayload(form));
+      const item = await reasonPrompt.run((reason) => original
+        ? patchTemplate(original.id, { ...savePayload(form, original), reason })
+        : createMissionTemplate({ ...createPayload(form), reason }));
       load(item); client.setQueryData(missionKeys.detail(item.id), item); void client.invalidateQueries({ queryKey: missionKeys.list }); onSaved(item);
     } catch (e) {
-      if (missing(e)) return;
+      if (e instanceof ReasonCancelled || missing(e)) return;
       setError(errorMessage(e));
       if (e instanceof ApiClientError) {
         setErrors(e.fieldErrors); setConflict(e.code === 'VERSION_CONFLICT'); focusInvalid();
@@ -214,10 +218,7 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
             <dt className="text-text-muted">Sửa gần nhất</dt><dd className="tabular-nums">{formatVnDateTime(original.updatedAt)}, phiên bản {original.version}</dd>
             <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{original.id}</dd>
           </dl>
-          <p className="border-t border-border pt-2 text-text-muted">
-            Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
-            {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'MISSION_TEMPLATE', id: String(original.id) })}>Xem nhật ký mẫu</TextLink></>}
-          </p>
+          <TargetHistory target={{ type: 'MISSION_TEMPLATE', id: String(original.id) }} />
         </div>}
       </aside>
     </div>
@@ -228,5 +229,6 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
         : <p>Nội dung đang nhập trùng bản trên server; chỉ cập nhật phiên bản.</p>}
       <p className="text-xs text-text-muted">Muốn giữ phần của mình: đóng hộp thoại, chép lại các giá trị cần giữ, rồi dùng bản server và nhập lại.</p>
     </ConfirmModal>}
+    {reasonPrompt.dialog}
   </div>;
 }

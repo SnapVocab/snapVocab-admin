@@ -5,7 +5,10 @@
 import { foldVi } from '../../lib/utils';
 import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatThemeKeyLabel, formatVnDateTime } from '../shop/mappers';
 import { categoryLabels, eligibilityLabels } from '../admin-missions/mappers';
-import { STATUS_META } from '../admin-learners/mappers';
+import { banReasonError, STATUS_META } from '../admin-learners/mappers';
+
+/** Every reason the backend asks for (ban, permanent stop of sale, a save past a guardrail): 10–500 characters, trimmed. */
+export const auditReasonError = banReasonError;
 import type { LearnerStatus } from '../admin-learners/types';
 import type { AuditAction, AuditArea, AuditEntry, AuditKind, AuditTarget, AuditTargetType } from './types';
 

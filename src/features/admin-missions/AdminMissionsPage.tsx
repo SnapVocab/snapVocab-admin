@@ -16,6 +16,7 @@ import { RewardItemLabel } from './RewardItemPicker';
 import { MissionCard, MissionTile, RewardLine } from './MissionCard';
 import { navigate } from '../../lib/router';
 import { useToast } from '../../components/ui/Toast';
+import { ReasonCancelled, useReasonPrompt } from '../activity-log/reason';
 
 const GROUPS: { key: MissionGroup; label: string; dot: string }[] = [
   { key: 'CORE', label: 'Cốt lõi · slot 1–4', dot: 'bg-primary' },
@@ -54,6 +55,8 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
   const [activation, setActivation] = useState<MissionTemplate | null>(null);
   const [activationError, setActivationError] = useState(''); const [blocked, setBlocked] = useState(false);
   const [busy, setBusy] = useState(false); const flight = useRef(false);
+  // Switching on a template that pushes the daily Coin ceiling past the cap needs a reason (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
   const { show: showToast, node: toastNode } = useToast(); const listScroll = useRef(0); const scroller = useRef<HTMLDivElement>(null);
   const editing = !!editor;
   useEffect(() => { if (scroller.current) scroller.current.scrollTop = editing ? 0 : listScroll.current; }, [editing]);
@@ -70,12 +73,14 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
     if (!activation || flight.current || blocked) return;
     flight.current = true; setBusy(true); setActivationError('');
     try {
-      const item = await setTemplateActive(activation.id, { version: activation.version, isActive: !activation.isActive });
+      const item = await reasonPrompt.run((reason) =>
+        setTemplateActive(activation.id, { version: activation.version, isActive: !activation.isActive, reason }));
       client.setQueryData(missionKeys.detail(item.id), item);
       await client.invalidateQueries({ queryKey: missionKeys.list });
       setActivation(null); showToast(item.isActive ? 'Đã bật nhiệm vụ.' : 'Đã tắt nhiệm vụ.');
       if (editor) setRevision(r => r + 1);
     } catch (e) {
+      if (e instanceof ReasonCancelled) return; // not toggled; the confirm dialog stays open
       void client.invalidateQueries({ queryKey: missionKeys.list });
       if (isApiError(e, 'MISSION_TEMPLATE_NOT_FOUND')) { setActivation(null); closeEditor(errorMessage(e)); return; }
       setActivationError(`${errorMessage(e)} ${isApiError(e, 'MISSION_POOL_INSUFFICIENT') && catalog.data ? poolShortage(toggled(activation)) : ''}`.trim());
@@ -183,5 +188,6 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
       <p className="font-bold">{activation.name}</p><p className="text-xs text-text-muted">{activation.code} · Phiên bản {activation.version}</p><p className="flex items-center gap-2 text-xs">Trạng thái: <ActiveBadge active={activation.isActive} />→<ActiveBadge active={!activation.isActive} /></p><p><RewardLine coin={activation.rewardCoin} xp={activation.rewardXp} />{activation.rewardItemCode && <span className="block text-xs"><RewardItemLabel code={activation.rewardItemCode} /></span>}</p><p className="text-xs text-text-muted">Áp dụng cho các bộ nhiệm vụ được cấp sau thao tác, kể cả người học chưa nhận bộ hôm nay. Bộ đã cấp giữ nguyên.</p>{after && <p className={`rounded-md p-3 text-xs ${after.valid || after.inactive ? 'bg-surface-subtle text-text' : 'bg-danger-light text-danger-dark'}`}>Sau thao tác còn {after.core} mẫu cốt lõi và {after.slotFive} mẫu slot 5 không có điều kiện cấp: {after.inactive ? 'không còn mẫu nào đang bật' : after.valid ? 'vẫn đủ cấp 5 nhiệm vụ mỗi ngày' : 'không đủ cấp 5 nhiệm vụ mỗi ngày'}. Máy chủ kiểm tra lại khi thực hiện.</p>}
       {activationError && <ErrorBanner message={activationError}>{blocked && <><Button size="sm" disabled={busy} onClick={() => void refreshActivation()}>Kiểm tra trạng thái server</Button><Button size="sm" disabled={busy} onClick={() => setActivation(null)}>Đóng</Button></>}</ErrorBanner>}
     </ConfirmModal>}
+    {reasonPrompt.dialog}
   </div>;
 }

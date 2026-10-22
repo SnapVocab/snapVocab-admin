@@ -27,6 +27,7 @@ import {
   ArchiveConfirmationModal,
   DeleteConfirmationModal,
 } from '../components/ShopModals';
+import { ReasonCancelled, useReasonPrompt } from '../../activity-log/reason';
 import { Search, Plus, RotateCw, PackageX, AlertCircle, LayoutGrid, List } from 'lucide-react';
 
 interface ShopItemListPageProps {
@@ -110,14 +111,18 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({ onCreateItem
       onToast?.(success);
       closeModals();
     } catch (err) {
+      if (err instanceof ReasonCancelled) return; // nothing changed; the dialog stays open
       setActionError(mapBackendErrorsToFields(err).generalError || fallback);
     }
   };
+  // Publishing past the price guardrail: the server asks for a reason, this re-sends with it (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
 
   const handleConfirmPublish = () => publishingItem
-    && run(() => publishMutation.mutateAsync(publishingItem.id), `Đã phát hành "${publishingItem.name}".`, 'Phát hành thất bại.');
-  const handleConfirmArchive = () => archivingItem
-    && run(() => archiveMutation.mutateAsync(archivingItem.id), `Đã lưu trữ "${archivingItem.name}".`, 'Lưu trữ thất bại.');
+    && run(() => reasonPrompt.run((reason) => publishMutation.mutateAsync({ id: publishingItem.id, reason })),
+      `Đã phát hành "${publishingItem.name}".`, 'Phát hành thất bại.');
+  const handleConfirmArchive = (reason: string) => archivingItem
+    && run(() => archiveMutation.mutateAsync({ id: archivingItem.id, reason }), `Đã lưu trữ "${archivingItem.name}".`, 'Lưu trữ thất bại.');
   const handleConfirmDelete = () => deletingItem
     && run(() => deleteMutation.mutateAsync(deletingItem.id), `Đã xóa bản nháp "${deletingItem.name}".`, 'Xóa thất bại.');
 
@@ -309,9 +314,10 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({ onCreateItem
           isArchiving={archiveMutation.isPending}
           errorMessage={actionError}
           onClose={closeModals}
-          onConfirm={handleConfirmArchive}
+          onConfirm={(reason) => void handleConfirmArchive(reason)}
         />
       )}
+      {reasonPrompt.dialog}
 
       {deletingItem && (
         <DeleteConfirmationModal

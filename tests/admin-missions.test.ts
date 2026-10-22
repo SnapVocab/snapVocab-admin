@@ -76,6 +76,10 @@ test('Transport unwraps real envelope and separates save from activation', async
     assert.deepEqual(JSON.parse(String(calls[1].options?.body)), { version: 4, name: 'New' });
     await setTemplateActive(item.id, { version: 4, isActive: false, name: 'NO' } as any);
     assert.deepEqual(JSON.parse(String(calls[2].options?.body)), { version: 4, isActive: false });
+    // FE-AUD-01: the reason the server asked for travels with the same write.
+    await patchTemplate(item.id, { version: 4, rewardCoin: 40, reason: 'Thử thưởng tuần ra mắt.' });
+    assert.deepEqual(JSON.parse(String(calls[3].options?.body)), { version: 4, rewardCoin: 40, reason: 'Thử thưởng tuần ra mắt.' });
+    calls.splice(3, 1);
     await createMissionTemplate(createPayload(toForm(item)));
     const created = JSON.parse(String(calls[3].options?.body));
     assert.equal('isActive' in created, false); assert.equal('version' in created, false);

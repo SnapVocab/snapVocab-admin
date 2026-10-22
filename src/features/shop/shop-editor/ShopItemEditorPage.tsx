@@ -44,9 +44,8 @@ import { BoosterIcon, CoinIcon, FrameIcon, FreezeIcon, ThemeIcon } from '../../.
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
-import { Badge, Button, ConfirmModal, SectionLabel, TextLink } from '../../../components/ui';
-import { auditUsesFixtures } from '../../../domains/admin-audit/config';
-import { historyPath } from '../../../domains/admin-audit/mappers';
+import { Badge, Button, ConfirmModal, SectionLabel } from '../../../components/ui';
+import { TargetHistory } from '../../activity-log/TargetHistory';
 import { AssetUploadField } from '../components/AssetUploadField';
 import {
   PublishConfirmationModal,
@@ -55,6 +54,7 @@ import {
   TypeChangeConfirmationModal,
   VersionConflictBanner,
 } from '../components/ShopModals';
+import { ReasonCancelled, useReasonPrompt } from '../../activity-log/reason';
 import {
   ArrowLeft,
   Save,
@@ -254,6 +254,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   const publishMutation = usePublishShopItem();
   const archiveMutation = useArchiveShopItem();
   const deleteMutation = useDeleteShopItem();
+  // Save/publish past the price guardrail: the server asks for a reason, this re-sends with it (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
 
   const isDirty = JSON.stringify(formData) !== JSON.stringify(initialData);
 
@@ -472,7 +474,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     ownWriteRef.current = true;
     try {
       if (mode === 'create') {
-        const created = await createMutation.mutateAsync(toPayload(formData));
+        const created = await reasonPrompt.run((reason) => createMutation.mutateAsync({ ...toPayload(formData), reason }));
         setInitialData(formData);
         onToast?.(`Đã lưu bản nháp "${created.name}".`);
         onSaved?.(created);
@@ -482,10 +484,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           throw new Error('Thiếu thông tin phiên bản để cập nhật.');
         }
 
-        const updated = await updateMutation.mutateAsync({
-          id: itemId,
-          payload: buildUpdatePayload(formData, initialData, currentVersion),
-        });
+        const payload = buildUpdatePayload(formData, initialData, currentVersion);
+        const updated = await reasonPrompt.run((reason) => updateMutation.mutateAsync({ id: itemId, payload: { ...payload, reason } }));
 
         loadItem(updated);
         onToast?.(`Đã lưu "${updated.name}" (v${updated.version}).`);
@@ -494,6 +494,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       }
       return null;
     } catch (err) {
+      if (err instanceof ReasonCancelled) return null; // nothing was saved; the edits stay on screen
       const mapped = mapBackendErrorsToFields(err);
       setFieldErrors(mapped.fieldErrors);
       // A conflict has its own banner with the way out.
@@ -523,12 +524,13 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     if (!itemId) return;
     ownWriteRef.current = true;
     try {
-      const published = await publishMutation.mutateAsync(itemId);
+      const published = await reasonPrompt.run((reason) => publishMutation.mutateAsync({ id: itemId, reason }));
       loadItem(published);
       setIsPublishModalOpen(false);
       onToast?.(`Vật phẩm "${published.name}" đã được phát hành thành công.`);
       onSaved?.(published);
     } catch (err) {
+      if (err instanceof ReasonCancelled) return; // still a draft; the publish dialog stays open
       const mapped = mapBackendErrorsToFields(err);
       setFieldErrors(mapped.fieldErrors);
       setModalError(mapped.generalError || 'Phát hành thất bại. Kiểm tra các trường được đánh dấu.');
@@ -545,11 +547,11 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   };
 
   // ARCHIVE HANDLER
-  const handleConfirmArchive = async () => {
+  const handleConfirmArchive = async (reason: string) => {
     if (!itemId) return;
     ownWriteRef.current = true;
     try {
-      const archived = await archiveMutation.mutateAsync(itemId);
+      const archived = await archiveMutation.mutateAsync({ id: itemId, reason });
       loadItem(archived);
       setIsArchiveModalOpen(false);
       onToast?.(`Vật phẩm "${archived.name}" đã được lưu trữ.`);
@@ -1351,10 +1353,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 <dt className="text-text-muted">ID</dt>
                 <dd className="tabular-nums text-text">{existingItem.id}</dd>
               </dl>
-              <p className="border-t border-border pt-2.5 text-xs text-text-muted">
-                Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
-                {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'SHOP_ITEM', id: String(existingItem.id) })}>Xem nhật ký mẫu</TextLink></>}
-              </p>
+              <TargetHistory target={{ type: 'SHOP_ITEM', id: String(existingItem.id) }} />
             </div>
           )}
         </div>
@@ -1378,7 +1377,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             isArchiving={archiveMutation.isPending}
             errorMessage={modalError}
             onClose={() => { setIsArchiveModalOpen(false); setModalError(null); }}
-            onConfirm={handleConfirmArchive}
+            onConfirm={(reason) => void handleConfirmArchive(reason)}
           />
 
           <DeleteConfirmationModal
@@ -1391,6 +1390,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           />
         </>
       )}
+
+      {reasonPrompt.dialog}
 
       {pendingTypeChange && (
         <TypeChangeConfirmationModal

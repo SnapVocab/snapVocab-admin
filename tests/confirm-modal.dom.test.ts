@@ -126,6 +126,60 @@ test('Shop dialogs run on the shared ConfirmModal: busy label, locked buttons, e
   assert.ok(text.includes('Giữ tối đa:') && text.includes('Xác nhận phát hành'));
 });
 
+/** React-controlled textarea: set through the native setter so onChange fires. */
+async function type(el: HTMLTextAreaElement, value: string) {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+const button = (label: string) => [...document.querySelectorAll('button')].find(b => b.textContent?.includes(label))!;
+
+// FE-AUD-01: the backend rejects an archive without a 10–500 character reason.
+test('Archive dialog asks for a reason before it confirms and hands it over trimmed', async () => {
+  const { ArchiveConfirmationModal } = await import('../src/features/shop/components/ShopModals');
+  const reasons: string[] = [];
+  await renderModal(React.createElement(ArchiveConfirmationModal, {
+    isOpen: true, itemName: 'Khung Vàng', isArchiving: false, onClose: () => {}, onConfirm: (r: string) => { reasons.push(r); },
+  }));
+  await act(async () => button('Ngừng bán vĩnh viễn').click());
+  assert.deepEqual(reasons, [], 'no reason, no archive');
+  assert.ok(document.body.textContent!.includes('ít nhất 10 ký tự'));
+  await type(document.querySelector('textarea')!, '  Hết mùa sự kiện mùa xuân  ');
+  await act(async () => button('Ngừng bán vĩnh viễn').click());
+  assert.deepEqual(reasons, ['Hết mùa sự kiện mùa xuân']);
+});
+
+test('useReasonPrompt re-sends a write the server sent back for a reason, or rejects with ReasonCancelled', async () => {
+  const { useReasonPrompt, ReasonCancelled } = await import('../src/features/activity-log/reason');
+  const { ApiClientError } = await import('../src/lib/api-client');
+  const guardrail = 'Giá 2.400 Coin cao hơn 1,5 lần giá cao nhất của Khung avatar đang bán (Huyền Thoại Bất Hủ, 1.500 Coin).';
+  const sent: (string | undefined)[] = [];
+  const send = async (reason?: string) => {
+    sent.push(reason);
+    if (!reason) throw new ApiClientError('x', 'AUDIT_REASON_REQUIRED', 400, { rule: 'PRICE_OUT_OF_BAND', guardrail });
+    return 'saved';
+  };
+  let prompt: ReturnType<typeof useReasonPrompt> | undefined;
+  function Page() { prompt = useReasonPrompt(); return React.createElement('div', null, prompt.dialog); }
+  await renderModal(React.createElement(Page));
+
+  let result: Promise<string> | undefined;
+  await act(async () => { result = prompt!.run(send); });
+  assert.ok(document.body.textContent!.includes(guardrail), 'the dialog quotes the guardrail');
+  await type(document.querySelector('textarea')!, 'Vật phẩm giới hạn mùa xuân.');
+  await act(async () => button('Lưu kèm lý do').click());
+  assert.equal(await result, 'saved');
+  assert.deepEqual(sent, [undefined, 'Vật phẩm giới hạn mùa xuân.']);
+  assert.equal(document.querySelector('[role="dialog"]'), null);
+
+  let outcome: Promise<unknown> | undefined;
+  // Settled into a value at once: the rejection must not surface as unhandled before it is checked.
+  await act(async () => { outcome = prompt!.run(send).then(() => 'resolved', (e: unknown) => e); });
+  await act(async () => button('Hủy').click());
+  assert.ok((await outcome) instanceof ReasonCancelled);
+});
+
 test('useToast: a second toast restarts the timer instead of being cut short by the first', async () => {
   const { useToast } = await import('../src/components/ui/Toast');
   let show: (text: string, error?: boolean) => void = () => {};

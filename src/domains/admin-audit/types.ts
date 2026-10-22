@@ -1,7 +1,7 @@
 /**
  * Proposed admin audit contract (design.md §8, PD-ADS-10; admin_product_review_2026-10-19 §3.14).
  * Backend implementation spec: docs/sa/admin_audit_log_backend.md (enum values here must match it exactly).
- * NOT implemented on the backend yet: the UI runs on fixtures until it is (api.ts).
+ * Implemented by the backend (module vn.ptit.snapvocab.audit); fixtures only with VITE_ADMIN_AUDIT_FIXTURES=true (config.ts).
  *
  *   GET /api/admin/audit-log?days=&day=&area=&actor=&kind=&targetType=&targetId=&q=&page=&size=  → AuditLogResponse
  * CSV export is built by the client from these pages (api.ts), so there is no export endpoint.
@@ -59,6 +59,14 @@ export interface AuditEntry {
   guardrail: string | null;
   /** Object version after the write (optimistic lock), when the object has one. */
   version: number | null;
+}
+
+/**
+ * Write bodies may carry the admin's "why" (FE-AUD-01): required past a guardrail (the server answers
+ * AUDIT_REASON_REQUIRED with { rule, guardrail }) and on archive; 10–500 characters.
+ */
+export interface AuditReasonInput {
+  reason?: string;
 }
 
 /** Questions the summary strip answers; an entry can match several. */

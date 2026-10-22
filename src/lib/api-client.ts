@@ -332,6 +332,15 @@ function getFriendlyErrorMessage(code: string, details?: any): string {
       return 'Chỉ có thể xóa vật phẩm ở trạng thái DRAFT (Bản nháp).';
     case 'VALIDATION_ERROR':
       return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường được đánh dấu.';
+    // admin_audit_log_backend.md §7: the write was not saved.
+    case 'AUDIT_REASON_REQUIRED':
+      return details?.guardrail
+        ? `Cần ghi lý do để lưu: ${details.guardrail}`
+        : 'Thao tác này cần ghi lý do vào nhật ký hoạt động.';
+    case 'AUDIT_REASON_INVALID':
+      return `Lý do phải từ ${details?.min ?? 10} đến ${details?.max ?? 500} ký tự.`;
+    case 'AUDIT_FILTER_INVALID':
+      return 'Bộ lọc nhật ký không hợp lệ.';
     case 'UNAUTHORIZED':
       return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     case 'FORBIDDEN':

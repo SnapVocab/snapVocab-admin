@@ -217,7 +217,7 @@ Mục tiêu: admin trông như công cụ một đội vận hành dùng hằng 
 | | Bảng xếp hạng (`/leaderboard`) | MOCK (chỉ xem) | **Đã dựng 2026-10-21** ([leaderboard_ui.md](./leaderboard_ui.md)). Chờ `GET /api/admin/leaderboards` ([leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) rev 1.1); phát hành sau màn người học |
 | PEOPLE | Người học (`/learners`, `/learners/:id`) | **MOCK** | **Đã dựng 2026-10-19** ([learners_ui.md](./learners_ui.md)) |
 | | Phản hồi (bản gọn) | FUTURE | Chờ OQ-ADS-02. Tab "Thiếu từ" nằm trong AI Scan |
-| SYSTEM | Nhật ký hoạt động (`/activity-log`, `/activity-log/:loại/:id`) | MOCK | **Đã làm lại 2026-10-20** ([activity_log_ui.md](./activity_log_ui.md)): dải câu hỏi kiêm bộ lọc, dải phân bố ngày · khu vực · người làm, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng. Chờ `admin_audit_logs` |
+| SYSTEM | Nhật ký hoạt động (`/activity-log`, `/activity-log/:loại/:id`) | NOW | **Đã làm lại 2026-10-20** ([activity_log_ui.md](./activity_log_ui.md)): dải câu hỏi kiêm bộ lọc, dải phân bố ngày · khu vực · người làm, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng. Chờ `admin_audit_logs` |
 | — | Seasons/Leagues, Decks, Settings, Admins & Roles, Báo cáo kiểu SLA | **REMOVE** | Đã gỡ khỏi route và sidebar (file prototype còn trên đĩa, chờ xóa) |
 
 ### 4.2. Quy tắc hiển thị theo bản build
@@ -568,7 +568,7 @@ Theo đề xuất trong đánh giá 2026-10-19:
 | AI Scan | Vận hành · Nhãn chưa có từ · Lịch sử | Sau |
 | Dashboard C | 11 quy tắc "Cần xử lý" (6 NOW, 5 MOCK) + vận hành scan, nhịp học, nhiệm vụ, kinh tế, cửa hàng, thay đổi gần đây | **Xong** 2026-10-19. Chờ `GET /api/admin/overview`, OQ-DASH-01/02 |
 | Phân tích | 4 tab Học tập · Giữ chân · Kinh tế · Scan; kết luận + hành động mỗi biểu đồ; giữ chân theo % chỉ hiện khi ≥ 200 người học | **Xong** 2026-10-19. Chờ `GET /api/admin/analytics`, OQ-ANL-01…03 |
-| Nhật ký hoạt động | Dải câu hỏi, dải phân bố, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng, xuất CSV | **Xong** 2026-10-20 (MOCK). Chờ `admin_audit_logs`, OQ-LOG-01…03 |
+| Nhật ký hoạt động | Dải câu hỏi, dải phân bố, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng, xuất CSV | **Xong** 2026-10-20; **API thật** 2026-10-22 (FE-AUD-02, nav NOW). Panel "Vòng đời" của Cửa hàng/Nhiệm vụ đọc nhật ký thật (FE-AUD-03). Còn OQ-LOG-01…03; thao tác người học chờ M3 |
 | Huy hiệu (rev 3) | Danh mục theo chuỗi + kệ trên ứng dụng; editor `/badges/:id`; P2 MOCK | **Xong** 2026-10-21. P1 dùng API thật; P2 chờ `PATCH`, cột `version`, API ước tính (OQ-BDGA-01/02) |
 | Bảng xếp hạng | Dải số liệu, phân bố, bảng, "Cần xem", drawer + mô phỏng app | **Xong** 2026-10-21 (MOCK). Chờ backend (leaderboard_backend.md rev 1.1), OQ-LBA-01…03 |
 | Mẫu thẻ | Thư viện vẽ bằng renderer của app, bảng thuộc tính × mẫu, editor với kiểm tra Quiz/hiển thị/dữ liệu | **Xong** 2026-10-21 (đọc NOW, ghi MOCK). Chờ API ghi (templates_ui.md §8), OQ-TPL-01…04 |

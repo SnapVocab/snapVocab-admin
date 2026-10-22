@@ -6,6 +6,7 @@ import type {
   ShopItemTypeMetadataDTO,
   ShopItemUpdatePayload,
 } from './types';
+import type { AuditReasonInput } from '../admin-audit/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   archiveShopItem,
@@ -70,7 +71,7 @@ export function useAdminShopItem(id: number | string | null | undefined) {
 export function useCreateShopItem() {
   const queryClient = useQueryClient();
 
-  return useMutation<AdminShopItemDTO, Error, ShopItemForm>({
+  return useMutation<AdminShopItemDTO, Error, ShopItemForm & AuditReasonInput>({
     mutationFn: payload => createShopItem(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminShopKeys.all });
@@ -87,7 +88,7 @@ export function useUpdateShopItem() {
   return useMutation<
     AdminShopItemDTO,
     Error,
-    { id: number | string; payload: ShopItemUpdatePayload }
+    { id: number | string; payload: ShopItemUpdatePayload & AuditReasonInput }
   >({
     mutationFn: ({ id, payload }) => updateShopItem(id, payload),
     onSuccess: (data) => {
@@ -105,8 +106,8 @@ export function useUpdateShopItem() {
 export function usePublishShopItem() {
   const queryClient = useQueryClient();
 
-  return useMutation<AdminShopItemDTO, Error, number | string>({
-    mutationFn: id => publishShopItem(id),
+  return useMutation<AdminShopItemDTO, Error, { id: number | string; reason?: string }>({
+    mutationFn: ({ id, reason }) => publishShopItem(id, reason),
     onSuccess: (data) => {
       queryClient.setQueryData(adminShopKeys.detail(data.id), data);
       queryClient.invalidateQueries({ queryKey: ['adminShop', 'list'] });
@@ -120,8 +121,8 @@ export function usePublishShopItem() {
 export function useArchiveShopItem() {
   const queryClient = useQueryClient();
 
-  return useMutation<AdminShopItemDTO, Error, number | string>({
-    mutationFn: id => archiveShopItem(id),
+  return useMutation<AdminShopItemDTO, Error, { id: number | string; reason: string }>({
+    mutationFn: ({ id, reason }) => archiveShopItem(id, reason),
     onSuccess: (data) => {
       queryClient.setQueryData(adminShopKeys.detail(data.id), data);
       queryClient.invalidateQueries({ queryKey: ['adminShop', 'list'] });
