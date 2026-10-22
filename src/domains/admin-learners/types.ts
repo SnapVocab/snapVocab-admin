@@ -47,7 +47,7 @@ export interface AdminLearnerDetail extends AdminLearnerRow {
   missions7d: { assigned: number; completed: number; claimed: number };
   badges: { code: string; name: string; earnedAt: string }[];
   wallet: { recent: { at: string; amount: number; source: CoinSource; note: string }[] };
-  items: { code: string; name: string; type: 'THEME' | 'AVATAR_FRAME' | 'XP_BOOSTER'; equipped: boolean; quantity: number }[];
+  items: { code: string; name: string; type: 'THEME' | 'AVATAR_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE'; equipped: boolean; quantity: number }[];
   scans: {
     today: number;
     dailyLimit: number;

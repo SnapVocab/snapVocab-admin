@@ -20,7 +20,7 @@ import {
 import { SaleStateBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemCard } from '../components/ShopItemCard';
 import { Button, StripCell, SummaryStrip, toolbarControl } from '../../../components/ui';
-import { BoosterIcon, FrameIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, FrameIcon, FreezeIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
 import {
   PublishConfirmationModal,
@@ -37,11 +37,12 @@ interface ShopItemListPageProps {
 
 type Row = { item: AdminShopItemDTO; sale: DerivedSaleState };
 
-/** Order matching the LiveOps Shop shelf: Frames -> Boosters -> Themes. */
+/** Order matching the LiveOps Shop shelf: Frames -> Boosters -> Streak Freeze -> Themes. */
 const TYPES: { type: ShopItemType; label: string; Icon: React.FC<{ size?: number }> }[] = [
   { type: 'AVATAR_FRAME', label: 'Khung avatar', Icon: FrameIcon },
   { type: 'XP_BOOSTER', label: 'XP Booster', Icon: BoosterIcon },
-  { type: 'THEME', label: 'Giao diện', Icon: ThemeIcon },
+  { type: 'STREAK_FREEZE', label: 'Đóng băng chuỗi', Icon: FreezeIcon },
+  { type: 'THEME', label: 'Bộ màu', Icon: ThemeIcon },
 ];
 
 /** Sale conclusions in scan order: what learners can buy, what is about to change, then inactive. */

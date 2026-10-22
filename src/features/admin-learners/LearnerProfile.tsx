@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, ArrowLeft, Award, BookOpen, Camera, Check, KeyRound, ListChecks, Lock, LockOpen, ShoppingBag, Target, UserRound } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Award, BookOpen, Camera, KeyRound, ListChecks, Lock, LockOpen, ShoppingBag, Target, UserRound } from 'lucide-react';
 import { Badge, Button, ConfirmModal, Mini, MiniStrip, Panel, SampleDataNotice, StatCell, SummaryStrip, TextLink } from '../../components/ui';
 import { auditUsesFixtures } from '../../domains/admin-audit/config';
 import { historyPath } from '../../domains/admin-audit/mappers';
@@ -14,6 +14,7 @@ import { scanErrorLabel } from '../../domains/scan/labels';
 import { navigate } from '../../lib/router';
 import { cn } from '../../lib/utils';
 import { LearnerAvatar } from './LearnerAvatar';
+import { useToast } from '../../components/ui/Toast';
 
 const fmt = (n: number) => n.toLocaleString('vi-VN');
 /** Event type is read from the glyph; colour stays neutral (design.md §3.2). */
@@ -35,8 +36,7 @@ type Dialog = 'ban' | 'unban' | 'reset' | null;
 export function LearnerProfile({ id }: { id: number }) {
   const learner = useLearner(id);
   const [dialog, setDialog] = useState<Dialog>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const flash = (text: string) => { setToast(text); window.setTimeout(() => setToast(null), 3500); };
+  const { show: flash, node: toastNode } = useToast();
   const now = learnersUseFixtures ? FIXTURE_NOW : new Date();
   const back = <Button icon={<ArrowLeft />} label="Quay lại danh sách" onClick={() => navigate('/learners')} />;
 
@@ -63,7 +63,7 @@ export function LearnerProfile({ id }: { id: number }) {
 
   return (
     <div className="space-y-4 pb-10">
-      {toast && <div role="status" className="fixed right-6 top-6 z-40 flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs font-medium text-text shadow-elevated"><Check size={16} className="text-primary-dark" />{toast}</div>}
+      {toastNode}
 
       {/* Who, account state, and the two support actions (the dangerous one set apart). */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

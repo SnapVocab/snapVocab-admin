@@ -478,13 +478,13 @@ Quy tắc:
 | TD-ADS-02 | ~~Sidebar theo IA cũ~~ | **Xong** 2026-10-19 (`layout/nav.ts`). File prototype của mục REMOVE còn trên đĩa, chờ xóa |
 | TD-ADS-03 | ~~Eyebrow lệch nhau~~ | **Xong**: Shop, Missions dùng "LiveOps"; Người học dùng "People" |
 | TD-ADS-04 | ~~`StripCell` trùng~~ | **Xong**: `components/ui/SummaryStrip` (StripCell, StripNote, StatCell) |
-| TD-ADS-05 | Toast và hộp xác nhận bị trùng. Người học dùng `components/ui/ConfirmModal`; Shop (`ShopModals`) và Missions (`ConfirmModal` riêng) chưa chuyển | P0 còn lại |
+| TD-ADS-05 | ~~Hộp xác nhận bị trùng~~ | **Xong** 2026-10-22: Người học, Missions và Shop (`ShopModals`: phát hành, ngừng bán, xóa nháp, đổi loại) đều dùng `components/ui/ConfirmModal`; bản chung thêm `busyLabel` và cuộn nội dung dài. Toast: 7 màn (Huy hiệu, Mẫu thẻ, Người học, Chủ đề, Nhiệm vụ, Cửa hàng, AI Scan) dùng `useToast` chung (`components/ui/Toast`); sửa lỗi toast thứ hai bị hẹn giờ của toast đầu tắt sớm, AI Scan có `role="status"` |
 | TD-ADS-06 | Simulator Shop có ngữ cảnh mẫu ngoài scope: "Bảo hiểm Streak" (Streak Freeze), "Diamond League · Top 1" (League); số mẫu ví/streak/từ đã học không gắn nhãn mẫu | Trước nghiệm thu |
 | TD-ADS-07 | `resolveFrameAsset` đoán ảnh khung theo mã khi item chưa upload, nên preview hiện ảnh không thuộc item | Trước nghiệm thu |
 | TD-ADS-08 | `THEME_SURFACES` mirror tay từ mobile | Khi registry > vài theme |
-| TD-ADS-09 | `SLOTS` và `dailyOutlook` mirror `MissionTracker` ở frontend nên có rủi ro lệch | P1: dùng chung test vector hoặc thêm endpoint outlook |
+| TD-ADS-09 | ~~`SLOTS` và `dailyOutlook` mirror `MissionTracker` ở frontend nên có rủi ro lệch~~ | **Xong** 2026-10-22: bộ vector dùng chung `snap-vocab-backend/src/test/resources/mission/outlook-vectors.json`, backend kiểm bằng `MissionTracker.outcomes` (cùng hàm duyệt với `choose`) |
 | TD-ADS-10 | Catalog Shop tải một trang 100 item; có cảnh báo khi vượt | Khi > 100 item |
-| TD-ADS-11 | `MAX_COIN_PER_DAY = 85` là hằng số ở frontend | Khi PD-DM-02 đổi, hoặc lấy từ API |
+| TD-ADS-11 | `MAX_COIN_PER_DAY` là hằng số ở frontend | 2026-10-22: đổi thành **75** theo PD-DM-02 và so với bộ nhiệm vụ của app hiện tại. Vẫn là hằng số; lấy từ API khi có endpoint cấu hình kinh tế |
 | TD-ADS-12 | Shell chưa responsive (sidebar cố định 240px) | P0 |
 | TD-ADS-13 | Tài liệu lệch: `docs/sa/techstack.md` (ghi Next.js), `docs/spec/phan_ra_man_hinh.md`, phần hình thức ở [admin_missions_api_design.md](./admin_missions_api_design.md) §7 | Sau khi chốt rev 2 |
 | TD-ADS-14 | `ShopItemCard` có nhãn loại 10px, dưới sàn 11px (§3.3) | Nhỏ |

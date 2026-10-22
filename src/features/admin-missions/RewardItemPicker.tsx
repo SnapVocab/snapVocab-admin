@@ -10,7 +10,7 @@ import { errorMessage, inputClass } from './ui';
 // Resolve a reward code by exact match, independent of picker search/pagination.
 // ponytail: one Shop search per distinct code at the backend max page size (100, newest first); add a bulk lookup
 // endpoint if more than 100 items ever contain the same code substring.
-function useRewardItem(code: string | null) {
+export function useRewardItem(code: string | null) {
   const params = { status: 'ALL', q: code ?? '', page: 0, size: 100 };
   const query = useQuery({ queryKey: adminShopKeys.list(params), queryFn: () => getAdminShopItems(params), enabled: !!code, staleTime: 60_000 });
   return { query, item: code ? query.data?.data.find(i => i.code === code) : undefined };

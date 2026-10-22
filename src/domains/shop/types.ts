@@ -2,7 +2,7 @@
  * Canonical Shop Admin Domain Contracts matching backend shop DTOs.
  */
 
-export type ShopItemType = 'THEME' | 'AVATAR_FRAME' | 'XP_BOOSTER';
+export type ShopItemType = 'THEME' | 'AVATAR_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE';
 
 export type ShopItemStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
@@ -35,7 +35,7 @@ export interface FieldSpec {
 
 export interface TypeSpec {
   type: ShopItemType;
-  behavior: 'EQUIP' | 'ACTIVATE';
+  behavior: 'EQUIP' | 'ACTIVATE' | 'PASSIVE';
   stackable: boolean;
   fixed: Record<string, unknown>;
   fields: FieldSpec[];
@@ -51,7 +51,7 @@ export interface AdminShopItemDTO {
   version: number;
   code: string;
   type: ShopItemType;
-  behavior: 'EQUIP' | 'ACTIVATE';
+  behavior: 'EQUIP' | 'ACTIVATE' | 'PASSIVE';
   name: string;
   description: string | null;
   iconKey: string | null;

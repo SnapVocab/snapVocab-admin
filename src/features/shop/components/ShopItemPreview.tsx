@@ -15,6 +15,7 @@ import { ARTWORK_BG, type Mode, THEME_SURFACES } from './artwork';
 import {
   CoinIcon,
   BoosterIcon,
+  FreezeIcon,
   ThemeIcon,
   StreakFlameIcon,
   RewardGiftIcon,
@@ -32,6 +33,8 @@ const INVENTORY_ACTION: Record<ShopItemType, string> = {
   THEME: 'Áp dụng',
   AVATAR_FRAME: 'Trang bị',
   XP_BOOSTER: 'Kích hoạt',
+  // Passive: the app shows a status, there is nothing to press (streak_freeze.md §7).
+  STREAK_FREEZE: 'Sẵn sàng',
 };
 
 /** Helper to resolve a sample frame asset when none is uploaded yet */
@@ -270,7 +273,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                           <img src={iconUrl} alt="" className="w-[72px] h-[72px] object-contain drop-shadow-sm" />
                         ) : (
                           <span style={{ color: TEXT.light.muted }}>
-                            {type === 'THEME' ? <ThemeIcon size={36} /> : <BoosterIcon size={36} />}
+                            {type === 'THEME' ? <ThemeIcon size={36} /> : type === 'STREAK_FREEZE' ? <FreezeIcon size={36} /> : <BoosterIcon size={36} />}
                           </span>
                         )}
                         <span className="absolute top-2 right-2 text-[9px] font-mono px-1.5 py-0.2 rounded-md bg-white/80 font-bold border border-border/60">
@@ -337,7 +340,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                           <img src={iconUrl} alt="" className="w-10 h-10 object-contain" />
                         ) : (
                           <span style={{ color: TEXT.light.muted }}>
-                            {type === 'THEME' ? <ThemeIcon size={24} /> : <BoosterIcon size={24} />}
+                            {type === 'THEME' ? <ThemeIcon size={24} /> : type === 'STREAK_FREEZE' ? <FreezeIcon size={24} /> : <BoosterIcon size={24} />}
                           </span>
                         )}
                       </div>
@@ -352,7 +355,9 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                         <div className="text-[10px] text-text-muted mt-0.5">
                           {type === 'XP_BOOSTER'
                             ? `Sở hữu: 2 thẻ · Tối đa ${form.maxQuantity ?? 5}`
-                            : 'Đã sẵn sàng trong túi đồ'}
+                            : type === 'STREAK_FREEZE'
+                              ? `Tự dùng khi bạn lỡ một ngày học · Tối đa ${form.maxQuantity ?? 2}`
+                              : 'Đã sẵn sàng trong túi đồ'}
                         </div>
                       </div>
                     </div>

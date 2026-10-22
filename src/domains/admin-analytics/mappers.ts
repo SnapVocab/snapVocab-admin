@@ -136,7 +136,7 @@ export function itemPerformance(items: AdminShopItemDTO[], sales: AdminAnalytics
     })
     .filter((r) => r.sale.state === 'ON_SALE' || byCode.has(r.item.code))
     .sort((a, b) => b.coin - a.coin || a.item.name.localeCompare(b.item.name, 'vi'));
-  const byType: Record<ShopItemType, number> = { XP_BOOSTER: 0, AVATAR_FRAME: 0, THEME: 0 };
+  const byType: Record<ShopItemType, number> = { XP_BOOSTER: 0, STREAK_FREEZE: 0, AVATAR_FRAME: 0, THEME: 0 };
   for (const r of rows) byType[r.item.type] += r.coin;
   return { rows, totalCoin, byType, unsold: rows.filter((r) => r.unsold).map((r) => r.item) };
 }

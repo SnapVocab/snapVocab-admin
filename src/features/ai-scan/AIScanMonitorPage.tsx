@@ -25,7 +25,8 @@ import { ReviewQueueTab } from './components/ReviewQueueTab';
 import { ScanRequestsExplorerTab } from './components/ScanRequestsExplorerTab';
 import { FineTuningDatasetTab } from './components/FineTuningDatasetTab';
 import { CEFRLevel } from '../../domains/flashcard/types';
-import { RotateCw, CheckCircle2 } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
+import { useToast } from '../../components/ui/Toast';
 
 interface AIScanMonitorPageProps {
   activeNav?: string;
@@ -62,13 +63,7 @@ export const AIScanMonitorPage: React.FC<AIScanMonitorPageProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState('Vừa cập nhật');
 
-  // Success Toast Notification
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+  const { show: showToast, node: toastNode } = useToast();
 
   // Aggregated Ribbon Metrics
   const ribbonMetrics = useMemo(
@@ -248,12 +243,7 @@ export const AIScanMonitorPage: React.FC<AIScanMonitorPageProps> = ({
   return (
     <div className="h-full w-full overflow-y-auto bg-background p-4 space-y-4 select-none">
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-text text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
-          <CheckCircle2 size={16} className="text-primary" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      {toastNode}
 
       {/* Top Action & Breadcrumb Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-border/60">

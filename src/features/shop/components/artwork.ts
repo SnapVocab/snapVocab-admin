@@ -23,4 +23,4 @@ export const THEME_SURFACES: Record<string, Record<Mode, Surfaces>> = {
 };
 
 /** Artwork tint behind each item type on the mobile Shop card. */
-export const ARTWORK_BG: Record<ShopItemType, string> = { THEME: '#F4F0FF', AVATAR_FRAME: '#FFF8EF', XP_BOOSTER: '#ECFDF5' };
+export const ARTWORK_BG: Record<ShopItemType, string> = { THEME: '#F4F0FF', AVATAR_FRAME: '#FFF8EF', XP_BOOSTER: '#ECFDF5', STREAK_FREEZE: '#F0F9FF' };

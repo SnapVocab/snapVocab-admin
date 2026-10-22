@@ -99,7 +99,7 @@ Quản lý danh mục… Giá quy ra ngày: số ngày làm đủ 5 nhiệm vụ
 | Section | Trường | Quy tắc |
 | :--- | :--- | :--- |
 | **CƠ BẢN** | Mã, Tên, Mô tả | Mã: chữ HOA, 3–64 ký tự `[A-Z][A-Z0-9_]`, khóa sau phát hành. Tên ≤ 100. Mô tả ≤ 500 |
-| **LOẠI & CẤU HÌNH** | Loại (3 thẻ chọn có icon brand) và cấu hình riêng | Đổi loại phải xác nhận. Giao diện: chọn `themeKey` từ danh sách theme còn trống (mỗi theme chỉ một item). Khung: ảnh PNG/WebP 512×512 có alpha, ≤ 300 KB. Booster: ×2 cố định, thời lượng 5–180 phút (mặc định 30), giữ tối đa 1–10 thẻ (mặc định 5) |
+| **LOẠI & CẤU HÌNH** | Loại (4 thẻ chọn có icon brand) và cấu hình riêng | Đổi loại phải xác nhận. Bộ màu: chọn `themeKey` từ danh sách theme còn trống (mỗi theme chỉ một item). Khung: ảnh PNG/WebP 512×512 có alpha, ≤ 300 KB. Booster: ×2 cố định, thời lượng 5–180 phút (mặc định 30), giữ tối đa 1–10 thẻ (mặc định 5). Đóng băng chuỗi (2026-10-22, [streak_freeze.md](../../../docs/decisions/streak_freeze.md)): chỉ giữ tối đa 1–5 (mặc định 2), một dòng giải thích cách tự dùng; chỉ một item loại này được phát hành (backend từ chối item thứ hai) |
 | **HÌNH ẢNH** | Icon vật phẩm | PNG/WebP vuông ≥ 256×256, ≤ 200 KB. Kiểm header ảnh ngay trên client |
 | **BÁN TRONG CỬA HÀNG** | Kết luận trạng thái bán trực tiếp, Cho phép mua, Giá, Thứ tự, Thời gian bán | Bản nháp hiện "Sau khi phát hành: …". Giá 1–100.000 khi bán, kèm guardrail (§4.3). Thời gian bán: Không giới hạn hoặc Theo thời gian, nhập theo UTC+7 |
 
@@ -112,6 +112,9 @@ Hiện dưới ô giá khi "Cho phép mua" đang bật:
 1. "1 đến 100,000 Coin. **≈ N ngày** làm đủ nhiệm vụ (tối đa 85 Coin/ngày)."
 2. Dải giá của các vật phẩm **khác** cùng loại đang mở bán (loại trừ chính item này): min–max, trung vị, số vật phẩm. Nếu chỉ có 1 thì ghi "N Coin (1 vật phẩm)". Nếu chưa có thì ghi "Chưa có … nào khác đang bán để so giá."
 3. Hộp cảnh báo khi **có ≥ 3 vật phẩm để so** và giá > ×1,5 giá cao nhất hoặc < giá thấp nhất ÷ 1,5. Câu cảnh báo kết thúc bằng "Gợi ý để rà lại, không chặn lưu." Ngưỡng: OQ-ADS-04.
+4. Bậc giá PO duyệt 2026-10-21 (PD-SHX-01, [shop.md](../../../docs/decisions/shop.md) §8.6; `PRICE_TIERS`, `priceTier`): dòng "Bậc giá: {bậc} (min–max Coin)". Giá nằm ngoài cả 3 bậc (60–250, 300–700, 800–1.500) thì hiện hộp cảnh báo liệt kê 3 bậc. Không chặn lưu.
+
+Thời gian bán "Theo thời gian" có giờ kết thúc: hộp cảnh báo "App người học không hiện hạn bán…" (PD-SHX-05 = Không bán theo mùa). Không chặn lưu.
 
 ### 4.4. Cột phải
 
@@ -137,6 +140,7 @@ Hiện dưới ô giá khi "Cho phép mua" đang bật:
 | AC-SHOP-04 | Dải giá chỉ tính item đang mở bán cùng loại; trung vị của số lượng chẵn = trung bình hai giá trị giữa | `admin-shop.test.ts` G1 |
 | AC-SHOP-05 | Cảnh báo giá chỉ xuất hiện khi so được với ≥ 3 vật phẩm và vượt ×1,5; không bao giờ chặn Lưu | G1 + kiểm tay |
 | AC-SHOP-06 | "≈ N ngày" = giá ÷ 85, một chữ số thập phân, định dạng vi-VN (850 → "≈ 10 ngày", 350 → "≈ 4,1 ngày") | G1 |
+| AC-SHOP-06b | Bậc giá: 60, 250 → Khởi đầu; 400 → Phổ thông; 1.500 → Cao cấp; 59, 251, 299, 701, 799, 1.501 → ngoài bậc (cảnh báo, không chặn lưu) | `admin-shop.test.ts` "PD-SHX-01 price tiers" |
 | AC-SHOP-07 | Panel Vòng đời chỉ hiển thị mốc có trong DTO; không có lịch sử giả | Kiểm tay |
 | AC-SHOP-08 | Preview không chứa tính năng ngoài scope và mọi ngữ cảnh mẫu đều có nhãn | **Chưa đạt**: TD-ADS-06, TD-ADS-07 |
 | AC-SHOP-09 | Các luồng an toàn §4.5 giữ nguyên hành vi trước khi làm lại giao diện | `admin-shop.test.ts` (R1–R5, 15–24) |

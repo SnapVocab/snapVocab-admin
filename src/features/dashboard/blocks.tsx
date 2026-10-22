@@ -8,7 +8,7 @@ import { formatAgo } from '../../domains/admin-learners/mappers';
 import { deriveSaleState, formatVnDateTime, MAX_COIN_PER_DAY, type SaleState } from '../../domains/shop/mappers';
 import type { AdminShopItemDTO } from '../../domains/shop/types';
 import type { MissionTemplate } from '../../domains/admin-missions/types';
-import { catalogSummary, categoryLabels, dailyOutlook } from '../../domains/admin-missions/mappers';
+import { catalogSummary, categoryLabels, CLIENTS, dailyOutlook } from '../../domains/admin-missions/mappers';
 import { openIssues, pct, seconds, THRESHOLDS, type ChangeEvent, type Check as Rule, type CheckArea, type Severity } from '../../domains/admin-overview/mappers';
 import type { AdminOverview } from '../../domains/admin-overview/types';
 import { COIN_BAND, coinVerdict } from '../../domains/admin-analytics/mappers';
@@ -216,7 +216,8 @@ export const LearningBand: React.FC<{ o?: AdminOverview; missions?: MissionTempl
 
 const MissionsColumn: React.FC<{ missions: MissionTemplate[]; o?: AdminOverview }> = ({ missions, o }) => {
   const s = catalogSummary(missions);
-  const outlook = dailyOutlook(missions);
+  // What a learner on the current app gets: the approved ceiling applies to it (PD-DM-02).
+  const outlook = dailyOutlook(missions, [CLIENTS.current]);
   const active = missions.filter((m) => m.isActive);
   const stat = (code: string) => o?.missions.find((m) => m.code === code);
   const catalog = s.inactive ? { text: 'Chưa kích hoạt', tone: 'text-text-muted' } : s.valid ? { text: 'Đủ cấp 5 nhiệm vụ/ngày', tone: 'text-primary-dark' } : { text: 'Không đủ cấp 5 nhiệm vụ/ngày', tone: 'text-danger-dark' };

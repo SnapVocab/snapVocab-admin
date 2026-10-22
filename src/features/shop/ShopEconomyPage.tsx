@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ShopItemListPage } from './shop-list/ShopItemListPage';
 import { ShopItemEditorPage } from './shop-editor/ShopItemEditorPage';
-import { Check, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button, PageHeader } from '../../components/ui';
 import { navigate } from '../../lib/router';
+import { useToast } from '../../components/ui/Toast';
 
 interface ShopEconomyPageProps {
   /** Route segment after /shop: undefined = list, "new" = create, numeric id = edit. */
@@ -18,22 +19,11 @@ export const ShopEconomyPage: React.FC<ShopEconomyPageProps> = ({ sub, onDirtyCh
       : sub && /^\d+$/.test(sub) ? { isOpen: true, mode: 'edit', itemId: Number(sub) }
       : { isOpen: false, mode: 'create' };
 
-  // Success Toast Notification
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+  const { show: showToast, node: toastNode } = useToast();
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-4 sm:p-6 space-y-4 min-w-0 text-text">
-      {toastMessage && (
-        <div role="status" className="fixed right-6 top-6 z-40 flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs font-medium text-text shadow-elevated">
-          <Check size={16} className="text-primary-dark" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      {toastNode}
 
       {/* Page Header — only shown in List view. In Editor view, Editor owns its clean header */}
       {!editorState.isOpen && (

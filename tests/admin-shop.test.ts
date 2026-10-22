@@ -15,6 +15,7 @@ import {
   checkAssetHeader,
   priceBand,
   priceHint,
+  priceTier,
   formatFullDays,
 } from '../src/domains/shop/mappers';
 import {
@@ -191,9 +192,10 @@ test('9. API - createShopAssetUploadUrl accepts fileName', () => {
    ========================================================================= */
 
 test('10. List - Format type labels in Vietnamese', () => {
-  assert.equal(formatShopItemTypeLabel('THEME'), 'Giao diện cửa hàng');
+  assert.equal(formatShopItemTypeLabel('THEME'), 'Bộ màu');
   assert.equal(formatShopItemTypeLabel('AVATAR_FRAME'), 'Khung avatar');
   assert.equal(formatShopItemTypeLabel('XP_BOOSTER'), 'XP Booster');
+  assert.equal(formatShopItemTypeLabel('STREAK_FREEZE'), 'Đóng băng chuỗi');
   assert.equal(formatShopItemTypeLabel(undefined), '—');
 });
 
@@ -540,6 +542,10 @@ test('R1. config of another type is null for THEME/AVATAR_FRAME; booster default
   assert.deepEqual(configForType('AVATAR_FRAME', { themeKey: 'MIDNIGHT_NEON', boostDurationMinutes: 30 }),
     { themeKey: null, frameAssetKey: null, boostDurationMinutes: null, maxQuantity: null });
   assert.deepEqual(configForType('XP_BOOSTER'), { themeKey: null, frameAssetKey: null, boostDurationMinutes: 30, maxQuantity: 5 });
+  // streak_freeze.md PD-SF-03: only maxQuantity, default 2; a booster's duration never leaks in.
+  assert.deepEqual(configForType('STREAK_FREEZE', { boostDurationMinutes: 30 }),
+    { themeKey: null, frameAssetKey: null, boostDurationMinutes: null, maxQuantity: 2 });
+  assert.equal(configForType('STREAK_FREEZE', { maxQuantity: 3 }).maxQuantity, 3);
 
   const form = itemToForm(serverItem({}));
   assert.equal(form.boostDurationMinutes, null);
@@ -631,6 +637,15 @@ test('G1. price guardrail: band covers only items of the type on sale now; hint 
   // Fewer than 3 items on sale is too thin to call anything unusual.
   assert.equal(priceHint(5000, priceBand(catalog, 'AVATAR_FRAME', 3, now)), null);
 
-  assert.equal(formatFullDays(850), '≈ 10 ngày');
-  assert.equal(formatFullDays(350), '≈ 4,1 ngày');
+  assert.equal(formatFullDays(750), '≈ 10 ngày');
+  assert.equal(formatFullDays(350), '≈ 4,7 ngày');
+});
+
+test('PD-SHX-01 price tiers: 60–250, 300–700, 800–1500; gaps and the ends are out of tier', () => {
+  assert.equal(priceTier(60)?.label, 'Khởi đầu');
+  assert.equal(priceTier(250)?.label, 'Khởi đầu');
+  assert.equal(priceTier(400)?.label, 'Phổ thông');
+  assert.equal(priceTier(1500)?.label, 'Cao cấp');
+  for (const outside of [59, 251, 299, 701, 799, 1501]) assert.equal(priceTier(outside), null, String(outside));
+  assert.equal(priceTier(null), null);
 });

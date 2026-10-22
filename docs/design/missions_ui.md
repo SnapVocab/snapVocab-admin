@@ -1,6 +1,6 @@
 # Admin · Nhiệm vụ hằng ngày — Đặc tả màn hình
 
-> **Rev 1 · 2026-10-19 · Trạng thái: đã dựng 2026-10-18, chờ PO chốt.**
+> **Rev 2 · 2026-10-22 · Trạng thái: đã dựng, chờ PO chốt.** Rev 2 cập nhật theo daily_mission.md PD-DM-02, PD-DM-07, PD-DM-12, PD-DM-13 (chọn 2 lượt, 12 mẫu seed, 3 điều kiện cấp, app cũ/app mới, trần 75 Coin) và xử lý TD-ADS-05, TD-ADS-09, TD-ADS-11.
 > Nền tảng: [design.md](./design.md) rev 2. Nghiệp vụ: [daily_mission.md](../../../docs/decisions/daily_mission.md). Contract và luồng an toàn: [admin_missions_api_design.md](./admin_missions_api_design.md) (§1–6, §8–9 vẫn hiệu lực; phần hình thức ở §7 được thay bằng tài liệu này).
 
 ## 1. Mục tiêu
@@ -20,7 +20,7 @@ Phạm vi theo PD-DM: không có rương, bonus, nhiệm vụ tuần/tháng, l�
 | Catalog | `GET /api/admin/mission-templates`: tải toàn bộ, không phân trang | REAL |
 | Chi tiết, tạo, sửa | `GET/POST/PATCH /api/admin/mission-templates[/{id}]` (PATCH có `version`, nội dung tách khỏi `isActive`) | REAL |
 | Vật phẩm thưởng | `GET /api/admin/shop/items?status=PUBLISHED` | REAL |
-| Bộ 5 nhiệm vụ, thưởng/ngày | `dailyOutlook()`: mô phỏng `MissionTracker.choose` trên catalog đang bật | Tính từ dữ liệu thật (TD-ADS-09) |
+| Bộ 5 nhiệm vụ, thưởng/ngày | `dailyOutlook()`: tính ngay trên trình duyệt (cần cho bản nháp chưa lưu), cùng thuật toán với `MissionTracker.choose`. Hai bên chạy chung bộ vector `snap-vocab-backend/src/test/resources/mission/outlook-vectors.json` (`MissionOutlookVectorsTest` và `admin-missions.test.ts`), lệch nhau là test đỏ (TD-ADS-09) | Tính từ dữ liệu thật |
 | Tỉ lệ hoàn thành, nhận thưởng | Chưa có API admin | CẦN BACKEND: không hiển thị |
 | Nhật ký ai sửa gì | Chưa có audit | CẦN BACKEND |
 
@@ -34,14 +34,17 @@ Phạm vi theo PD-DM: không có rương, bonus, nhiệm vụ tuần/tháng, l�
 | 4 | Quiz |
 | 5 | Duy trì / Cửa hàng |
 
-**Thuật toán** (mirror backend): duyệt từng slot theo thứ tự.
+**Thuật toán** (giống backend, daily_mission.md §4.2):
 
-1. Lấy các mẫu đang bật, người học đủ điều kiện cấp, thuộc nhóm của slot và chưa được chọn ở slot trước.
-2. Nếu rỗng, lấy **mẫu cốt lõi** (nhóm slot 1–4) chưa được chọn.
-3. Nếu vẫn rỗng, slot không lấp được (`POOL_INSUFFICIENT`).
-4. Chọn theo trọng số, ưu tiên mẫu không trùng hôm qua.
+1. Ứng viên = mẫu đang bật, có trigger mà app của người học hiển thị được (PD-DM-13: app cũ chỉ 5 trigger cũ), và người học đủ điều kiện cấp.
+2. **Lượt 1:** slot nào có ứng viên thuộc nhóm của mình thì chọn trước.
+3. **Lượt 2:** slot còn trống lấy **mẫu cốt lõi** (nhóm slot 1–4) chưa được chọn. Lấy bù chạy sau lượt 1 nên không lấy mất mẫu duy nhất của slot khác.
+4. Nếu vẫn rỗng, slot không lấp được (`POOL_INSUFFICIENT`).
+5. Chọn theo trọng số, ưu tiên mẫu không trùng hôm qua.
 
-Trọng số ≥ 1 và quy tắc "không trùng hôm qua" chỉ đổi xác suất, nên **mọi nhánh đều có thể xảy ra**. `dailyOutlook` duyệt hết các nhánh, qua 4 tổ hợp điều kiện cấp (không có / có booster chưa dùng / có vật phẩm mua được / cả hai).
+Trọng số ≥ 1 và quy tắc "không trùng hôm qua" chỉ đổi xác suất, nên **mọi nhánh đều có thể xảy ra**. `dailyOutlook` duyệt hết các nhánh, qua **2 loại app** (hiện tại, cũ) × **8 tổ hợp** của 3 điều kiện cấp (`HAS_IDLE_XP_BOOSTER`, `HAS_PURCHASABLE_ITEM`, `HAS_STUDY_CARDS_FOR_TARGET`). `HAS_STUDY_CARDS_FOR_TARGET` so số thẻ trong phiên học hôm nay với mục tiêu của chính mẫu; mô phỏng coi người học hoặc đạt cho mọi mẫu, hoặc không đạt cho mẫu nào (các trường hợp ở giữa cho ra tập con của hai trường hợp này).
+
+**Invariant** (`catalogSummary`, như `MissionTracker.satisfiesInvariant`): chỉ đếm mẫu NONE có trigger cũ, để người dùng app cũ luôn đủ 5 nhiệm vụ. Mẫu Scan/SRS vẫn nằm ở nhóm CORE trong bảng nhưng không được tính vào invariant.
 
 **Nhóm kết quả** (`missionGroup`):
 
@@ -80,7 +83,7 @@ Không có mẫu nhóm này đang bật: lấy mẫu cốt lõi.
 | Mẫu nhiệm vụ | Tổng số mẫu. Bấm để bỏ lọc nhóm |
 | Cốt lõi · Slot 5 · Có điều kiện cấp · Đang tắt | Đếm theo `missionGroup`. Mỗi ô là bộ lọc của bảng |
 | Invariant catalog | Badge `Đạt` (success), `Không đạt` (danger) hoặc `Chưa kích hoạt` (neutral, khi không còn mẫu nào bật). Tooltip là `invariantHint` |
-| Thưởng mỗi người/ngày | Min–max Coin và XP trên mọi bộ 5 có thể cấp (`dailyOutlook`). Ghi "—" khi không lấp đủ 5 slot |
+| Thưởng mỗi người/ngày | Min–max Coin và XP trên mọi bộ 5 có thể cấp (`dailyOutlook`). Coin tối đa cộng cả `rewardItemFallbackCoin` của nhiệm vụ thưởng vật phẩm, vì người đã đủ vật phẩm sẽ nhận Coin đó (2026-10-21). Ghi "—" khi không lấp đủ 5 slot |
 
 ### 3.2. Panel "Một ngày của người học" (PD-ADS-12)
 
@@ -89,7 +92,8 @@ Không có mẫu nhóm này đang bật: lấy mẫu cốt lõi.
   - Tiêu đề "SLOT N · nhóm" và số mẫu có thể rơi vào slot đó (tooltip liệt kê tên).
   - **Thẻ nhiệm vụ giống mobile** (`MissionCard` dạng gọn) của bộ ví dụ.
   - Ghi chú "Không có mẫu nhóm này đang bật: lấy mẫu cốt lõi" nếu nhóm của slot không có mẫu nào đang bật.
-- Bộ ví dụ là nhánh đầu tiên (id nhỏ nhất mỗi slot) của người học **không có điều kiện cấp nào**.
+- Bộ ví dụ là nhánh đầu tiên (id nhỏ nhất mỗi slot) của người học **dùng app hiện tại, không đạt điều kiện cấp nào**.
+- Số mẫu mỗi slot và khoảng thưởng tính cho **mọi** người học, gồm cả người dùng app cũ (họ vẫn có thể nhận tới 85 Coin cho tới khi app cũ hết).
 - Nếu người học đó không nhận đủ 5 nhiệm vụ, panel hiện banner lỗi thay cho các thẻ.
 - Đây là mô phỏng từ catalog, **không** phải bộ của một người học cụ thể và không phải mock.
 
@@ -128,7 +132,7 @@ Không có mẫu nhóm này đang bật: lấy mẫu cốt lõi.
 
 ### 3.4. Hộp xác nhận Bật/Tắt
 
-Hộp xác nhận gồm:
+Hộp xác nhận dùng `components/ui/ConfirmModal` chung (TD-ADS-05; tắt mẫu: nút đỏ, bật mẫu: nút chính). Nội dung gồm:
 
 - Tên, mã, phiên bản; trạng thái hiện tại → trạng thái mới; phần thưởng.
 - Câu "Áp dụng cho các bộ nhiệm vụ được cấp sau thao tác…".
@@ -150,7 +154,7 @@ Mất phản hồi: không gửi lại mù. Hộp hiện nút "Kiểm tra trạn
 | Section | Trường | Quy tắc |
 | :--- | :--- | :--- |
 | **CƠ BẢN** | Mã nhiệm vụ, Tên hiển thị, Mô tả | Mã ≤ 64, bất biến sau khi tạo, có nút sao chép. Tên ≤ 100. Mô tả ≤ 255. Có bộ đếm ký tự |
-| **MỤC TIÊU** | Mẫu hành động (7 preset), Mục tiêu (đơn vị theo preset), dòng "Nhóm X · vào slot N", bộ lọc quiz (số câu 5/10/20, độ chính xác 1–100%) | Đổi preset sẽ đặt lại mục tiêu và bộ lọc, có báo trường nào bị đặt lại. Có ghi chú riêng theo trigger (tín dụng từ khi thêm từ, booster, hoạt động học, quiz) |
+| **MỤC TIÊU** | Mẫu hành động (10 preset: thêm 5 từ, quiz × 3, giữ chuỗi, booster, mua vật phẩm, lưu từ đã quét, học thẻ, học 10 thẻ có điều kiện), Mục tiêu (đơn vị theo preset), dòng "Nhóm X · vào slot N", bộ lọc quiz (số câu 5/10/20, độ chính xác 1–100%) | Đổi preset sẽ đặt lại mục tiêu và bộ lọc, có báo trường nào bị đặt lại. Có ghi chú riêng theo trigger (tín dụng từ khi thêm từ, booster, hoạt động học, quiz, học thẻ, lưu từ đã quét; hai trigger cuối ghi rõ người dùng app cũ không nhận mẫu) |
 | **PHẦN THƯỞNG** | Coin (`CoinIcon`), XP (`XpIcon`), Vật phẩm thưởng (chọn item PUBLISHED), Coin dự phòng | Cần ít nhất một trong Coin > 0, XP > 0 hoặc có item. XP thưởng không được booster nhân |
 | **ĐIỀU KIỆN CẤP** | Chỉ đọc, lấy theo preset | "Điều kiện cấp ảnh hưởng việc nhiệm vụ được chọn, không bảo đảm điều kiện hoàn thành." |
 | **CẤU HÌNH NÂNG CAO** (thu gọn) | Trọng số; chuỗi `category / trigger / eligibility` | Trọng số ≥ 1 |
@@ -159,9 +163,9 @@ Mất phản hồi: không gửi lại mù. Hộp hiện nút "Kiểm tra trạn
 
 | Panel | Nội dung |
 | :--- | :--- |
-| **Xem trước trên ứng dụng** | `MissionCard` bản đầy đủ: ô icon và màu theo mobile, tên, mô tả, gợi ý thêm từ, thanh tiến độ 0/N, Coin, XP, CTA ("Thêm từ", "Làm quiz", "Học ngay", "Tới cửa hàng", "Kích hoạt booster") và "Vật phẩm: CODE". Bên dưới: "Hoàn thành khi: {objective}" |
+| **Xem trước trên ứng dụng** | `MissionCard` bản đầy đủ: ô icon và màu theo mobile, tên, mô tả, gợi ý thêm từ, thanh tiến độ 0/N, Coin, XP (ô bằng 0 thì ẩn, như app), CTA ("Thêm từ", "Làm quiz", "Học ngay", "Tới cửa hàng", "Kích hoạt booster", "Quét ảnh") và "Vật phẩm: {tên vật phẩm}" (app đọc `reward.itemName`; chưa tìm thấy item thì hiện mã). Bên dưới: "Hoàn thành khi: {objective}" |
 | **Tác động lên bộ 5 nhiệm vụ** | **Vị trí**: "Slot N · nhóm"; nếu là nhóm cốt lõi thì thêm "còn lấp slot …" cho các slot đang không có mẫu riêng. **Cấp cho**: "Mọi người học" hoặc "Chỉ người học {điều kiện}". **Thưởng/ngày**: trước → sau, ghi "Sau khi lưu" (mẫu đang bật) hoặc "Nếu bật nhiệm vụ này" (mẫu tắt hoặc mới). Không đổi thì ghi "không đổi" |
-| Cảnh báo | Trần Coin/ngày sau thay đổi > 85: hộp `warning`, ghi là gợi ý, không chặn lưu. Thay đổi làm một số người học không đủ 5 nhiệm vụ: hộp `danger`, báo backend sẽ từ chối |
+| Cảnh báo | Trần Coin/ngày **của app hiện tại** sau thay đổi > 75 (`MAX_COIN_PER_DAY`, PD-DM-02): hộp `warning`, ghi là gợi ý, không chặn lưu. Thay đổi làm một số người học không đủ 5 nhiệm vụ: hộp `danger`, báo backend sẽ từ chối |
 | **Vòng đời** (mẫu đã lưu) | Tạo, Sửa gần nhất · vN, ID. Dòng "Chưa có nhật ký ai sửa gì…" |
 
 Màu ô icon theo mobile (`missions-screen.tsx`):
@@ -190,13 +194,13 @@ Giữ nguyên hành vi theo [admin_missions_api_design.md](./admin_missions_api_
 
 | ID | Tiêu chí | Kiểm bằng |
 | :--- | :--- | :--- |
-| AC-MIS-01 | Với 7 mẫu seed, thưởng mỗi người/ngày = **80–85 Coin · 150–160 XP** (khớp daily_mission.md); slot 1 và 3 ghi lấy mẫu cốt lõi; slot 1 có 4 mẫu, slot 5 có 3 mẫu; bộ ví dụ = id 1–5 | `admin-missions.test.ts` (Daily outlook) |
+| AC-MIS-01 | Bộ 5 nhiệm vụ và khoảng thưởng khớp backend trên mọi vector dùng chung (12 mẫu seed như khi phát hành: **60–85 Coin · 115–160 XP** cho mọi người học; bật hết, app hiện tại: **55–75 Coin · 105–160 XP**) | `admin-missions.test.ts` (shared backend vectors) và `MissionOutlookVectorsTest` |
 | AC-MIS-02 | Tắt 1 trong 4 mẫu cốt lõi seed → `insufficient`, thưởng/ngày "—" | Như trên |
 | AC-MIS-03 | Đếm ở dải số liệu khớp `missionGroup`; ô 0 bị vô hiệu; bấm ô để lọc bảng | Kiểm tay |
 | AC-MIS-04 | Câu kết luận của nhóm đúng bảng §3.3 với mọi tổ hợp core/slotFive; câu thể hiện vi phạm có màu đỏ | Kiểm tay |
 | AC-MIS-05 | Invariant hiển thị Đạt / Không đạt / Chưa kích hoạt đúng `catalogSummary` | `admin-missions.test.ts` (List renders…) |
-| AC-MIS-06 | Preview dùng đúng copy mobile ("Vật phẩm: CODE", CTA theo trigger) | `admin-missions.test.ts` (Edit editor…) |
-| AC-MIS-07 | Panel tác động hiện trước → sau khi thưởng thay đổi; cảnh báo khi > 85 Coin/ngày; không chặn lưu | Kiểm tay |
+| AC-MIS-06 | Preview dùng đúng copy mobile ("Vật phẩm: {tên}", ẩn ô Coin/XP bằng 0, CTA theo trigger) | `admin-missions.test.ts` (Edit editor…) |
+| AC-MIS-07 | Panel tác động hiện trước → sau khi thưởng thay đổi; cảnh báo khi app hiện tại > 75 Coin/ngày; không chặn lưu | Kiểm tay |
 | AC-MIS-08 | Các luồng an toàn §3.4 và §4.4 giữ nguyên hành vi | `admin-missions.dom.test.ts` |
 
 ## 6. Ngoài phạm vi

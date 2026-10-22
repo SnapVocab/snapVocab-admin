@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Check, Plus, RefreshCw, Search } from 'lucide-react';
+import { Plus, RefreshCw, Search } from 'lucide-react';
 import { getMissionTemplate, setTemplateActive } from '../../domains/admin-missions/api';
 import { catalogSummary, categoryLabels, dailyOutlook, eligibilityLabels, invariantHint, missionGroup, objective, poolShortage, supportedPreset, type MissionGroup } from '../../domains/admin-missions/mappers';
 import { missionKeys, useMissionTemplates } from '../../domains/admin-missions/queries';
@@ -8,12 +8,14 @@ import type { MissionTemplate } from '../../domains/admin-missions/types';
 import { Badge, Button, PageHeader, StripCell, StripNote, SummaryStrip, toolbarControl } from '../../components/ui';
 import { ApiClientError } from '../../lib/api-client';
 import { cn } from '../../lib/utils';
-import { ActiveBadge, ConfirmModal, ErrorBanner } from './components';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { ActiveBadge, ErrorBanner } from './components';
 import { errorMessage, isApiError } from './ui';
 import { MissionEditor } from './MissionEditor';
 import { RewardItemLabel } from './RewardItemPicker';
 import { MissionCard, MissionTile, RewardLine } from './MissionCard';
 import { navigate } from '../../lib/router';
+import { useToast } from '../../components/ui/Toast';
 
 const GROUPS: { key: MissionGroup; label: string; dot: string }[] = [
   { key: 'CORE', label: 'Cốt lõi · slot 1–4', dot: 'bg-primary' },
@@ -52,8 +54,7 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
   const [activation, setActivation] = useState<MissionTemplate | null>(null);
   const [activationError, setActivationError] = useState(''); const [blocked, setBlocked] = useState(false);
   const [busy, setBusy] = useState(false); const flight = useRef(false);
-  const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null); const listScroll = useRef(0); const scroller = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (!toast) return; const t = window.setTimeout(() => setToast(null), 3500); return () => window.clearTimeout(t); }, [toast]);
+  const { show: showToast, node: toastNode } = useToast(); const listScroll = useRef(0); const scroller = useRef<HTMLDivElement>(null);
   const editing = !!editor;
   useEffect(() => { if (scroller.current) scroller.current.scrollTop = editing ? 0 : listScroll.current; }, [editing]);
   useEffect(() => { if (busy) onDirtyChange(true); return () => { if (busy) onDirtyChange(false); }; }, [busy, onDirtyChange]);
@@ -62,7 +63,7 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
   const outlook = dailyOutlook(items);
   const toggled = (target: MissionTemplate) => items.map(i => i.id === target.id ? { ...i, isActive: !target.isActive } : i);
   const after = activation && catalog.data ? catalogSummary(toggled(activation)) : undefined;
-  function closeEditor(notice?: string) { navigate('/missions'); onDirtyChange(false); if (notice) setToast({ text: notice, error: true }); }
+  function closeEditor(notice?: string) { navigate('/missions'); onDirtyChange(false); if (notice) showToast(notice, true); }
   function openEditor(id?: number) { listScroll.current = scroller.current?.scrollTop ?? 0; navigate(id ? `/missions/${id}` : '/missions/new'); }
   function openActivation(item: MissionTemplate) { setActivation(item); setActivationError(''); setBlocked(false); }
   async function activate() {
@@ -72,7 +73,7 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
       const item = await setTemplateActive(activation.id, { version: activation.version, isActive: !activation.isActive });
       client.setQueryData(missionKeys.detail(item.id), item);
       await client.invalidateQueries({ queryKey: missionKeys.list });
-      setActivation(null); setToast({ text: item.isActive ? 'Đã bật nhiệm vụ.' : 'Đã tắt nhiệm vụ.' });
+      setActivation(null); showToast(item.isActive ? 'Đã bật nhiệm vụ.' : 'Đã tắt nhiệm vụ.');
       if (editor) setRevision(r => r + 1);
     } catch (e) {
       void client.invalidateQueries({ queryKey: missionKeys.list });
@@ -87,7 +88,7 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
       const current = await getMissionTemplate(activation.id);
       client.setQueryData(missionKeys.detail(current.id), current);
       // Do not retry a lost-response toggle: close and let admin review the actual state.
-      setActivation(null); setBlocked(false); setToast({ text: `Trạng thái server: ${current.isActive ? 'Đang bật' : 'Đang tắt'}.` });
+      setActivation(null); setBlocked(false); showToast(`Trạng thái server: ${current.isActive ? 'Đang bật' : 'Đang tắt'}.`);
       void client.invalidateQueries({ queryKey: missionKeys.list });
       if (editor) setRevision(r => r + 1);
     } catch (e) {
@@ -101,8 +102,8 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
   const invariant = summary.inactive ? <span className="font-medium text-text-muted">Chưa kích hoạt</span> : summary.valid ? <span className="font-medium text-primary-dark">Đạt</span> : <Badge tone="danger" className="w-fit">Không đạt</Badge>;
 
   return <div ref={scroller} className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
-    {toast && <div role="status" className={`fixed right-6 top-6 z-40 flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-xs font-medium shadow-elevated ${toast.error ? 'border-danger/30 text-danger-dark' : 'border-border text-text'}`}>{toast.error ? <AlertCircle size={16} /> : <Check size={16} className="text-primary-dark" />}{toast.text}</div>}
-    {editor ? <MissionEditor key={`${editor.id ?? 'new'}-${revision}`} id={editor.id} onDirtyChange={onDirtyChange} onBack={closeEditor} onSaved={item => { navigate(`/missions/${item.id}`, { replace: true }); onDirtyChange(false); setToast({ text: 'Đã lưu nhiệm vụ.' }); }} onActivate={openActivation} /> : <>
+    {toastNode}
+    {editor ? <MissionEditor key={`${editor.id ?? 'new'}-${revision}`} id={editor.id} onDirtyChange={onDirtyChange} onBack={closeEditor} onSaved={item => { navigate(`/missions/${item.id}`, { replace: true }); onDirtyChange(false); showToast('Đã lưu nhiệm vụ.'); }} onActivate={openActivation} /> : <>
       <PageHeader title="Nhiệm vụ hằng ngày"
         description="Mỗi ngày mỗi người học nhận 5 nhiệm vụ: slot 1–4 từ nhóm học cốt lõi, slot 5 từ Duy trì hoặc Cửa hàng."
         actions={<Button variant="primary" icon={<Plus />} disabled={catalog.isError && !catalog.data} onClick={() => openEditor()}>Tạo nhiệm vụ</Button>} />
@@ -178,7 +179,7 @@ export function AdminMissionsPage({ onDirtyChange, sub }: { onDirtyChange: (dirt
         {!visible.length && <div className="space-y-3 p-12 text-center text-sm text-text-muted"><p>{items.length ? 'Không có nhiệm vụ phù hợp bộ lọc.' : 'Catalog chưa có mẫu nhiệm vụ nào.'}</p>{items.length ? <Button size="sm" onClick={clearFilters}>Xóa bộ lọc</Button> : <Button size="sm" variant="primary" disabled={catalog.isError} onClick={() => openEditor()}>Tạo nhiệm vụ đầu tiên</Button>}</div>}
       </div>}
     </>}
-    {activation && <ConfirmModal title={activation.isActive ? 'Tắt nhiệm vụ?' : 'Bật nhiệm vụ?'} busy={busy} confirmDisabled={blocked} onClose={() => { if (!busy) { setActivation(null); setActivationError(''); } }} onConfirm={() => void activate()} confirmLabel={activation.isActive ? 'Xác nhận tắt' : 'Xác nhận bật'}>
+    {activation && <ConfirmModal title={activation.isActive ? 'Tắt nhiệm vụ?' : 'Bật nhiệm vụ?'} tone={activation.isActive ? 'warning' : 'primary'} maxWidth="lg" busy={busy} confirmDisabled={blocked} onClose={() => { if (!busy) { setActivation(null); setActivationError(''); } }} onConfirm={() => void activate()} confirmLabel={activation.isActive ? 'Xác nhận tắt' : 'Xác nhận bật'}>
       <p className="font-bold">{activation.name}</p><p className="text-xs text-text-muted">{activation.code} · Phiên bản {activation.version}</p><p className="flex items-center gap-2 text-xs">Trạng thái: <ActiveBadge active={activation.isActive} />→<ActiveBadge active={!activation.isActive} /></p><p><RewardLine coin={activation.rewardCoin} xp={activation.rewardXp} />{activation.rewardItemCode && <span className="block text-xs"><RewardItemLabel code={activation.rewardItemCode} /></span>}</p><p className="text-xs text-text-muted">Áp dụng cho các bộ nhiệm vụ được cấp sau thao tác, kể cả người học chưa nhận bộ hôm nay. Bộ đã cấp giữ nguyên.</p>{after && <p className={`rounded-md p-3 text-xs ${after.valid || after.inactive ? 'bg-surface-subtle text-text' : 'bg-danger-light text-danger-dark'}`}>Sau thao tác còn {after.core} mẫu cốt lõi và {after.slotFive} mẫu slot 5 không có điều kiện cấp: {after.inactive ? 'không còn mẫu nào đang bật' : after.valid ? 'vẫn đủ cấp 5 nhiệm vụ mỗi ngày' : 'không đủ cấp 5 nhiệm vụ mỗi ngày'}. Máy chủ kiểm tra lại khi thực hiện.</p>}
       {activationError && <ErrorBanner message={activationError}>{blocked && <><Button size="sm" disabled={busy} onClick={() => void refreshActivation()}>Kiểm tra trạng thái server</Button><Button size="sm" disabled={busy} onClick={() => setActivation(null)}>Đóng</Button></>}</ErrorBanner>}
     </ConfirmModal>}

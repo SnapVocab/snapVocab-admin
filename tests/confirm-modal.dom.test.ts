@@ -97,3 +97,50 @@ test('ConfirmModal handles Escape key to dismiss', async () => {
 
   assert.equal(closed, true);
 });
+
+// TD-ADS-05: Shop dialogs are content inside the shared ConfirmModal.
+test('Shop dialogs run on the shared ConfirmModal: busy label, locked buttons, error kept in the dialog', async () => {
+  const { ArchiveConfirmationModal, PublishConfirmationModal } = await import('../src/features/shop/components/ShopModals');
+  let closed = 0;
+  await renderModal(React.createElement(ArchiveConfirmationModal, {
+    isOpen: true, itemName: 'Khung Vàng', isArchiving: true, errorMessage: 'Mất kết nối',
+    onClose: () => { closed++; }, onConfirm: () => {},
+  }));
+  const dialog = document.querySelector('[role="dialog"]')!;
+  assert.ok(dialog.textContent!.includes('Ngừng bán vĩnh viễn'));
+  assert.equal(dialog.querySelector('[role="alert"]')?.textContent, 'Mất kết nối');
+  const buttons = [...dialog.querySelectorAll('button')];
+  assert.ok(buttons.some(b => b.textContent?.includes('Đang ngừng bán…')), 'busy label on the confirm button');
+  assert.ok(buttons.every(b => b.disabled), 'nothing clickable while archiving');
+  await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+  assert.equal(closed, 0, 'Esc does not close while busy');
+
+  act(() => root?.unmount());
+  document.body.innerHTML = '';
+  await renderModal(React.createElement(PublishConfirmationModal, {
+    isOpen: true, isPublishing: false, onClose: () => {}, onConfirm: () => {},
+    item: { name: 'Bảo hiểm chuỗi', code: 'STREAK_FREEZE', type: 'STREAK_FREEZE', status: 'DRAFT', purchasable: true, price: 200, maxQuantity: 2 } as never,
+  }));
+  const text = document.querySelector('[role="dialog"]')!.textContent!;
+  assert.ok(text.includes('Phát hành vật phẩm') && text.includes('STREAK_FREEZE') && text.includes('200 Coin'));
+  assert.ok(text.includes('Giữ tối đa:') && text.includes('Xác nhận phát hành'));
+});
+
+test('useToast: a second toast restarts the timer instead of being cut short by the first', async () => {
+  const { useToast } = await import('../src/components/ui/Toast');
+  let show: (text: string, error?: boolean) => void = () => {};
+  function Page() {
+    const toast = useToast(80);
+    show = toast.show;
+    return React.createElement('div', null, toast.node);
+  }
+  const sleep = (ms: number) => act(() => new Promise(r => setTimeout(r, ms)));
+  await renderModal(React.createElement(Page));
+  await act(async () => show('Đã lưu.'));
+  await sleep(50);
+  await act(async () => show('Không lưu được.', true));
+  await sleep(50); // 100 ms after the first toast: its timer would have closed the second one
+  assert.equal(document.querySelector('[role="status"]')?.textContent, 'Không lưu được.');
+  await sleep(60);
+  assert.equal(document.querySelector('[role="status"]'), null);
+});

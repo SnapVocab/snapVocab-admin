@@ -1,13 +1,16 @@
-import type { CreateMission, MissionCategory, MissionContent, MissionForm, MissionTemplate, SaveMission } from './types';
+import type { CreateMission, MissionCategory, MissionContent, MissionForm, MissionTemplate, MissionTrigger, SaveMission } from './types';
 
 export const categoryLabels = { SCAN: 'Quét ảnh', VOCABULARY: 'Từ vựng', FLASHCARD: 'Flashcard', SRS: 'Ôn tập SRS', QUIZ: 'Quiz', RETENTION: 'Duy trì học', SHOP: 'Cửa hàng' };
-export const eligibilityLabels = { NONE: 'Không có điều kiện cấp', HAS_IDLE_XP_BOOSTER: 'Có booster XP chưa dùng', HAS_PURCHASABLE_ITEM: 'Có vật phẩm mua được' };
+export const eligibilityLabels = { NONE: 'Không có điều kiện cấp', HAS_IDLE_XP_BOOSTER: 'Có booster XP chưa dùng', HAS_PURCHASABLE_ITEM: 'Có vật phẩm mua được', HAS_STUDY_CARDS_FOR_TARGET: 'Có đủ thẻ học hôm nay cho mục tiêu' };
 export const invariantHint = 'Chỉ kiểm tra điều kiện tối thiểu: catalog đủ cấp 5 nhiệm vụ mỗi ngày cho người học không có điều kiện cấp nào. Không bảo đảm mọi nhiệm vụ hợp với mọi người học.';
 export const presets = [
   { key: 'ADD_5_WORDS', label: 'Thêm từ mới', category: 'VOCABULARY', triggerEvent: 'TOPIC_ITEM_CREATED', eligibilityRule: 'NONE', targetValue: '5', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'từ' },
   { key: 'QUIZ_SCORE_80', label: 'Quiz đạt độ chính xác', category: 'QUIZ', triggerEvent: 'QUIZ_COMPLETED', eligibilityRule: 'NONE', targetValue: '1', minQuizAccuracyPercent: '80', quizRequestedCount: '', unit: 'quiz' },
   { key: 'FINISH_2_SHORT_QUIZZES', label: 'Hoàn thành quiz ngắn', category: 'QUIZ', triggerEvent: 'QUIZ_COMPLETED', eligibilityRule: 'NONE', targetValue: '2', minQuizAccuracyPercent: '', quizRequestedCount: '5', unit: 'quiz' },
   { key: 'PERFECT_MINI_QUIZ', label: 'Quiz ngắn hoàn hảo', category: 'QUIZ', triggerEvent: 'QUIZ_COMPLETED', eligibilityRule: 'NONE', targetValue: '1', minQuizAccuracyPercent: '100', quizRequestedCount: '5', unit: 'quiz' },
+  { key: 'SCAN_SAVE_3_WORDS', label: 'Lưu từ từ ảnh quét', category: 'SCAN', triggerEvent: 'SCAN_WORD_SAVED', eligibilityRule: 'NONE', targetValue: '3', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'từ' },
+  { key: 'STUDY_5_CARDS', label: 'Học hoặc ôn thẻ', category: 'SRS', triggerEvent: 'SRS_REVIEW_COMPLETED', eligibilityRule: 'NONE', targetValue: '5', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'thẻ' },
+  { key: 'STUDY_10_CARDS', label: 'Học hoặc ôn 10 thẻ', category: 'SRS', triggerEvent: 'SRS_REVIEW_COMPLETED', eligibilityRule: 'HAS_STUDY_CARDS_FOR_TARGET', targetValue: '10', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'thẻ' },
   { key: 'KEEP_DAILY_STREAK', label: 'Có hoạt động học trong ngày', category: 'RETENTION', triggerEvent: 'LEARNING_ACTIVITY_RECORDED', eligibilityRule: 'NONE', targetValue: '1', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'hoạt động' },
   { key: 'USE_XP_BOOSTER', label: 'Kích hoạt booster XP', category: 'SHOP', triggerEvent: 'BOOSTER_USED', eligibilityRule: 'HAS_IDLE_XP_BOOSTER', targetValue: '1', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'lần' },
   { key: 'BUY_SHOP_ITEM', label: 'Mua vật phẩm Shop', category: 'SHOP', triggerEvent: 'SHOP_ITEM_PURCHASED', eligibilityRule: 'HAS_PURCHASABLE_ITEM', targetValue: '1', minQuizAccuracyPercent: '', quizRequestedCount: '', unit: 'lần' },
@@ -21,7 +24,7 @@ export function matchPreset(f: Pick<MissionForm, 'category' | 'triggerEvent' | '
     && (f.triggerEvent !== 'QUIZ_COMPLETED' || (p.quizRequestedCount === f.quizRequestedCount
       && (p.key === 'QUIZ_SCORE_80' ? f.minQuizAccuracyPercent !== '' : p.minQuizAccuracyPercent === f.minQuizAccuracyPercent))));
 }
-/** Slots 1–4 groups (MissionCategory.isCore): a slot without candidates falls back to these. */
+/** Slots 1–4 groups (MissionCategory.isCore): a slot without candidates falls back to the ones left after every slot with its own candidates has picked. */
 export const isCore = (c: MissionCategory) => c !== 'RETENTION' && c !== 'SHOP';
 /** Slot → categories, mirror of backend MissionTracker.SLOTS (daily_mission.md §2.2). */
 export const SLOTS: { label: string; categories: MissionCategory[] }[] = [
@@ -39,44 +42,62 @@ export function missionGroup(t: Pick<MissionTemplate, 'isActive' | 'eligibilityR
   return isCore(t.category) ? 'CORE' : 'SLOT5';
 }
 
-type Picked = Pick<MissionTemplate, 'id' | 'category' | 'eligibilityRule' | 'rewardCoin' | 'rewardXp'>;
+/** Triggers an app that sends no X-Mission-Triggers header can render (backend MissionTriggerEvent.LEGACY, PD-DM-13). */
+export const LEGACY_TRIGGERS: MissionTrigger[] = ['QUIZ_COMPLETED', 'LEARNING_ACTIVITY_RECORDED', 'TOPIC_ITEM_CREATED', 'SHOP_ITEM_PURCHASED', 'BOOSTER_USED'];
+/** The apps a learner may be on: the current build renders every trigger, an older one only the legacy ones. */
+export const CLIENTS = { current: (_: MissionTrigger) => true, legacy: (t: MissionTrigger) => LEGACY_TRIGGERS.includes(t) };
+type Client = (t: MissionTrigger) => boolean;
+
+type Picked = Pick<MissionTemplate, 'id' | 'category' | 'triggerEvent' | 'eligibilityRule' | 'rewardCoin' | 'rewardXp' | 'rewardItemCode' | 'rewardItemFallbackCoin'>;
 export interface DailyOutlook<T extends Picked> {
-  /** Min/max Coin and XP of any 5-mission set a learner can be handed; null when no set can be filled. */
+  /**
+   * Min/max Coin and XP of any 5-mission set a learner can be handed; null when no set can be filled.
+   * Max Coin counts an item reward's fallback Coin: a learner who cannot receive the item gets it (shop.md S17).
+   */
   coin: [number, number] | null;
   xp: [number, number] | null;
   /** Per slot: templates that can land there, and whether its own groups have no active template (core fallback). */
   slots: { label: string; fallback: boolean; reachable: T[] }[];
-  /** One set a learner with no booster/purchasable item gets (lowest id per slot). */
+  /** One set a learner on the current app with no gate passed gets (lowest id per slot). */
   example: T[] | null;
   /** Some eligibility mix cannot fill all 5 slots (MISSION_POOL_INSUFFICIENT for those learners). */
   insufficient: boolean;
 }
-const GATE_MIXES: string[][] = [[], ['HAS_IDLE_XP_BOOSTER'], ['HAS_PURCHASABLE_ITEM'], ['HAS_IDLE_XP_BOOSTER', 'HAS_PURCHASABLE_ITEM']];
+const GATES = ['HAS_IDLE_XP_BOOSTER', 'HAS_PURCHASABLE_ITEM', 'HAS_STUDY_CARDS_FOR_TARGET'];
+/** Every combination of gates a learner can pass, the empty one first (the `example` learner). */
+const GATE_MIXES: string[][] = GATES.reduce<string[][]>((mixes, g) => [...mixes, ...mixes.map(m => [...m, g])], [[]]);
 /**
  * What MissionTracker.choose can hand out for the active catalog, over every eligibility mix.
  * Weights ≥ 1 and the "not yesterday" preference only change odds, so every branch is reachable.
  * ponytail: exhaustive search, fine for tens of templates; switch to per-slot bounds if the catalog grows past that.
  */
-export function dailyOutlook<T extends Picked & { isActive: boolean }>(items: T[]): DailyOutlook<T> {
+export function dailyOutlook<T extends Picked & { isActive: boolean }>(items: T[], clients: Client[] = Object.values(CLIENTS)): DailyOutlook<T> {
   const active = items.filter(t => t.isActive).sort((a, b) => a.id - b.id);
   const reach = SLOTS.map(() => new Set<T>());
   let coin: [number, number] | null = null; let xp: [number, number] | null = null;
   let insufficient = false; let example: T[] | null = null;
-  for (const mix of GATE_MIXES) {
-    const eligible = active.filter(t => t.eligibilityRule === 'NONE' || mix.includes(t.eligibilityRule));
-    const walk = (slot: number, chosen: T[]) => {
-      if (slot === SLOTS.length) {
+  for (const [client, mix] of clients.flatMap(c => GATE_MIXES.map(m => [c, m] as const))) {
+    const eligible = active.filter(t => client(t.triggerEvent) && (t.eligibilityRule === 'NONE' || mix.includes(t.eligibilityRule)));
+    // Same order as MissionTracker.choose: slots with own candidates first, then the core fallback for the rest.
+    const own = (slot: number) => eligible.some(t => SLOTS[slot].categories.includes(t.category));
+    const order = SLOTS.map((_, i) => i).sort((a, b) => Number(own(b)) - Number(own(a)));
+    const walk = (k: number, picks: T[]) => {
+      if (k === SLOTS.length) {
+        const chosen = SLOTS.map((_, i) => picks[i]);
         const c = chosen.reduce((s, t) => s + t.rewardCoin, 0); const x = chosen.reduce((s, t) => s + t.rewardXp, 0);
-        coin = coin ? [Math.min(coin[0], c), Math.max(coin[1], c)] : [c, c];
+        const cMax = c + chosen.reduce((s, t) => s + (t.rewardItemCode ? t.rewardItemFallbackCoin ?? 0 : 0), 0);
+        coin = coin ? [Math.min(coin[0], c), Math.max(coin[1], cMax)] : [c, cMax];
         xp = xp ? [Math.min(xp[0], x), Math.max(xp[1], x)] : [x, x];
         chosen.forEach((t, i) => reach[i].add(t));
         if (!mix.length && !example) example = chosen;
         return;
       }
-      let pool = eligible.filter(t => SLOTS[slot].categories.includes(t.category) && !chosen.includes(t));
-      if (!pool.length) pool = eligible.filter(t => isCore(t.category) && !chosen.includes(t));
+      const slot = order[k]; const taken = picks.filter(Boolean);
+      const pool = own(slot)
+        ? eligible.filter(t => SLOTS[slot].categories.includes(t.category))
+        : eligible.filter(t => isCore(t.category) && !taken.includes(t));
       if (!pool.length) { insufficient = true; return; }
-      for (const t of pool) walk(slot + 1, [...chosen, t]);
+      for (const t of pool) { const next = [...picks]; next[slot] = t; walk(k + 1, next); }
     };
     walk(0, []);
   }
@@ -88,7 +109,8 @@ export function dailyOutlook<T extends Picked & { isActive: boolean }>(items: T[
 
 export function catalogSummary(items: MissionTemplate[]) {
   const active = items.filter(i => i.isActive);
-  const none = active.filter(i => i.eligibilityRule === 'NONE');
+  // Same rule as MissionTracker.satisfiesInvariant: only what an older app can render counts (PD-DM-13).
+  const none = active.filter(i => i.eligibilityRule === 'NONE' && LEGACY_TRIGGERS.includes(i.triggerEvent));
   const core = none.filter(i => isCore(i.category)).length;
   const slotFive = none.length - core;
   // No active template = "not activated" (spec §7.7): allowed by backend, not a violation.
@@ -98,6 +120,7 @@ export const eligibilityHints = {
   NONE: 'Mọi người học đều có thể được giao nhiệm vụ này; điều đó không có nghĩa ai cũng hoàn thành được.',
   HAS_IDLE_XP_BOOSTER: 'Chỉ được chọn cho người học đang có booster XP chưa dùng.',
   HAS_PURCHASABLE_ITEM: 'Chỉ được chọn cho người học có vật phẩm có thể mua.',
+  HAS_STUDY_CARDS_FOR_TARGET: 'Chỉ được chọn cho người học có số thẻ trong phiên học hôm nay (thẻ đến hạn và thẻ mới trong hạn mức, như tab Học hiển thị) không ít hơn mục tiêu của mẫu.',
 };
 // Explains how far a (projected) catalog is from the invariant; backend remains the authority.
 export function poolShortage(items: MissionTemplate[]) {
@@ -165,6 +188,6 @@ export function formDiff(draft: MissionForm, server: MissionForm) {
     .map(k => ({ key: k, label: formLabels[k], draft: draft[k] || '—', server: server[k] || '—' }));
 }
 export function objective(item: Pick<MissionContent, 'targetValue' | 'triggerEvent' | 'quizRequestedCount' | 'minQuizAccuracyPercent'>) {
-  const verb = { TOPIC_ITEM_CREATED: 'Thêm từ mới', QUIZ_COMPLETED: 'Hoàn thành quiz', LEARNING_ACTIVITY_RECORDED: 'Ghi nhận hoạt động học', SHOP_ITEM_PURCHASED: 'Mua vật phẩm', BOOSTER_USED: 'Kích hoạt booster' }[item.triggerEvent];
+  const verb = { TOPIC_ITEM_CREATED: 'Thêm từ mới', QUIZ_COMPLETED: 'Hoàn thành quiz', LEARNING_ACTIVITY_RECORDED: 'Ghi nhận hoạt động học', SHOP_ITEM_PURCHASED: 'Mua vật phẩm', BOOSTER_USED: 'Kích hoạt booster', SRS_REVIEW_COMPLETED: 'Học hoặc ôn thẻ', SCAN_WORD_SAVED: 'Lưu từ từ ảnh quét' }[item.triggerEvent];
   return `${verb}: ${item.targetValue}${item.quizRequestedCount ? ` · ${item.quizRequestedCount} câu/bài` : ''}${item.minQuizAccuracyPercent ? ` · chính xác ≥ ${item.minQuizAccuracyPercent}%` : ''}`;
 }

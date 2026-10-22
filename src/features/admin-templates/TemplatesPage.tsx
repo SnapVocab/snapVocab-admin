@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button, SourceError } from '../../components/ui';
 import { useTopicItems, useTopicSchema } from '../../domains/admin-content/queries';
 import { templatesEditable } from '../../domains/admin-templates/config';
@@ -10,6 +10,7 @@ import { ErrorBanner } from '../admin-missions/components';
 import { TemplateEditor } from './TemplateEditor';
 import { TemplateLibrary, type PreviewState } from './TemplateLibrary';
 import { templateErrorMessage } from './ui';
+import { useToast } from '../../components/ui/Toast';
 
 const NONE: Record<string, unknown>[] = [];
 
@@ -29,7 +30,7 @@ export function TemplatesPage({ sub, onDirtyChange = () => {} }: { sub?: string;
   const system = useSystemTopics();
   const [pickedTopic, setPickedTopic] = useState<number | null>(null);
   const [index, setIndex] = useState(0);
-  const [toast, setToast] = useState('');
+  const { show: setToast, node: toastNode } = useToast();
   const scroller = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
   const opener = useRef<HTMLElement | null>(null);
@@ -55,11 +56,6 @@ export function TemplatesPage({ sub, onDirtyChange = () => {} }: { sub?: string;
     if (scroller.current) scroller.current.scrollTop = openId === null ? listScroll.current : 0;
     if (openId === null && opener.current?.isConnected) opener.current.focus({ preventScroll: true });
   }, [openId]);
-  useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(''), 3500);
-    return () => window.clearTimeout(t);
-  }, [toast]);
 
   const all = useMemo(() => schemas.data ?? [], [schemas.data]);
   const byTemplate = useMemo(() => topicsByTemplate(system.topics), [system.topics]);
@@ -77,7 +73,7 @@ export function TemplatesPage({ sub, onDirtyChange = () => {} }: { sub?: string;
   const refresh = () => { void schemas.refetch(); system.refetch(); void items.refetch(); };
 
   return <div ref={scroller} className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
-    {toast && <div role="status" className="fixed right-6 top-6 z-40 flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs font-medium text-text shadow-elevated"><Check size={16} className="text-primary-dark" />{toast}</div>}
+    {toastNode}
 
     {schemas.isError && <ErrorBanner message={`${schemas.data ? 'Đang hiển thị dữ liệu đã tải trước đó. ' : 'Không tải được mẫu thẻ. '}${templateErrorMessage(schemas.error)}`}>
       <Button size="sm" disabled={schemas.isFetching} onClick={() => void schemas.refetch()}>Thử lại</Button>

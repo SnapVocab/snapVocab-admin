@@ -36,9 +36,11 @@ import {
   formatVnDateTime,
   priceBand,
   priceHint,
+  priceTier,
+  PRICE_TIERS,
 } from '../../../domains/shop/mappers';
 import { useShopCatalog } from '../../../domains/shop/queries';
-import { BoosterIcon, CoinIcon, FrameIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CoinIcon, FrameIcon, FreezeIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
@@ -98,8 +100,8 @@ const TYPE_OPTIONS: {
 }[] = [
   {
     type: 'THEME',
-    label: 'Giao diện cửa hàng',
-    desc: 'Đổi giao diện Cửa hàng, Kho đồ và Ví Coin',
+    label: 'Bộ màu',
+    desc: 'Đổi màu Trang chủ, Hồ sơ, Cửa hàng, Kho đồ và Ví Coin',
     icon: <ThemeIcon size={20} />,
   },
   {
@@ -114,6 +116,12 @@ const TYPE_OPTIONS: {
     desc: 'Nhân đôi XP trong thời gian giới hạn',
     icon: <BoosterIcon size={20} />,
   },
+  {
+    type: 'STREAK_FREEZE',
+    label: 'Đóng băng chuỗi',
+    desc: 'Tự giữ chuỗi khi người học lỡ một ngày học',
+    icon: <FreezeIcon size={20} />,
+  },
 ];
 
 const fmt = (n: number) => n.toLocaleString('vi-VN');
@@ -124,6 +132,7 @@ const fmt = (n: number) => n.toLocaleString('vi-VN');
  */
 const PriceGuard: React.FC<{ price: number | null | undefined; band: PriceBand | null; typeLabel: string }> = ({ price, band, typeLabel }) => {
   const hint = priceHint(price, band);
+  const tier = priceTier(price);
   const what = /^[A-Z]{2}/.test(typeLabel) ? typeLabel : typeLabel.toLowerCase();
   const factor = PRICE_HINT_FACTOR.toLocaleString('vi-VN');
   return (
@@ -148,6 +157,15 @@ const PriceGuard: React.FC<{ price: number | null | undefined; band: PriceBand |
           ? `${typeLabel} khác đang bán: ${fmt(band.min)} Coin (1 vật phẩm).`
           : `${typeLabel} đang bán: ${fmt(band.min)}–${fmt(band.max)} Coin, trung vị ${fmt(band.median)} Coin (${band.count} vật phẩm).`}
       </p>
+      {tier && <p>Bậc giá: {tier.label} ({fmt(tier.min)}–{fmt(tier.max)} Coin).</p>}
+      {price != null && price > 0 && !tier && (
+        <div role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-warning-dark text-xs font-medium">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          <span>
+            Ngoài 3 bậc giá đã duyệt: {PRICE_TIERS.map(t => `${t.label} ${fmt(t.min)}–${fmt(t.max)}`).join(', ')} Coin.
+          </span>
+        </div>
+      )}
       {hint && (
         <div role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-warning-dark text-xs font-medium">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -427,6 +445,11 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       ) {
         errors.maxQuantity = 'Số lượng tối đa người dùng có thể giữ phải từ 1 đến 10.';
       }
+    }
+
+    // streak_freeze.md PD-SF-03: more than a few units and a long break still keeps the chain.
+    if (formData.type === 'STREAK_FREEZE' && (formData.maxQuantity == null || formData.maxQuantity < 1 || formData.maxQuantity > 5)) {
+      errors.maxQuantity = 'Số lượng tối đa người học có thể giữ phải từ 1 đến 5.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -922,7 +945,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 </p>
               ) : (
                 <p className="text-xs text-text-muted">
-                  Áp dụng cho Cửa hàng, Kho đồ và Ví Coin của người học (không đổi toàn ứng dụng).
+                  Áp dụng cho Trang chủ, Hồ sơ, Cửa hàng, Kho đồ và Ví Coin của người học (tab bar và các màn khác giữ mặc định).
                 </p>
               )}
             </div>
@@ -1018,6 +1041,44 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     <p className="text-xs text-text-muted">1 đến 10 vật phẩm (mặc định: 5).</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TYPE: STREAK_FREEZE (streak_freeze.md §6, §7) */}
+          {formData.type === 'STREAK_FREEZE' && (
+            <div className="space-y-3 pt-3 border-t border-border/70">
+              <p className="text-xs text-text-muted">
+                Tự dùng, mỗi ngày người học lỡ học dùng 1 vật phẩm; ngày được giữ không cộng vào số chuỗi. Chỉ một vật phẩm loại này được phát hành.
+              </p>
+              <div className="space-y-1 sm:max-w-[50%]">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="shop-maxQuantity" className="text-body font-semibold text-text">
+                    Số lượng tối đa trong túi đồ <span className="text-danger">*</span>
+                  </label>
+                  {!isEditable('maxQuantity') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
+                </div>
+                <input
+                  {...a11y('maxQuantity')}
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={formData.maxQuantity ?? 2}
+                  onChange={(e) => handleFieldChange('maxQuantity', parseInt(e.target.value, 10) || 0)}
+                  disabled={!isEditable('maxQuantity') || isSaving}
+                  className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
+                    fieldErrors.maxQuantity
+                      ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
+                      : !isEditable('maxQuantity')
+                      ? 'border-border bg-surface-subtle text-text-muted cursor-not-allowed'
+                      : 'border-border focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
+                />
+                {fieldErrors.maxQuantity ? (
+                  <p id="shop-maxQuantity-error" className="text-xs text-danger-dark">{fieldErrors.maxQuantity}</p>
+                ) : (
+                  <p className="text-xs text-text-muted">1 đến 5 vật phẩm (mặc định: 2).</p>
+                )}
               </div>
             </div>
           )}
@@ -1256,6 +1317,13 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     <p id="shop-availableUntil-error" className="text-xs text-danger-dark">{fieldErrors.availableUntil}</p>
                   )}
                 </div>
+                {/* PD-SHX-05: no seasonal selling; the app shows no end date, so the item would just vanish. */}
+                {formData.availableUntil && (
+                  <p role="status" className="sm:col-span-2 flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-xs font-medium text-warning-dark">
+                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                    <span>App người học không hiện hạn bán: tới giờ kết thúc, vật phẩm tự biến mất khỏi Cửa hàng mà không báo trước. Hiện không bán vật phẩm theo mùa.</span>
+                  </p>
+                )}
               </div>
             )}
           </div>

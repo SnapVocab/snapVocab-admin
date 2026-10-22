@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "tsx --test tests/missions.test.ts tests/admin-shop.test.ts tests/admin-missions.test.ts tests/admin-missions.dom.test.ts tests/admin-badges.test.ts tests/admin-badges.dom.test.ts tests/auth.test.ts tests/ui-tokens.test.ts tests/confirm-modal.dom.test.ts tests/admin-learners.test.ts tests/admin-content.test.ts tests/admin-content.dom.test.ts tests/admin-overview.test.ts tests/admin-analytics.test.ts tests/admin-audit.test.ts tests/admin-audit.dom.test.ts tests/admin-leaderboard.test.ts tests/admin-leaderboard.dom.test.ts tests/admin-templates.test.ts tests/admin-templates.dom.test.ts",
+    "test": "tsx --test tests/admin-shop.test.ts tests/admin-missions.test.ts tests/admin-missions.dom.test.ts tests/admin-badges.test.ts tests/admin-badges.dom.test.ts tests/auth.test.ts tests/ui-tokens.test.ts tests/confirm-modal.dom.test.ts tests/admin-learners.test.ts tests/admin-content.test.ts tests/admin-content.dom.test.ts tests/admin-overview.test.ts tests/admin-analytics.test.ts tests/admin-audit.test.ts tests/admin-audit.dom.test.ts tests/admin-leaderboard.test.ts tests/admin-leaderboard.dom.test.ts tests/admin-templates.test.ts tests/admin-templates.dom.test.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },

@@ -5,7 +5,7 @@
 import type { AdminShopItemDTO } from '../shop/types';
 import { deriveSaleState, formatShopItemStatusLabel, formatVnDateTime, MAX_COIN_PER_DAY, priceBand, priceHint } from '../shop/mappers';
 import type { MissionTemplate } from '../admin-missions/types';
-import { catalogSummary, dailyOutlook, poolShortage } from '../admin-missions/mappers';
+import { catalogSummary, CLIENTS, dailyOutlook, poolShortage } from '../admin-missions/mappers';
 import { scanErrorLabel } from '../scan/labels';
 import type { AdminOverview } from './types';
 
@@ -85,7 +85,7 @@ function missionChecks(missions: MissionTemplate[], shop?: AdminShopItemDTO[]): 
     });
   }
 
-  const top = dailyOutlook(missions).coin?.[1] ?? 0;
+  const top = dailyOutlook(missions, [CLIENTS.current]).coin?.[1] ?? 0;
   out.push({
     id: 'mission-budget', area: 'MISSIONS', scope: 'NOW', rule: `Thưởng tối đa mỗi người/ngày ≤ ${MAX_COIN_PER_DAY} Coin`,
     issue: top > MAX_COIN_PER_DAY ? {

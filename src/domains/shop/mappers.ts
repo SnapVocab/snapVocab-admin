@@ -10,14 +10,14 @@ export const SHOP_FIELD_LABELS: Record<string, string> = {
 
 /**
  * Type-specific config for `type`: fields owned by another type are null (the backend rejects anything else);
- * booster defaults (shop.md §2.3) apply to boosters only.
+ * defaults: booster shop.md §2.3, Streak Freeze holds 2 (streak_freeze.md PD-SF-03).
  */
 export function configForType(type: ShopItemType, from: Partial<ShopItemForm> = {}) {
   return {
     themeKey: type === 'THEME' ? from.themeKey ?? null : null,
     frameAssetKey: type === 'AVATAR_FRAME' ? from.frameAssetKey ?? null : null,
     boostDurationMinutes: type === 'XP_BOOSTER' ? from.boostDurationMinutes ?? 30 : null,
-    maxQuantity: type === 'XP_BOOSTER' ? from.maxQuantity ?? 5 : null,
+    maxQuantity: type === 'XP_BOOSTER' ? from.maxQuantity ?? 5 : type === 'STREAK_FREEZE' ? from.maxQuantity ?? 2 : null,
   };
 }
 
@@ -153,10 +153,11 @@ export function deriveSaleState(
 }
 
 /**
- * Most Coin a learner can earn in a day: Daily Mission is the only Coin source and pays at most
- * 85 Coin/day (daily_mission.md, economy approved). Prices read best in "full days" of missions.
+ * Most Coin a learner on the current app can earn in a day: Daily Mission is the only Coin source and pays at most
+ * 75 Coin/day (daily_mission.md PD-DM-02, PO 2026-10-22). Prices read best in "full days" of missions.
+ * Compare it with dailyOutlook(…, [CLIENTS.current]): older apps keep the legacy set (up to 85) until they are gone.
  */
-export const MAX_COIN_PER_DAY = 85;
+export const MAX_COIN_PER_DAY = 75;
 
 const days = (price: number) => (price / MAX_COIN_PER_DAY).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
 
@@ -188,11 +189,22 @@ export function priceBand(
   return { min: prices[0], max: prices[prices.length - 1], median, count: prices.length };
 }
 
+/** Price tiers the PO approved for new items (PD-SHX-01, shop.md §8.6). Admin policy; the server does not check it. */
+export const PRICE_TIERS = [
+  { label: 'Khởi đầu', min: 60, max: 250 },
+  { label: 'Phổ thông', min: 300, max: 700 },
+  { label: 'Cao cấp', min: 800, max: 1500 },
+] as const;
+
+/** The tier `price` falls in; null when it sits in a gap, below 60 or above 1500 (or there is no price). */
+export function priceTier(price: number | null | undefined) {
+  return price == null ? null : PRICE_TIERS.find(t => price >= t.min && price <= t.max) ?? null;
+}
+
 /**
  * Soft guardrail: a price far outside what the same type sells for today. A UI hint only;
- * the server enforces just 1–100,000 Coin.
- * ponytail: fixed ×1.5 tolerance (so the top/bottom tier is not always flagged) and ≥3 items to compare
- * against; the PO sets the real rule.
+ * the server enforces just 1–100,000 Coin. The PO's rule is the tier table above; this one compares by type.
+ * ponytail: fixed ×1.5 tolerance (so the top/bottom tier is not always flagged) and ≥3 items to compare against.
  */
 export const PRICE_HINT_FACTOR = 1.5;
 const PRICE_HINT_MIN_SAMPLE = 3;
@@ -295,11 +307,13 @@ export function mapBackendErrorsToFields(
 export function formatShopItemTypeLabel(type?: ShopItemType | string | null): string {
   switch (type) {
     case 'THEME':
-      return 'Giao diện cửa hàng';
+      return 'Bộ màu';
     case 'AVATAR_FRAME':
       return 'Khung avatar';
     case 'XP_BOOSTER':
       return 'XP Booster';
+    case 'STREAK_FREEZE':
+      return 'Đóng băng chuỗi';
     default:
       return type || '—';
   }

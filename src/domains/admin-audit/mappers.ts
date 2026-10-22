@@ -99,7 +99,8 @@ const asset = (v: unknown) => String(v).replace(/^.*\//, '').replace(/^([0-9a-f]
 
 const TRIGGER_LABEL: Record<string, string> = {
   QUIZ_COMPLETED: 'Hoàn thành quiz', LEARNING_ACTIVITY_RECORDED: 'Có hoạt động học', TOPIC_ITEM_CREATED: 'Thêm từ mới',
-  SHOP_ITEM_PURCHASED: 'Mua vật phẩm', BOOSTER_USED: 'Kích hoạt booster',
+  SHOP_ITEM_PURCHASED: 'Mua vật phẩm', BOOSTER_USED: 'Kích hoạt booster', SRS_REVIEW_COMPLETED: 'Học hoặc ôn thẻ',
+  SCAN_WORD_SAVED: 'Lưu từ từ ảnh quét',
 };
 const label = (map: Record<string, string>) => (v: unknown) => map[String(v)] ?? String(v);
 

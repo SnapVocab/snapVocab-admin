@@ -92,6 +92,14 @@ export const ThemeIcon: React.FC<BrandIconProps> = ({ size = 16, className }) =>
   </svg>
 );
 
+/** Streak Freeze snowflake, sky like the item's artwork tint (streak_freeze.md). */
+export const FreezeIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
+  <svg {...box(size, className)}>
+    <path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="#0EA5E9" strokeWidth={2} strokeLinecap="round" />
+    <path d="M9 4l3 2 3-2M9 20l3-2 3 2M4.2 11l1.3 1 -1.3 1M19.8 11l-1.3 1 1.3 1" stroke="#7DD3FC" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 /** Avatar frame: gold ring around an avatar dot. */
 export const FrameIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
   <svg {...box(size, className)}>

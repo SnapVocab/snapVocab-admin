@@ -2,7 +2,7 @@ import React from 'react';
 import { AdminShopItemDTO } from '../../../domains/shop/types';
 import { DerivedSaleState, formatFullDays, formatThemeKeyLabel } from '../../../domains/shop/mappers';
 import { Badge } from '../../../components/ui';
-import { BoosterIcon, CoinIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CoinIcon, FreezeIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
 import { FramedAvatar } from './ShopItemPreview';
 import { ARTWORK_BG, THEME_SURFACES } from './artwork';
@@ -39,7 +39,7 @@ const Artwork: React.FC<{ item: AdminShopItemDTO }> = ({ item }) => {
   // No uploaded artwork yet: a plain placeholder, so a missing asset is visible instead of dressed up.
   return (
     <div className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface/70 text-text-light">
-      {item.type === 'THEME' ? <ThemeIcon size={32} /> : <BoosterIcon size={32} />}
+      {item.type === 'THEME' ? <ThemeIcon size={32} /> : item.type === 'STREAK_FREEZE' ? <FreezeIcon size={32} /> : <BoosterIcon size={32} />}
       <span className="text-2xs">Chưa có ảnh</span>
     </div>
   );
@@ -61,6 +61,7 @@ const ThemeSwatch: React.FC<{ themeKey: string | null }> = ({ themeKey }) => {
 /** What sets this item apart from others of its type; the shelf already names the type. */
 function specLine(item: AdminShopItemDTO): string | null {
   if (item.type === 'XP_BOOSTER') return `×2 XP trong ${item.boostDurationMinutes ?? 30} phút, giữ tối đa ${item.maxQuantity ?? 5}`;
+  if (item.type === 'STREAK_FREEZE') return `Tự giữ chuỗi khi lỡ một ngày học, giữ tối đa ${item.maxQuantity ?? 2}`;
   if (item.type === 'THEME') return `Bộ ${formatThemeKeyLabel(item.themeKey)}`;
   return null;
 }

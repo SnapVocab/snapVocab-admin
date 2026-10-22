@@ -1,20 +1,27 @@
-import React, { useId } from 'react';
+import React from 'react';
 import {
   AdminShopItemDTO,
   ShopItemType,
 } from '../../../domains/shop/types';
 import { formatShopItemTypeLabel, formatThemeKeyLabel, deriveSaleState } from '../../../domains/shop/mappers';
 import { SaleStateBadge } from './ShopItemStatusBadge';
-import { Button, useDialogFocus } from '../../../components/ui';
+import { Button } from '../../../components/ui';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import {
   AlertTriangle,
-  Globe,
-  Archive,
-  Trash2,
   RefreshCw,
-  X,
   Coins,
 } from 'lucide-react';
+
+/* Shop dialogs are content inside the shared components/ui ConfirmModal (TD-ADS-05). */
+
+/** Failure stays in the dialog the operator is looking at. */
+const ErrorAlert: React.FC<{ message?: string | null }> = ({ message }) => (message ? (
+  <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
+    <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+    <span>{message}</span>
+  </div>
+) : null);
 
 /* =========================================================================
    1. PUBLISH CONFIRMATION MODAL
@@ -29,6 +36,13 @@ interface PublishConfirmationModalProps {
   onConfirm: () => void;
 }
 
+const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="px-4 py-2.5 flex justify-between items-center gap-3">
+    <span className="text-text-muted font-medium">{label}</span>
+    {children}
+  </div>
+);
+
 export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> = ({
   isOpen,
   item,
@@ -37,100 +51,59 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
   onClose,
   onConfirm,
 }) => {
-  const dialogRef = useDialogFocus(isOpen, isPublishing ? () => {} : onClose);
-  const titleId = useId();
   if (!isOpen) return null;
-
   // Publishing makes the item live; whether learners can BUY it is a separate outcome.
   const afterPublish = deriveSaleState({ ...item, status: 'PUBLISHED' });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
-          <div className="flex items-center gap-2 text-primary">
-            <Globe size={20} />
-            <h3 id={titleId} className="text-sm font-bold text-text">Phát hành vật phẩm</h3>
-          </div>
-          <Button variant="ghost" size="sm" icon={<X />} label="Đóng" onClick={onClose} disabled={isPublishing} />
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4 overflow-y-auto">
-          <div className="p-3 border border-border rounded-lg space-y-1.5">
-            <p className="text-body font-semibold text-text">Sau khi phát hành, vật phẩm sẽ:</p>
-            <SaleStateBadge sale={afterPublish} />
-            <p className="text-xs text-text-muted">
-              Phát hành khác mở bán: vật phẩm dùng được làm phần thưởng ngay; người học chỉ mua được khi bật "Cho phép mua" và đang trong thời gian bán.
-            </p>
-          </div>
-
-          <div className="p-3 bg-reward-light border border-reward/40 rounded-lg flex items-start gap-2.5 text-body text-reward-dark">
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-            <p>
-              Mã, loại và cấu hình theo loại sẽ bị khóa vĩnh viễn vì phần thưởng và vật phẩm đã bán tham chiếu tới chúng.
-            </p>
-          </div>
-
-          <div className="border border-border rounded-lg divide-y divide-border text-xs">
-            <div className="px-4 py-2.5 flex justify-between">
-              <span className="text-text-muted font-medium">Tên vật phẩm:</span>
-              <span className="font-bold text-text">{item.name}</span>
-            </div>
-            <div className="px-4 py-2.5 flex justify-between">
-              <span className="text-text-muted font-medium">Mã code:</span>
-              <span className="font-mono font-semibold text-text">{item.code}</span>
-            </div>
-            <div className="px-4 py-2.5 flex justify-between">
-              <span className="text-text-muted font-medium">Loại vật phẩm:</span>
-              <span className="font-semibold text-text">{formatShopItemTypeLabel(item.type)}</span>
-            </div>
-            <div className="px-4 py-2.5 flex justify-between items-center">
-              <span className="text-text-muted font-medium">Giá bán:</span>
-              <span className="font-bold text-reward flex items-center gap-1">
-                <Coins size={13} className="text-reward-dark" />
-                {item.purchasable ? `${(item.price ?? 0).toLocaleString('vi-VN')} Coin` : 'Không bán'}
-              </span>
-            </div>
-
-            {/* Type-specific details */}
-            {item.type === 'THEME' && (
-              <div className="px-4 py-2.5 flex justify-between">
-                <span className="text-text-muted font-medium">Bộ giao diện:</span>
-                <span className="font-semibold text-text">{item.themeKey ? formatThemeKeyLabel(item.themeKey) : 'Chưa thiết lập'}</span>
-              </div>
-            )}
-            {item.type === 'AVATAR_FRAME' && (
-              <div className="px-4 py-2.5 flex justify-between">
-                <span className="text-text-muted font-medium">Ảnh khung:</span>
-                <span className="font-medium text-text">{item.frameAssetKey ? 'Đã tải lên' : 'Chưa tải lên'}</span>
-              </div>
-            )}
-            {item.type === 'XP_BOOSTER' && (
-              <div className="px-4 py-2.5 flex justify-between">
-                <span className="text-text-muted font-medium">Thời lượng hiệu ứng:</span>
-                <span className="font-semibold text-text">{item.boostDurationMinutes} phút (x2 XP)</span>
-              </div>
-            )}
-          </div>
-          {errorMessage && (
-            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-border bg-surface-subtle flex items-center justify-end gap-2">
-          <Button data-autofocus onClick={onClose} disabled={isPublishing}>Hủy</Button>
-          <Button variant="primary" icon={<Globe />} loading={isPublishing} loadingText="Đang phát hành…" onClick={onConfirm}>
-            Xác nhận phát hành
-          </Button>
-        </div>
+    <ConfirmModal
+      title="Phát hành vật phẩm"
+      tone="primary"
+      maxWidth="lg"
+      busy={isPublishing}
+      busyLabel="Đang phát hành…"
+      confirmLabel="Xác nhận phát hành"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    >
+      <div className="p-3 border border-border rounded-lg space-y-1.5">
+        <p className="text-body font-semibold text-text">Sau khi phát hành, vật phẩm sẽ:</p>
+        <SaleStateBadge sale={afterPublish} />
+        <p className="text-xs text-text-muted">
+          Phát hành khác mở bán: vật phẩm dùng được làm phần thưởng ngay; người học chỉ mua được khi bật "Cho phép mua" và đang trong thời gian bán.
+        </p>
       </div>
-    </div>
+
+      <div className="p-3 bg-reward-light border border-reward/40 rounded-lg flex items-start gap-2.5 text-body text-reward-dark">
+        <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+        <p>Mã, loại và cấu hình theo loại sẽ bị khóa vĩnh viễn vì phần thưởng và vật phẩm đã bán tham chiếu tới chúng.</p>
+      </div>
+
+      <div className="border border-border rounded-lg divide-y divide-border text-xs">
+        <Row label="Tên vật phẩm:"><span className="font-bold text-text">{item.name}</span></Row>
+        <Row label="Mã code:"><span className="font-mono font-semibold text-text">{item.code}</span></Row>
+        <Row label="Loại vật phẩm:"><span className="font-semibold text-text">{formatShopItemTypeLabel(item.type)}</span></Row>
+        <Row label="Giá bán:">
+          <span className="font-bold text-reward flex items-center gap-1">
+            <Coins size={13} className="text-reward-dark" />
+            {item.purchasable ? `${(item.price ?? 0).toLocaleString('vi-VN')} Coin` : 'Không bán'}
+          </span>
+        </Row>
+        {item.type === 'THEME' && (
+          <Row label="Bộ giao diện:"><span className="font-semibold text-text">{item.themeKey ? formatThemeKeyLabel(item.themeKey) : 'Chưa thiết lập'}</span></Row>
+        )}
+        {item.type === 'AVATAR_FRAME' && (
+          <Row label="Ảnh khung:"><span className="font-medium text-text">{item.frameAssetKey ? 'Đã tải lên' : 'Chưa tải lên'}</span></Row>
+        )}
+        {item.type === 'XP_BOOSTER' && (
+          <Row label="Thời lượng hiệu ứng:"><span className="font-semibold text-text">{item.boostDurationMinutes} phút (x2 XP)</span></Row>
+        )}
+        {item.type === 'STREAK_FREEZE' && (
+          <Row label="Giữ tối đa:"><span className="font-semibold text-text">{item.maxQuantity ?? 2} vật phẩm, tự dùng khi lỡ một ngày học</span></Row>
+        )}
+      </div>
+      <ErrorAlert message={errorMessage} />
+    </ConfirmModal>
   );
 };
 
@@ -153,49 +126,28 @@ export const ArchiveConfirmationModal: React.FC<ArchiveConfirmationModalProps> =
   errorMessage,
   onClose,
   onConfirm,
-}) => {
-  const dialogRef = useDialogFocus(isOpen, isArchiving ? () => {} : onClose);
-  const titleId = useId();
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
-          <div className="flex items-center gap-2 text-danger">
-            <Archive size={20} />
-            <h3 id={titleId} className="text-sm font-bold text-text">Ngừng bán vĩnh viễn</h3>
-          </div>
-          <Button variant="ghost" size="sm" icon={<X />} label="Đóng" onClick={onClose} disabled={isArchiving} />
-        </div>
-
-        <div className="p-6 space-y-3">
-          <p className="text-body text-text leading-relaxed">
-            Ngừng bán vĩnh viễn <strong className="font-bold">{itemName}</strong> (lưu trữ)? <strong className="text-danger-dark">Không thể hoàn tác</strong>: không phát hành hay mở bán lại được.
-          </p>
-          <ul className="p-3 bg-danger-light border border-danger/30 rounded-lg list-disc list-inside space-y-1 text-body text-danger-dark">
-            <li>Ngừng bán trong Cửa hàng ngay lập tức.</li>
-            <li>Người đã sở hữu vẫn giữ và dùng bình thường.</li>
-            <li>Không chọn được làm phần thưởng mới; phần thưởng đã cấu hình trước đó giữ nguyên.</li>
-          </ul>
-          {errorMessage && (
-            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 py-4 border-t border-border bg-surface-subtle flex items-center justify-end gap-2">
-          <Button data-autofocus onClick={onClose} disabled={isArchiving}>Hủy</Button>
-          <Button variant="danger" icon={<Archive />} loading={isArchiving} loadingText="Đang ngừng bán…" onClick={onConfirm}>
-            Ngừng bán vĩnh viễn
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
+}) => (
+  <ConfirmModal
+    isOpen={isOpen}
+    title="Ngừng bán vĩnh viễn"
+    tone="danger"
+    busy={isArchiving}
+    busyLabel="Đang ngừng bán…"
+    confirmLabel="Ngừng bán vĩnh viễn"
+    onClose={onClose}
+    onConfirm={onConfirm}
+  >
+    <p className="text-body text-text leading-relaxed">
+      Ngừng bán vĩnh viễn <strong className="font-bold">{itemName}</strong> (lưu trữ)? <strong className="text-danger-dark">Không thể hoàn tác</strong>: không phát hành hay mở bán lại được.
+    </p>
+    <ul className="p-3 bg-danger-light border border-danger/30 rounded-lg list-disc list-inside space-y-1 text-body text-danger-dark">
+      <li>Ngừng bán trong Cửa hàng ngay lập tức.</li>
+      <li>Người đã sở hữu vẫn giữ và dùng bình thường.</li>
+      <li>Không chọn được làm phần thưởng mới; phần thưởng đã cấu hình trước đó giữ nguyên.</li>
+    </ul>
+    <ErrorAlert message={errorMessage} />
+  </ConfirmModal>
+);
 
 /* =========================================================================
    3. DELETE DRAFT CONFIRMATION MODAL
@@ -216,45 +168,24 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   errorMessage,
   onClose,
   onConfirm,
-}) => {
-  const dialogRef = useDialogFocus(isOpen, isDeleting ? () => {} : onClose);
-  const titleId = useId();
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
-          <div className="flex items-center gap-2 text-danger">
-            <Trash2 size={20} />
-            <h3 id={titleId} className="text-sm font-bold text-text">Xóa bản nháp</h3>
-          </div>
-          <Button variant="ghost" size="sm" icon={<X />} label="Đóng" onClick={onClose} disabled={isDeleting} />
-        </div>
-
-        <div className="p-6 space-y-3">
-          <p className="text-body text-text leading-relaxed">
-            Xóa bản nháp <strong className="font-bold">{itemName}</strong>?
-          </p>
-          <p className="text-body text-text-muted">Vật phẩm sẽ bị xóa vĩnh viễn. Không thể hoàn tác.</p>
-          {errorMessage && (
-            <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-start gap-2 text-body text-danger-dark">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 py-4 border-t border-border bg-surface-subtle flex items-center justify-end gap-2">
-          <Button data-autofocus onClick={onClose} disabled={isDeleting}>Hủy</Button>
-          <Button variant="danger" icon={<Trash2 />} loading={isDeleting} loadingText="Đang xóa…" onClick={onConfirm}>
-            Xóa bản nháp
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
+}) => (
+  <ConfirmModal
+    isOpen={isOpen}
+    title="Xóa bản nháp"
+    tone="danger"
+    busy={isDeleting}
+    busyLabel="Đang xóa…"
+    confirmLabel="Xóa bản nháp"
+    onClose={onClose}
+    onConfirm={onConfirm}
+  >
+    <p className="text-body text-text leading-relaxed">
+      Xóa bản nháp <strong className="font-bold">{itemName}</strong>?
+    </p>
+    <p className="text-body text-text-muted">Vật phẩm sẽ bị xóa vĩnh viễn. Không thể hoàn tác.</p>
+    <ErrorAlert message={errorMessage} />
+  </ConfirmModal>
+);
 
 /* =========================================================================
    4. TYPE CHANGE CONFIRMATION MODAL
@@ -271,42 +202,27 @@ export const TypeChangeConfirmationModal: React.FC<TypeChangeConfirmationModalPr
   newType,
   onClose,
   onConfirm,
-}) => {
-  const dialogRef = useDialogFocus(isOpen, onClose);
-  const titleId = useId();
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-surface border border-border rounded-lg max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
-          <div className="flex items-center gap-2 text-warning-dark">
-            <AlertTriangle size={20} />
-            <h3 id={titleId} className="text-sm font-bold text-text">Thay Đổi Loại Vật Phẩm</h3>
-          </div>
-          <Button variant="ghost" size="sm" icon={<X />} label="Đóng" onClick={onClose} />
-        </div>
-
-        <div className="p-6 space-y-3">
-          <p className="text-xs text-text leading-relaxed">
-            Bạn đang chuyển sang loại <strong className="text-text font-bold">{formatShopItemTypeLabel(newType)}</strong>.
-          </p>
-          <div className="p-3 bg-warning-light border border-warning/40 rounded-lg text-xs text-warning-dark">
-            <p className="font-semibold">Cấu hình riêng của loại hiện tại sẽ bị xóa.</p>
-            <p className="mt-0.5 text-warning-dark">
-              Các thông tin đặc thù của loại cũ sẽ bị đặt lại về giá trị mặc định của loại mới.
-            </p>
-          </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-border bg-surface-subtle flex items-center justify-end gap-2">
-          <Button data-autofocus onClick={onClose}>Hủy</Button>
-          <Button variant="primary" onClick={onConfirm}>Đồng ý thay đổi</Button>
-        </div>
-      </div>
+}) => (
+  <ConfirmModal
+    isOpen={isOpen}
+    title="Thay đổi loại vật phẩm"
+    tone="warning"
+    confirmVariant="primary"
+    confirmLabel="Đồng ý thay đổi"
+    onClose={onClose}
+    onConfirm={onConfirm}
+  >
+    <p className="text-xs text-text leading-relaxed">
+      Bạn đang chuyển sang loại <strong className="text-text font-bold">{formatShopItemTypeLabel(newType)}</strong>.
+    </p>
+    <div className="p-3 bg-warning-light border border-warning/40 rounded-lg text-xs text-warning-dark">
+      <p className="font-semibold">Cấu hình riêng của loại hiện tại sẽ bị xóa.</p>
+      <p className="mt-0.5 text-warning-dark">
+        Các thông tin đặc thù của loại cũ sẽ bị đặt lại về giá trị mặc định của loại mới.
+      </p>
     </div>
-  );
-};
+  </ConfirmModal>
+);
 
 /* =========================================================================
    5. OPTIMISTIC LOCKING / VERSION CONFLICT BANNER
