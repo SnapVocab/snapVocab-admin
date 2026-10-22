@@ -1,6 +1,6 @@
 # Admin · Nhiệm vụ hằng ngày — Đặc tả màn hình
 
-> **Rev 2 · 2026-10-22 · Trạng thái: đã dựng, chờ PO chốt.** Rev 2 cập nhật theo daily_mission.md PD-DM-02, PD-DM-07, PD-DM-12, PD-DM-13 (chọn 2 lượt, 12 mẫu seed, 3 điều kiện cấp, app cũ/app mới, trần 75 Coin) và xử lý TD-ADS-05, TD-ADS-09, TD-ADS-11.
+> **Rev 2 · 2026-10-22 · Trạng thái: đã dựng, PO duyệt 2026-10-22.** Rev 2 cập nhật theo daily_mission.md PD-DM-02, PD-DM-07, PD-DM-12, PD-DM-13 (chọn 2 lượt, 12 mẫu seed, 3 điều kiện cấp, app cũ/app mới, trần 75 Coin) và xử lý TD-ADS-05, TD-ADS-09, TD-ADS-11.
 > Nền tảng: [design.md](./design.md) rev 2. Nghiệp vụ: [daily_mission.md](../../../docs/decisions/daily_mission.md). Contract và luồng an toàn: [admin_missions_api_design.md](./admin_missions_api_design.md) (§1–6, §8–9 vẫn hiệu lực; phần hình thức ở §7 được thay bằng tài liệu này).
 
 ## 1. Mục tiêu
@@ -22,7 +22,7 @@ Phạm vi theo PD-DM: không có rương, bonus, nhiệm vụ tuần/tháng, l�
 | Vật phẩm thưởng | `GET /api/admin/shop/items?status=PUBLISHED` | REAL |
 | Bộ 5 nhiệm vụ, thưởng/ngày | `dailyOutlook()`: tính ngay trên trình duyệt (cần cho bản nháp chưa lưu), cùng thuật toán với `MissionTracker.choose`. Hai bên chạy chung bộ vector `snap-vocab-backend/src/test/resources/mission/outlook-vectors.json` (`MissionOutlookVectorsTest` và `admin-missions.test.ts`), lệch nhau là test đỏ (TD-ADS-09) | Tính từ dữ liệu thật |
 | Tỉ lệ hoàn thành, nhận thưởng | Chưa có API admin | CẦN BACKEND: không hiển thị |
-| Nhật ký ai sửa gì | Chưa có audit | CẦN BACKEND |
+| Nhật ký ai sửa gì | Nhật ký hoạt động Admin, đối tượng `MISSION_TEMPLATE` (5 thay đổi gần nhất trong 90 ngày) | REAL |
 
 **Slot** (bản sao `MissionTracker.SLOTS`, daily_mission.md §2.2):
 
@@ -166,7 +166,7 @@ Mất phản hồi: không gửi lại mù. Hộp hiện nút "Kiểm tra trạn
 | **Xem trước trên ứng dụng** | `MissionCard` bản đầy đủ: ô icon và màu theo mobile, tên, mô tả, gợi ý thêm từ, thanh tiến độ 0/N, Coin, XP (ô bằng 0 thì ẩn, như app), CTA ("Thêm từ", "Làm quiz", "Học ngay", "Tới cửa hàng", "Kích hoạt booster", "Quét ảnh") và "Vật phẩm: {tên vật phẩm}" (app đọc `reward.itemName`; chưa tìm thấy item thì hiện mã). Bên dưới: "Hoàn thành khi: {objective}" |
 | **Tác động lên bộ 5 nhiệm vụ** | **Vị trí**: "Slot N · nhóm"; nếu là nhóm cốt lõi thì thêm "còn lấp slot …" cho các slot đang không có mẫu riêng. **Cấp cho**: "Mọi người học" hoặc "Chỉ người học {điều kiện}". **Thưởng/ngày**: trước → sau, ghi "Sau khi lưu" (mẫu đang bật) hoặc "Nếu bật nhiệm vụ này" (mẫu tắt hoặc mới). Không đổi thì ghi "không đổi" |
 | Cảnh báo | Trần Coin/ngày **của app hiện tại** sau thay đổi > 75 (`MAX_COIN_PER_DAY`, PD-DM-02): hộp `warning`, ghi là gợi ý, không chặn lưu. Thay đổi làm một số người học không đủ 5 nhiệm vụ: hộp `danger`, báo backend sẽ từ chối |
-| **Vòng đời** (mẫu đã lưu) | Tạo, Sửa gần nhất · vN, ID. Dòng "Chưa có nhật ký ai sửa gì…" |
+| **Vòng đời** (mẫu đã lưu) | Tạo, Sửa gần nhất · vN, ID. "Nhật ký gần đây" (`TargetHistory`) và liên kết xem cả lịch sử |
 
 Màu ô icon theo mobile (`missions-screen.tsx`):
 

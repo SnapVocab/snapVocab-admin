@@ -13,6 +13,7 @@ import { formatVnDateTime } from '../../domains/shop/mappers';
 import { ApiClientError } from '../../lib/api-client';
 import { cn } from '../../lib/utils';
 import { ErrorBanner } from '../admin-missions/components';
+import { TargetHistory } from '../activity-log/TargetHistory';
 import { BadgeArtifact } from './BadgeArtifact';
 import { badgeErrorMessage } from './ui';
 
@@ -302,7 +303,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
               <dt className="text-text-muted">Sửa gần nhất</dt><dd className="tabular-nums">{formatVnDateTime(original.updatedAt)}{original.version !== null && `, phiên bản ${original.version}`}</dd>
               <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{original.id}</dd>
             </dl>
-            <p className="border-t border-border pt-2 text-text-muted">Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.</p>
+            <TargetHistory target={{ type: 'BADGE', id: String(original.id) }} />
           </div>
         </aside>
       </div>

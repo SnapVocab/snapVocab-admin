@@ -101,7 +101,9 @@ test('AC-CAT-4: a catalog without earner counts has no "Đã đạt" column and 
   assert.equal(page.match(/scope="rowgroup"/g)?.length, 4);
   assert.ok(page.indexOf('Chuỗi ngày học') < page.indexOf('Quiz hoàn thành'));
   assert.doesNotMatch(page, /Dữ liệu mẫu/, 'outside dev the real API needs no sample-data notice');
-  assert.doesNotMatch(page, />Sửa</, 'P1 is read-only');
+  // P2 shipped (PATCH /api/admin/badges/{id}): every row can be edited and switched on/off.
+  assert.match(page, />Sửa</);
+  assert.match(page, />(Bật|Tắt)</);
 });
 
 test('P1 editor view hides absent version and displays a real zero version when provided', () => {

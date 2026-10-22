@@ -1,6 +1,6 @@
 # Admin · Cửa hàng & Vật phẩm — Đặc tả màn hình
 
-> **Rev 1 · 2026-10-19 · Trạng thái: đã dựng 2026-10-18, chờ PO chốt.**
+> **Rev 1 · 2026-10-19 · Trạng thái: đã dựng 2026-10-18, PO duyệt 2026-10-22.**
 > Nền tảng: [design.md](./design.md) rev 2. Nghiệp vụ: [shop.md](../../../docs/decisions/shop.md). Khi mâu thuẫn, shop.md đứng trên tài liệu này.
 
 ## 1. Mục tiêu

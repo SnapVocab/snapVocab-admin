@@ -6,21 +6,23 @@ import { foldVi } from '../../lib/utils';
 import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatThemeKeyLabel, formatVnDateTime } from '../shop/mappers';
 import { categoryLabels, eligibilityLabels } from '../admin-missions/mappers';
 import { banReasonError, STATUS_META } from '../admin-learners/mappers';
-
-/** Every reason the backend asks for (ban, permanent stop of sale, a save past a guardrail): 10–500 characters, trimmed. */
-export const auditReasonError = banReasonError;
+import { EMBLEM_LABELS } from '../admin-badges/catalog';
 import type { LearnerStatus } from '../admin-learners/types';
 import type { AuditAction, AuditArea, AuditEntry, AuditKind, AuditTarget, AuditTargetType } from './types';
 
-export const AREAS: AuditArea[] = ['SHOP', 'MISSIONS', 'DICTIONARY', 'TOPICS', 'AI_SCAN', 'LEARNERS', 'NOTIFICATIONS'];
+/** Every reason the backend asks for (ban, permanent stop of sale, a save past a guardrail): 10–500 characters, trimmed. */
+export const auditReasonError = banReasonError;
+
+export const AREAS: AuditArea[] = ['SHOP', 'MISSIONS', 'BADGES', 'DICTIONARY', 'TOPICS', 'AI_SCAN', 'LEARNERS', 'NOTIFICATIONS'];
 export const AREA_LABEL: Record<AuditArea, string> = {
-  SHOP: 'Cửa hàng', MISSIONS: 'Nhiệm vụ', DICTIONARY: 'Từ điển', TOPICS: 'Chủ đề', AI_SCAN: 'AI Scan', LEARNERS: 'Người học', NOTIFICATIONS: 'Thông báo',
+  SHOP: 'Cửa hàng', MISSIONS: 'Nhiệm vụ', BADGES: 'Huy hiệu', DICTIONARY: 'Từ điển', TOPICS: 'Chủ đề', AI_SCAN: 'AI Scan', LEARNERS: 'Người học', NOTIFICATIONS: 'Thông báo',
 };
 
 /** The verb; the object has its own column. */
 export const ACTION_LABEL: Record<AuditAction, string> = {
   SHOP_ITEM_CREATED: 'Tạo bản nháp', SHOP_ITEM_UPDATED: 'Sửa', SHOP_ITEM_PUBLISHED: 'Phát hành', SHOP_ITEM_ARCHIVED: 'Ngừng bán vĩnh viễn', SHOP_ITEM_DELETED: 'Xóa bản nháp',
   MISSION_TEMPLATE_CREATED: 'Tạo mẫu', MISSION_TEMPLATE_UPDATED: 'Sửa', MISSION_TEMPLATE_ENABLED: 'Bật', MISSION_TEMPLATE_DISABLED: 'Tắt',
+  BADGE_UPDATED: 'Sửa', BADGE_ENABLED: 'Bật', BADGE_DISABLED: 'Tắt',
   WORD_UPDATED: 'Sửa',
   COLLECTION_CREATED: 'Tạo collection', COLLECTION_UPDATED: 'Sửa collection', COLLECTION_DELETED: 'Xóa collection',
   TOPIC_CREATED: 'Tạo chủ đề', TOPIC_ITEM_ADDED: 'Thêm mục từ', TOPIC_TEMPLATE_CHANGED: 'Đổi mẫu thẻ', TOPIC_SCHEMA_CHANGED: 'Đổi schema',
@@ -30,7 +32,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
 };
 
 export const TARGET_LABEL: Record<AuditTargetType, string> = {
-  SHOP_ITEM: 'Vật phẩm', MISSION_TEMPLATE: 'Mẫu nhiệm vụ', WORD: 'Từ', COLLECTION: 'Collection', TOPIC: 'Chủ đề',
+  SHOP_ITEM: 'Vật phẩm', MISSION_TEMPLATE: 'Mẫu nhiệm vụ', BADGE: 'Huy hiệu', WORD: 'Từ', COLLECTION: 'Collection', TOPIC: 'Chủ đề',
   SCAN_LABEL: 'Nhãn scan', LEARNER: 'Người học', NOTIFICATION: 'Thông báo',
 };
 
@@ -43,6 +45,7 @@ const ECONOMY_FIELDS = new Set(['price', 'purchasable', 'rewardCoin', 'rewardXp'
 const LIFECYCLE_ACTIONS = new Set<AuditAction>([
   'SHOP_ITEM_CREATED', 'SHOP_ITEM_PUBLISHED', 'SHOP_ITEM_ARCHIVED', 'SHOP_ITEM_DELETED',
   'MISSION_TEMPLATE_CREATED', 'MISSION_TEMPLATE_ENABLED', 'MISSION_TEMPLATE_DISABLED',
+  'BADGE_ENABLED', 'BADGE_DISABLED',
   'COLLECTION_CREATED', 'COLLECTION_DELETED', 'TOPIC_CREATED',
 ]);
 
@@ -71,6 +74,7 @@ export function targetPath(t: AuditTarget): string | null {
   switch (t.type) {
     case 'SHOP_ITEM': return `/shop/${t.id}`;
     case 'MISSION_TEMPLATE': return `/missions/${t.id}`;
+    case 'BADGE': return `/badges/${t.id}`;
     case 'WORD': return `/dictionary/${encodeURIComponent(t.id)}`;
     case 'COLLECTION': return `/topics/${t.id}`;
     case 'TOPIC': return `/topics/${[...(t.parents ?? []), t.id].join('/')}`;
@@ -81,7 +85,7 @@ export function targetPath(t: AuditTarget): string | null {
 }
 
 const SEGMENT: Record<AuditTargetType, string> = {
-  SHOP_ITEM: 'vat-pham', MISSION_TEMPLATE: 'nhiem-vu', WORD: 'tu', COLLECTION: 'collection', TOPIC: 'chu-de',
+  SHOP_ITEM: 'vat-pham', MISSION_TEMPLATE: 'nhiem-vu', BADGE: 'huy-hieu', WORD: 'tu', COLLECTION: 'collection', TOPIC: 'chu-de',
   SCAN_LABEL: 'nhan-scan', LEARNER: 'nguoi-hoc', NOTIFICATION: 'thong-bao',
 };
 
@@ -114,7 +118,8 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   type: { label: 'Loại', format: (v) => formatShopItemTypeLabel(String(v)) },
   name: { label: 'Tên' },
   description: { label: 'Mô tả' },
-  iconKey: { label: 'Ảnh biểu tượng', format: asset },
+  // Shop stores an upload key; a badge stores the emblem name the app draws.
+  iconKey: { label: 'Ảnh biểu tượng', format: (v) => EMBLEM_LABELS[String(v)] ?? asset(v) },
   purchasable: { label: 'Bán trong Cửa hàng' },
   price: { label: 'Giá', format: unit('Coin') },
   availableFrom: { label: 'Mở bán từ', format: (v) => formatVnDateTime(String(v)) },
