@@ -154,7 +154,7 @@ Tách màu **hành động** khỏi màu **trạng thái**: nút "Phát hành" v
 | Loại | Nguồn | Danh sách |
 | :--- | :--- | :--- |
 | **Chức năng** | `lucide-react` | Search, Filter, Chevron, Arrow, Edit, Delete, Settings, Download, Upload, Calendar, Sort, More, Refresh, Lock, Copy, LayoutGrid/List |
-| **Brand / ngữ nghĩa** | `src/components/brand/BrandIcons.tsx` | `CoinIcon` (coin 3D), `XpIcon` (orb XP 3D), `BoosterIcon`, `ThemeIcon`, `FrameIcon`, `StreakFlameIcon`, `SnapyIcon`, `RewardGiftIcon`, `BadgeMedalIcon`, `ScanLensIcon` |
+| **Brand / ngữ nghĩa** | `src/components/brand/BrandIcons.tsx` | `CoinIcon` (coin 3D), `XpIcon` (orb XP 3D), `BoosterIcon`, `FrameIcon`, `StreakFlameIcon`, `SnapyIcon`, `RewardGiftIcon`, `BadgeMedalIcon`, `ScanLensIcon` |
 
 Quy tắc:
 
@@ -350,7 +350,7 @@ Dùng cho Từ vựng. Chia ba cột: danh sách (280px) · editor · preview mo
 
 | Bề mặt | Nguồn mobile được phản chiếu | Thành phần admin | Mức trung thực |
 | :--- | :--- | :--- | :--- |
-| Card vật phẩm Shop, theme | `SnapVocab/src/features/shop/theme/theme-context.tsx` (bề mặt sáng/tối), card Cửa hàng/Kho đồ | `ShopItemPreview` (`ShopMobileSimulator`), `artwork.ts` | Bề mặt theme mirror tay (TD-ADS-08); khung avatar theo tỉ lệ 58% |
+| Card vật phẩm Shop | card Cửa hàng/Kho đồ | `ShopItemPreview` (`ShopMobileSimulator`), `artwork.ts` | Khung avatar theo tỉ lệ 58% |
 | Thẻ nhiệm vụ | `SnapVocab/src/features/missions/missions-screen.tsx` (màu ô, copy CTA, "Vật phẩm: CODE") | `MissionCard`, `MissionTile` | Copy và màu giống app; tiến độ luôn 0/N (ngày mới) |
 | Bộ 5 nhiệm vụ | Backend `MissionTracker.SLOTS` / `choose` | `dailyOutlook()` | Mô phỏng cùng thuật toán (TD-ADS-09) |
 | Thẻ học | `SnapVocab/src/features/card-renderer` (`data-resolver.ts`, `card-field-renderer.tsx`, `card-face.tsx`) và `template-builder/mappers` | `CardFace` (`features/admin-templates/CardPreview.tsx`), `domains/admin-templates/render.ts` | Port hành vi (phần, ngắt cột, dò nhóm, nút nghe, phiên âm, cỡ chữ). Khác: chữ Inter, mặt thẻ không cuộn (TD-TPL-06). Mirror tay (TD-TPL-01) |
@@ -481,7 +481,6 @@ Quy tắc:
 | TD-ADS-05 | ~~Hộp xác nhận bị trùng~~ | **Xong** 2026-10-22: Người học, Missions và Shop (`ShopModals`: phát hành, ngừng bán, xóa nháp, đổi loại) đều dùng `components/ui/ConfirmModal`; bản chung thêm `busyLabel` và cuộn nội dung dài. Toast: 7 màn (Huy hiệu, Mẫu thẻ, Người học, Chủ đề, Nhiệm vụ, Cửa hàng, AI Scan) dùng `useToast` chung (`components/ui/Toast`); sửa lỗi toast thứ hai bị hẹn giờ của toast đầu tắt sớm, AI Scan có `role="status"` |
 | TD-ADS-06 | Simulator Shop có ngữ cảnh mẫu ngoài scope: "Bảo hiểm Streak" (Streak Freeze), "Diamond League · Top 1" (League); số mẫu ví/streak/từ đã học không gắn nhãn mẫu | Trước nghiệm thu |
 | TD-ADS-07 | `resolveFrameAsset` đoán ảnh khung theo mã khi item chưa upload, nên preview hiện ảnh không thuộc item | Trước nghiệm thu |
-| TD-ADS-08 | `THEME_SURFACES` mirror tay từ mobile | Khi registry > vài theme |
 | TD-ADS-09 | ~~`SLOTS` và `dailyOutlook` mirror `MissionTracker` ở frontend nên có rủi ro lệch~~ | **Xong** 2026-10-22: bộ vector dùng chung `snap-vocab-backend/src/test/resources/mission/outlook-vectors.json`, backend kiểm bằng `MissionTracker.outcomes` (cùng hàm duyệt với `choose`) |
 | TD-ADS-10 | Catalog Shop tải một trang 100 item; có cảnh báo khi vượt | Khi > 100 item |
 | TD-ADS-11 | `MAX_COIN_PER_DAY` là hằng số ở frontend | 2026-10-22: đổi thành **75** theo PD-DM-02 và so với bộ nhiệm vụ của app hiện tại. Vẫn là hằng số; lấy từ API khi có endpoint cấu hình kinh tế |

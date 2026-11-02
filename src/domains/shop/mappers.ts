@@ -5,7 +5,7 @@ import { ApiClientError } from '../../lib/api-client';
 export const SHOP_FIELD_LABELS: Record<string, string> = {
   code: 'Mã', name: 'Tên', description: 'Mô tả', type: 'Loại', iconKey: 'Icon', purchasable: 'Cho phép mua',
   price: 'Giá', availableFrom: 'Bắt đầu bán', availableUntil: 'Kết thúc bán', sortOrder: 'Thứ tự',
-  themeKey: 'Bộ giao diện', frameAssetKey: 'Ảnh khung', boostDurationMinutes: 'Thời lượng', maxQuantity: 'Số lượng tối đa',
+  frameAssetKey: 'Ảnh khung', boostDurationMinutes: 'Thời lượng', maxQuantity: 'Số lượng tối đa',
 };
 
 /**
@@ -14,7 +14,6 @@ export const SHOP_FIELD_LABELS: Record<string, string> = {
  */
 export function configForType(type: ShopItemType, from: Partial<ShopItemForm> = {}) {
   return {
-    themeKey: type === 'THEME' ? from.themeKey ?? null : null,
     frameAssetKey: type === 'AVATAR_FRAME' ? from.frameAssetKey ?? null : null,
     boostDurationMinutes: type === 'XP_BOOSTER' ? from.boostDurationMinutes ?? 30 : null,
     maxQuantity: type === 'XP_BOOSTER' ? from.maxQuantity ?? 5 : type === 'STREAK_FREEZE' ? from.maxQuantity ?? 2 : null,
@@ -258,9 +257,6 @@ export function mapBackendErrorsToFields(
       case 'SHOP_ITEM_CODE_EXISTS':
         fieldErrors.code = 'Mã code này đã tồn tại trong hệ thống. Vui lòng chọn mã khác.';
         break;
-      case 'INVALID_THEME_KEY':
-        fieldErrors.themeKey = 'Theme Key không hợp lệ hoặc không thuộc danh sách cho phép.';
-        break;
       case 'INVALID_PRICE':
         fieldErrors.price = 'Giá vật phẩm không hợp lệ (phải từ 1 đến 100,000 Coin khi mở bán).';
         break;
@@ -306,8 +302,6 @@ export function mapBackendErrorsToFields(
  */
 export function formatShopItemTypeLabel(type?: ShopItemType | string | null): string {
   switch (type) {
-    case 'THEME':
-      return 'Bộ màu';
     case 'AVATAR_FRAME':
       return 'Khung avatar';
     case 'XP_BOOSTER':
@@ -322,24 +316,6 @@ export function formatShopItemTypeLabel(type?: ShopItemType | string | null): st
 /** Lifecycle status in Vietnamese (the stored status, not the derived sale state). */
 export function formatShopItemStatusLabel(status?: string | null): string {
   return ({ DRAFT: 'Bản nháp', PUBLISHED: 'Đã phát hành', ARCHIVED: 'Đã lưu trữ' } as Record<string, string>)[status ?? ''] ?? (status || '—');
-}
-
-/**
- * Format theme key labels for friendly UI display
- */
-export function formatThemeKeyLabel(themeKey?: string | null): string {
-  switch (themeKey) {
-    case 'MIDNIGHT_NEON':
-      return 'Midnight Neon';
-    case 'SUNSET_AMBER':
-      return 'Sunset Amber';
-    case 'FOREST_MINT':
-      return 'Forest Mint';
-    case 'DEFAULT':
-      return 'Mặc định (Default)';
-    default:
-      return themeKey || '—';
-  }
 }
 
 /**

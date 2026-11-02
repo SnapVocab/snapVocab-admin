@@ -5,7 +5,7 @@
 
 ## 1. Mục tiêu
 
-Người vận hành quản lý danh mục vật phẩm (Giao diện cửa hàng, Khung avatar, XP Booster) theo vòng đời `DRAFT → PUBLISHED → ARCHIVED`. Màn phải trả lời nhanh ba câu hỏi:
+Người vận hành quản lý danh mục vật phẩm (Khung avatar, XP Booster, Đóng băng chuỗi; THEME gỡ 2026-11-02) theo vòng đời `DRAFT → PUBLISHED → ARCHIVED`. Màn phải trả lời nhanh ba câu hỏi:
 
 1. Lúc này người học mua được gì?
 2. Có gì sắp thay đổi?
@@ -20,7 +20,7 @@ Trục thời gian của người vận hành: Find → Inspect → Edit → Val
 | Danh mục | `GET /api/admin/shop/items?page=0&size=100`: toàn bộ catalog trong một trang (`useShopCatalog`) | REAL |
 | Chi tiết, tạo, sửa | `GET/POST/PATCH /api/admin/shop/items[/{id}]` (PATCH có `version`) | REAL |
 | Vòng đời | `POST …/{id}/publish`, `POST …/{id}/archive`, `DELETE …/{id}` (chỉ DRAFT) | REAL |
-| Siêu dữ liệu form | `GET /api/admin/shop/item-types`: trường, giới hạn, theme còn trống, quy tắc khóa | REAL |
+| Siêu dữ liệu form | `GET /api/admin/shop/item-types`: trường, giới hạn, quy tắc khóa | REAL |
 | Upload ảnh | `POST /api/admin/shop/assets/upload-url` → PUT presigned (MinIO) | REAL |
 | "Ngày đủ" | giá ÷ `MAX_COIN_PER_DAY` (85, mức kinh tế Daily Mission đã duyệt) | Tính từ hằng số |
 | Doanh số, lượt mua, luồng Coin | Chưa có API admin | CẦN BACKEND: không hiển thị |
@@ -56,7 +56,7 @@ Quản lý danh mục… Giá quy ra ngày: số ngày làm đủ 5 nhiệm vụ
 
 ### 3.2. Toolbar và kiểu hiển thị
 
-- **Tab loại** theo thứ tự kệ: Khung avatar → XP Boosters → Giao diện. Mỗi tab có icon brand (`FrameIcon`, `BoosterIcon`, `ThemeIcon`) và số đếm.
+- **Tab loại** theo thứ tự kệ: Khung avatar → XP Boosters → Đóng băng chuỗi. Mỗi tab có icon brand (`FrameIcon`, `BoosterIcon`, `FreezeIcon`) và số đếm.
 - **Tìm kiếm** chạy trên client, không phân biệt hoa thường, theo `code` và `name`.
 - **Lưới** (mặc định):
   - Tab "Tất cả" chia **kệ** theo loại. Đầu kệ ghi tên loại, số item và dải giá đang bán. Kệ rỗng sau khi lọc thì ẩn.
@@ -69,10 +69,10 @@ Quản lý danh mục… Giá quy ra ngày: số ngày làm đủ 5 nhiệm vụ
 
 | Vùng | Nội dung |
 | :--- | :--- |
-| Khung hình (nền theo loại, `ARTWORK_BG`) | Badge trạng thái bán (trái trên), `#sortOrder` (phải trên). Khung avatar: ảnh khung phủ lên avatar mẫu theo tỉ lệ 58%. Loại khác: icon đã upload; nếu chưa có thì dùng icon brand. Giao diện: thêm chấm màu theme (viền sáng, viền tối, nền tối) |
+| Khung hình (nền theo loại, `ARTWORK_BG`) | Badge trạng thái bán (trái trên), `#sortOrder` (phải trên). Khung avatar: ảnh khung phủ lên avatar mẫu theo tỉ lệ 58%. Loại khác: icon đã upload; nếu chưa có thì dùng icon brand. |
 | Thông tin | Nhãn loại, tên (1 dòng), mã (mono) |
 | Kinh tế | `CoinIcon` + giá + "≈ N ngày". Không bán: `RewardGiftIcon` + "Chỉ dùng làm quà" |
-| Thông số | Booster: "×2 XP · N phút · Tối đa M". Giao diện: "Bộ {theme}". Khung: "Khung Avatar hồ sơ" |
+| Thông số | Booster: "×2 XP · N phút · Tối đa M". Khung: "Khung Avatar hồ sơ" |
 | Trạng thái tile | DRAFT: viền đứt. ARCHIVED: hình xám, mờ 50%. Hover: nhấc 2px kèm bóng. Bấm để mở editor |
 
 ### 3.4. Trạng thái màn
@@ -99,7 +99,7 @@ Quản lý danh mục… Giá quy ra ngày: số ngày làm đủ 5 nhiệm vụ
 | Section | Trường | Quy tắc |
 | :--- | :--- | :--- |
 | **CƠ BẢN** | Mã, Tên, Mô tả | Mã: chữ HOA, 3–64 ký tự `[A-Z][A-Z0-9_]`, khóa sau phát hành. Tên ≤ 100. Mô tả ≤ 500 |
-| **LOẠI & CẤU HÌNH** | Loại (4 thẻ chọn có icon brand) và cấu hình riêng | Đổi loại phải xác nhận. Bộ màu: chọn `themeKey` từ danh sách theme còn trống (mỗi theme chỉ một item). Khung: ảnh PNG/WebP 512×512 có alpha, ≤ 300 KB. Booster: ×2 cố định, thời lượng 5–180 phút (mặc định 30), giữ tối đa 1–10 thẻ (mặc định 5). Đóng băng chuỗi (2026-10-22, [streak_freeze.md](../../../docs/decisions/streak_freeze.md)): chỉ giữ tối đa 1–5 (mặc định 2), một dòng giải thích cách tự dùng; chỉ một item loại này được phát hành (backend từ chối item thứ hai) |
+| **LOẠI & CẤU HÌNH** | Loại (3 thẻ chọn có icon brand) và cấu hình riêng | Đổi loại phải xác nhận. Khung: ảnh PNG/WebP 512×512 có alpha, ≤ 300 KB. Booster: ×2 cố định, thời lượng 5–180 phút (mặc định 30), giữ tối đa 1–10 thẻ (mặc định 5). Đóng băng chuỗi (2026-10-22, [streak_freeze.md](../../../docs/decisions/streak_freeze.md)): chỉ giữ tối đa 1–5 (mặc định 2), một dòng giải thích cách tự dùng; chỉ một item loại này được phát hành (backend từ chối item thứ hai) |
 | **HÌNH ẢNH** | Icon vật phẩm | PNG/WebP vuông ≥ 256×256, ≤ 200 KB. Kiểm header ảnh ngay trên client |
 | **BÁN TRONG CỬA HÀNG** | Kết luận trạng thái bán trực tiếp, Cho phép mua, Giá, Thứ tự, Thời gian bán | Bản nháp hiện "Sau khi phát hành: …". Giá 1–100.000 khi bán, kèm guardrail (§4.3). Thời gian bán: Không giới hạn hoặc Theo thời gian, nhập theo UTC+7 |
 
@@ -120,7 +120,7 @@ Thời gian bán "Theo thời gian" có giờ kết thúc: hộp cảnh báo "Ap
 
 | Panel | Nội dung |
 | :--- | :--- |
-| **Xem trước trên ứng dụng** (`ShopMobileSimulator`) | Khung điện thoại với 3 tab: Cửa hàng (card mua), Kho đồ (card sở hữu: Áp dụng / Trang bị / Kích hoạt), Hồ sơ (khung trên avatar). Giao diện có công tắc Sáng/Tối theo bề mặt theme của mobile. Ngữ cảnh mẫu theo [design.md](./design.md) §6 |
+| **Xem trước trên ứng dụng** (`ShopMobileSimulator`) | Khung điện thoại với 3 tab: Cửa hàng (card mua), Kho đồ (card sở hữu: Trang bị / Kích hoạt), Hồ sơ (khung trên avatar). Ngữ cảnh mẫu theo [design.md](./design.md) §6 |
 | **Vòng đời** | Tạo, Phát hành, Sửa gần nhất · vN, ID (UTC+7). Dòng "Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ." |
 
 ### 4.5. An toàn thao tác

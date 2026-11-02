@@ -14,7 +14,7 @@ const BASE_URL = '/api/admin/shop';
 
 /**
  * 1. GET /api/admin/shop/item-types
- * Returns dynamic form metadata: fields, limits, defaults, free themeKeys, lock rules.
+ * Returns dynamic form metadata: fields, limits, defaults, lock rules.
  */
 export async function getShopItemTypes(): Promise<ShopItemTypeMetadataDTO> {
   return apiClient<ShopItemTypeMetadataDTO>(`${BASE_URL}/item-types`);

@@ -84,14 +84,6 @@ export const BoosterIcon: React.FC<BrandIconProps> = ({ size = 16, className }) 
   </svg>
 );
 
-/** Shop theme sparkles (mobile sparkles.tsx), violet like the theme artwork tint. */
-export const ThemeIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
-  <svg {...box(size, className)}>
-    <path d="M9 3l1.6 4.4L15 9l-4.4 1.6L9 15l-1.6-4.4L3 9l4.4-1.6L9 3z" fill="#8B5CF6" />
-    <path d="M17.5 13l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" fill="#C4B5FD" />
-  </svg>
-);
-
 /** Streak Freeze snowflake, sky like the item's artwork tint (streak_freeze.md). */
 export const FreezeIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
   <svg {...box(size, className)}>

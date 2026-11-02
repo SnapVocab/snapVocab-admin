@@ -314,8 +314,6 @@ function getFriendlyErrorMessage(code: string, details?: any): string {
   switch (code) {
     case 'SHOP_ITEM_CODE_EXISTS':
       return 'Mã định danh (code) này đã tồn tại trong hệ thống.';
-    case 'INVALID_THEME_KEY':
-      return 'Chủ đề này không nằm trong danh mục cho phép hoặc đã được gán.';
     case 'INVALID_PRICE':
       return 'Giá niêm yết không hợp lệ (1..100,000 Coin).';
     case 'INVALID_AVAILABILITY_WINDOW':

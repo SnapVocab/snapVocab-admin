@@ -11,26 +11,21 @@ import {
 } from 'lucide-react';
 import { ShopItemForm, ShopItemType } from '../../../domains/shop/types';
 import { formatShopItemTypeLabel } from '../../../domains/shop/mappers';
-import { ARTWORK_BG, type Mode, THEME_SURFACES } from './artwork';
+import { ARTWORK_BG } from './artwork';
 import {
   CoinIcon,
   BoosterIcon,
   FreezeIcon,
-  ThemeIcon,
   StreakFlameIcon,
   RewardGiftIcon,
 } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
 
-/** Text is fixed per mode on mobile (shop.md §6.2); themes only change surfaces. */
-const TEXT: Record<Mode, { text: string; muted: string }> = {
-  light: { text: '#1E2A44', muted: '#565879' },
-  dark: { text: '#FFFFFF', muted: '#9597AD' },
-};
+/** Mobile light-mode text colors. */
+const INK = { text: '#1E2A44', muted: '#565879' };
 
 /** The button an owned item shows in Kho đồ (mobile inventory card). */
 const INVENTORY_ACTION: Record<ShopItemType, string> = {
-  THEME: 'Áp dụng',
   AVATAR_FRAME: 'Trang bị',
   XP_BOOSTER: 'Kích hoạt',
   // Passive: the app shows a status, there is nothing to press (streak_freeze.md §7).
@@ -94,15 +89,12 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
   frameUrl,
   className,
 }) => {
-  const type = form.type ?? 'THEME';
+  const type = form.type ?? 'AVATAR_FRAME';
   const [selectedTab, setSelectedTab] = useState<SimulatorTab | null>(null);
   const activeTab = selectedTab ?? (type === 'AVATAR_FRAME' ? 'profile' : 'shop');
   const setActiveTab = setSelectedTab;
-  const [mode, setMode] = useState<Mode>('light');
 
   const sold = Boolean(form.purchasable);
-  const palette = form.themeKey ? THEME_SURFACES[form.themeKey]?.[mode] : undefined;
-  const ink = TEXT[mode];
   const effectiveFrameUrl = resolveFrameAsset(form, frameUrl);
 
   return (
@@ -161,25 +153,6 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
               <span>Hồ sơ</span>
             </button>
           </div>
-
-          {/* Theme Light/Dark switcher if Theme type */}
-          {type === 'THEME' && form.themeKey && (
-            <div className="flex items-center gap-1 bg-surface-subtle p-0.5 rounded-lg border border-border text-[11px] font-semibold">
-              {(['light', 'dark'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={cn(
-                    'px-2 py-0.5 rounded transition-all',
-                    mode === m ? 'bg-text text-white font-bold' : 'text-text-muted hover:text-text'
-                  )}
-                >
-                  {m === 'light' ? 'Sáng' : 'Tối'}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -190,12 +163,12 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
           <div
             className="w-full h-full rounded-[34px] overflow-hidden flex flex-col relative border border-slate-900 transition-colors duration-300"
             style={{
-              background: palette ? palette.background : '#F8F9F7',
-              color: ink.text,
+              background: '#F8F9F7',
+              color: INK.text,
             }}
           >
             {/* Phone Status Bar */}
-            <div className="w-full h-7 pt-1 px-5 flex items-center justify-between text-[10px] font-bold select-none z-30" style={{ color: ink.text }}>
+            <div className="w-full h-7 pt-1 px-5 flex items-center justify-between text-[10px] font-bold select-none z-30" style={{ color: INK.text }}>
               <span>09:41</span>
               {/* Dynamic Island Notch */}
               <div className="w-18 h-3.5 bg-black rounded-full mx-auto" />
@@ -210,13 +183,13 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
             <div
               className="px-3.5 py-2 flex items-center justify-between border-b transition-colors z-20"
               style={{
-                background: palette ? palette.headerBg : '#FFFFFF',
-                borderColor: palette ? palette.border : '#E5E7EB',
+                background: '#FFFFFF',
+                borderColor: '#E5E7EB',
               }}
             >
               <div className="flex items-center gap-1.5">
                 <span className="text-sm">🦊</span>
-                <span className="font-black text-xs tracking-tight" style={{ color: ink.text }}>
+                <span className="font-black text-xs tracking-tight" style={{ color: INK.text }}>
                   SnapVocab
                 </span>
               </div>
@@ -262,8 +235,8 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                     <div
                       className="overflow-hidden rounded-[22px] border border-b-[3px] bg-white shadow-xs transition-all"
                       style={{
-                        borderColor: palette ? palette.border : '#E2E8F0',
-                        background: palette ? palette.surface : '#FFFFFF',
+                        borderColor: '#E2E8F0',
+                        background: '#FFFFFF',
                       }}
                     >
                       <div className="h-[96px] flex items-center justify-center relative overflow-hidden" style={{ background: ARTWORK_BG[type] }}>
@@ -272,8 +245,8 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                         ) : iconUrl ? (
                           <img src={iconUrl} alt="" className="w-[72px] h-[72px] object-contain drop-shadow-sm" />
                         ) : (
-                          <span style={{ color: TEXT.light.muted }}>
-                            {type === 'THEME' ? <ThemeIcon size={36} /> : type === 'STREAK_FREEZE' ? <FreezeIcon size={36} /> : <BoosterIcon size={36} />}
+                          <span style={{ color: INK.muted }}>
+                            {type === 'STREAK_FREEZE' ? <FreezeIcon size={36} /> : <BoosterIcon size={36} />}
                           </span>
                         )}
                         <span className="absolute top-2 right-2 text-[9px] font-mono px-1.5 py-0.2 rounded-md bg-white/80 font-bold border border-border/60">
@@ -283,14 +256,14 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
 
                       <div className="p-2.5 space-y-2">
                         <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wide truncate" style={{ color: ink.muted }}>
+                          <div className="text-[10px] font-bold uppercase tracking-wide truncate" style={{ color: INK.muted }}>
                             {formatShopItemTypeLabel(type)}
                           </div>
-                          <div className="text-[14px] leading-tight font-extrabold line-clamp-2 min-h-[34px]" style={{ color: ink.text }}>
+                          <div className="text-[14px] leading-tight font-extrabold line-clamp-2 min-h-[34px]" style={{ color: INK.text }}>
                             {form.name || 'Tên vật phẩm'}
                           </div>
                           {form.description && (
-                            <div className="mt-0.5 text-[11px] leading-snug line-clamp-2" style={{ color: ink.muted }}>
+                            <div className="mt-0.5 text-[11px] leading-snug line-clamp-2" style={{ color: INK.muted }}>
                               {form.description}
                             </div>
                           )}
@@ -323,7 +296,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
               {activeTab === 'inventory' && (
                 <div className="space-y-3 animate-in fade-in-50 duration-150">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wide" style={{ color: ink.text }}>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wide" style={{ color: INK.text }}>
                       Túi đồ của bạn
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-light text-primary-dark font-bold font-mono">
@@ -331,7 +304,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-2xl border bg-white shadow-xs space-y-2.5" style={{ borderColor: palette?.border ?? '#E5E7EB' }}>
+                  <div className="p-3 rounded-2xl border bg-white shadow-xs space-y-2.5" style={{ borderColor: '#E5E7EB' }}>
                     <div className="flex items-center gap-3">
                       <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ background: ARTWORK_BG[type] }}>
                         {type === 'AVATAR_FRAME' ? (
@@ -339,8 +312,8 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                         ) : iconUrl ? (
                           <img src={iconUrl} alt="" className="w-10 h-10 object-contain" />
                         ) : (
-                          <span style={{ color: TEXT.light.muted }}>
-                            {type === 'THEME' ? <ThemeIcon size={24} /> : type === 'STREAK_FREEZE' ? <FreezeIcon size={24} /> : <BoosterIcon size={24} />}
+                          <span style={{ color: INK.muted }}>
+                            {type === 'STREAK_FREEZE' ? <FreezeIcon size={24} /> : <BoosterIcon size={24} />}
                           </span>
                         )}
                       </div>

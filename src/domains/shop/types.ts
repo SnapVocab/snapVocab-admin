@@ -2,11 +2,9 @@
  * Canonical Shop Admin Domain Contracts matching backend shop DTOs.
  */
 
-export type ShopItemType = 'THEME' | 'AVATAR_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE';
+export type ShopItemType = 'AVATAR_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE';
 
 export type ShopItemStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-
-export type ThemeKey = 'DEFAULT' | 'MIDNIGHT_NEON' | 'SUNSET_AMBER' | 'FOREST_MINT';
 
 export type InputType =
   | 'TEXT'
@@ -62,7 +60,6 @@ export interface AdminShopItemDTO {
   availableFrom: string | null;
   availableUntil: string | null;
   sortOrder: number;
-  themeKey: string | null;
   frameAssetKey: string | null;
   frameAssetUrl: string | null;
   boostDurationMinutes: number | null;
@@ -84,7 +81,6 @@ export interface ShopItemForm {
   availableFrom?: string | null;
   availableUntil?: string | null;
   sortOrder?: number;
-  themeKey?: string | null;
   frameAssetKey?: string | null;
   boostDurationMinutes?: number | null;
   maxQuantity?: number | null;

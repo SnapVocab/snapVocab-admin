@@ -5,7 +5,7 @@ import {
   AdminShopItemDTO,
   ShopItemType,
 } from '../../../domains/shop/types';
-import { formatShopItemTypeLabel, formatThemeKeyLabel, deriveSaleState } from '../../../domains/shop/mappers';
+import { formatShopItemTypeLabel, deriveSaleState } from '../../../domains/shop/mappers';
 import { SaleStateBadge } from './ShopItemStatusBadge';
 import { Button } from '../../../components/ui';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
@@ -91,9 +91,6 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
             {item.purchasable ? `${(item.price ?? 0).toLocaleString('vi-VN')} Coin` : 'Không bán'}
           </span>
         </Row>
-        {item.type === 'THEME' && (
-          <Row label="Bộ giao diện:"><span className="font-semibold text-text">{item.themeKey ? formatThemeKeyLabel(item.themeKey) : 'Chưa thiết lập'}</span></Row>
-        )}
         {item.type === 'AVATAR_FRAME' && (
           <Row label="Ảnh khung:"><span className="font-medium text-text">{item.frameAssetKey ? 'Đã tải lên' : 'Chưa tải lên'}</span></Row>
         )}

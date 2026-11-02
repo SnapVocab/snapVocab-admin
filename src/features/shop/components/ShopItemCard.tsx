@@ -1,11 +1,11 @@
 import React from 'react';
 import { AdminShopItemDTO } from '../../../domains/shop/types';
-import { DerivedSaleState, formatFullDays, formatThemeKeyLabel } from '../../../domains/shop/mappers';
+import { DerivedSaleState, formatFullDays } from '../../../domains/shop/mappers';
 import { Badge } from '../../../components/ui';
-import { BoosterIcon, CoinIcon, FreezeIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CoinIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
 import { FramedAvatar } from './ShopItemPreview';
-import { ARTWORK_BG, THEME_SURFACES } from './artwork';
+import { ARTWORK_BG } from './artwork';
 
 /**
  * Resolves frame asset URL: uses uploaded frameAssetUrl if present,
@@ -39,22 +39,9 @@ const Artwork: React.FC<{ item: AdminShopItemDTO }> = ({ item }) => {
   // No uploaded artwork yet: a plain placeholder, so a missing asset is visible instead of dressed up.
   return (
     <div className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface/70 text-text-light">
-      {item.type === 'THEME' ? <ThemeIcon size={32} /> : item.type === 'STREAK_FREEZE' ? <FreezeIcon size={32} /> : <BoosterIcon size={32} />}
+      {item.type === 'STREAK_FREEZE' ? <FreezeIcon size={32} /> : <BoosterIcon size={32} />}
       <span className="text-2xs">Chưa có ảnh</span>
     </div>
-  );
-};
-
-/** Light and dark surfaces of the theme, so operators tell themes apart without opening them. */
-const ThemeSwatch: React.FC<{ themeKey: string | null }> = ({ themeKey }) => {
-  const t = themeKey ? THEME_SURFACES[themeKey] : undefined;
-  if (!t) return null;
-  return (
-    <span className="flex -space-x-1 p-1 bg-surface/85 backdrop-blur-xs rounded-full border border-border/80 shadow-xs" title={`Bộ ${formatThemeKeyLabel(themeKey)}`}>
-      {[t.light.border, t.dark.border, t.dark.background].map((c) => (
-        <span key={c} className="h-3 w-3 rounded-full border-2 border-white shadow-xs" style={{ background: c }} />
-      ))}
-    </span>
   );
 };
 
@@ -62,7 +49,6 @@ const ThemeSwatch: React.FC<{ themeKey: string | null }> = ({ themeKey }) => {
 function specLine(item: AdminShopItemDTO): string | null {
   if (item.type === 'XP_BOOSTER') return `×2 XP trong ${item.boostDurationMinutes ?? 30} phút, giữ tối đa ${item.maxQuantity ?? 5}`;
   if (item.type === 'STREAK_FREEZE') return `Tự giữ chuỗi khi lỡ một ngày học, giữ tối đa ${item.maxQuantity ?? 2}`;
-  if (item.type === 'THEME') return `Bộ ${formatThemeKeyLabel(item.themeKey)}`;
   return null;
 }
 
@@ -100,11 +86,6 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({ item, sale, onOpen }
         <div className={cn(item.status === 'ARCHIVED' && 'opacity-50 grayscale')}>
           <Artwork item={item} />
         </div>
-        {item.type === 'THEME' && (
-          <span className="absolute bottom-2 right-2 z-10">
-            <ThemeSwatch themeKey={item.themeKey} />
-          </span>
-        )}
       </div>
 
       <div className="flex flex-1 flex-col justify-between gap-2 p-3">

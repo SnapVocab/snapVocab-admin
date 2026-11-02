@@ -3,7 +3,7 @@
  * Enum codes never reach the screen (design.md §3.7 G5): every code goes through a label here.
  */
 import { foldVi } from '../../lib/utils';
-import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatThemeKeyLabel, formatVnDateTime } from '../shop/mappers';
+import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatVnDateTime } from '../shop/mappers';
 import { categoryLabels, eligibilityLabels } from '../admin-missions/mappers';
 import { banReasonError, STATUS_META } from '../admin-learners/mappers';
 import { EMBLEM_LABELS } from '../admin-badges/catalog';
@@ -125,7 +125,6 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   availableFrom: { label: 'Mở bán từ', format: (v) => formatVnDateTime(String(v)) },
   availableUntil: { label: 'Bán đến', format: (v) => formatVnDateTime(String(v)) },
   sortOrder: { label: 'Thứ tự trên kệ' },
-  themeKey: { label: 'Giao diện', format: (v) => formatThemeKeyLabel(String(v)) },
   frameAssetKey: { label: 'Ảnh khung', format: asset },
   boostDurationMinutes: { label: 'Thời lượng', format: unit('phút') },
   maxQuantity: { label: 'Giữ tối đa' },

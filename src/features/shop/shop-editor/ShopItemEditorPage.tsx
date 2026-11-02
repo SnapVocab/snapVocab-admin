@@ -18,7 +18,6 @@ import {
 import {
   isFieldEditable,
   deriveSaleState,
-  formatThemeKeyLabel,
   mapBackendErrorsToFields,
   SHOP_TZ_LABEL,
   vnInputToIso,
@@ -40,7 +39,7 @@ import {
   PRICE_TIERS,
 } from '../../../domains/shop/mappers';
 import { useShopCatalog } from '../../../domains/shop/queries';
-import { BoosterIcon, CoinIcon, FrameIcon, FreezeIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CoinIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
@@ -82,14 +81,14 @@ const DEFAULT_FORM_DATA: ShopItemForm = {
   code: '',
   name: '',
   description: '',
-  type: 'THEME',
+  type: 'AVATAR_FRAME',
   iconKey: null,
   purchasable: false,
   price: null,
   availableFrom: null,
   availableUntil: null,
   sortOrder: 0,
-  ...configForType('THEME'),
+  ...configForType('AVATAR_FRAME'),
 };
 
 const TYPE_OPTIONS: {
@@ -98,12 +97,6 @@ const TYPE_OPTIONS: {
   desc: string;
   icon: React.ReactNode;
 }[] = [
-  {
-    type: 'THEME',
-    label: 'Bộ màu',
-    desc: 'Đổi màu Trang chủ, Hồ sơ, Cửa hàng, Kho đồ và Ví Coin',
-    icon: <ThemeIcon size={20} />,
-  },
   {
     type: 'AVATAR_FRAME',
     label: 'Khung avatar',
@@ -297,11 +290,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     return metadata?.types.find((t) => t.type === formData.type);
   }, [metadata, formData.type]);
 
-  // Backend lists only themes not yet sold by another item; none left means nothing can be chosen here.
-  const themeOptionsEmpty = Boolean(metadata) && formData.type === 'THEME'
-    && !initialData.themeKey
-    && (currentTypeMetadata?.fields.find((f) => f.name === 'themeKey')?.options?.length ?? 0) === 0;
-
   const getFieldSpec = (fieldName: string): FieldSpec | undefined => {
     const common = metadata?.commonFields.find((f) => f.name === fieldName);
     if (common) return common;
@@ -426,10 +414,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       if (new Date(formData.availableFrom) >= new Date(formData.availableUntil)) {
         errors.availableUntil = 'Thời điểm kết thúc phải sau thời điểm bắt đầu.';
       }
-    }
-
-    if (formData.type === 'THEME' && !formData.themeKey) {
-      errors.themeKey = 'Vui lòng chọn bộ giao diện.';
     }
 
     if (formData.type === 'XP_BOOSTER') {
@@ -612,7 +596,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     availableFrom: vnInputToIso(formData.availableFrom),
     availableUntil: vnInputToIso(formData.availableUntil),
   });
-  const band = priceBand(catalog?.data ?? [], formData.type ?? 'THEME', itemId);
+  const band = priceBand(catalog?.data ?? [], formData.type ?? 'AVATAR_FRAME', itemId);
 
 
   if (mode === 'edit' && !existingItem && itemError) {
@@ -781,7 +765,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 value={formData.code}
                 onChange={(e) => handleFieldChange('code', e.target.value.toUpperCase())}
                 disabled={!isEditable('code') || isSaving}
-                placeholder="VD: THEME_NEON_NIGHT"
+                placeholder="VD: FRAME_GOLD_WEEKLY"
                 className={`w-full px-3 py-2 text-body font-mono rounded-lg border bg-surface text-text ${
                   fieldErrors.code
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
@@ -902,57 +886,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           </div>
 
           {/* Cấu hình đặc thù theo loại */}
-          {/* TYPE: THEME */}
-          {formData.type === 'THEME' && (
-            <div className="space-y-1.5 max-w-md pt-3 border-t border-border/70">
-              <div className="flex items-center justify-between">
-                <label htmlFor="shop-themeKey" className="text-body font-semibold text-text">
-                  Bộ giao diện <span className="text-danger">*</span>
-                </label>
-                {!isEditable('themeKey') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
-              </div>
-              {(() => {
-                const free = currentTypeMetadata?.fields.find((f) => f.name === 'themeKey')?.options ?? [];
-                const own = initialData.type === 'THEME' && initialData.themeKey ? [initialData.themeKey] : [];
-                const options = [...new Set([...own, ...free])];
-
-                return (
-                  <select
-                    {...a11y('themeKey')}
-                    value={formData.themeKey || ''}
-                    onChange={(e) => handleFieldChange('themeKey', e.target.value)}
-                    disabled={!isEditable('themeKey') || isSaving}
-                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text cursor-pointer ${
-                      fieldErrors.themeKey
-                        ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
-                        : !isEditable('themeKey')
-                        ? 'border-border bg-surface-subtle text-text-muted cursor-not-allowed'
-                        : 'border-border focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                    }`}
-                  >
-                    <option value="" disabled>-- Chọn bộ giao diện --</option>
-                    {options.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {formatThemeKeyLabel(opt)}
-                      </option>
-                    ))}
-                  </select>
-                );
-              })()}
-              {fieldErrors.themeKey ? (
-                <p id="shop-themeKey-error" className="text-xs text-danger-dark">{fieldErrors.themeKey}</p>
-              ) : themeOptionsEmpty ? (
-                <p className="text-xs text-warning-dark">
-                  Cả 3 bộ giao diện đã có vật phẩm (mỗi bộ chỉ bán bằng một vật phẩm). Hãy sửa vật phẩm giao diện sẵn có.
-                </p>
-              ) : (
-                <p className="text-xs text-text-muted">
-                  Áp dụng cho Trang chủ, Hồ sơ, Cửa hàng, Kho đồ và Ví Coin của người học (tab bar và các màn khác giữ mặc định).
-                </p>
-              )}
-            </div>
-          )}
-
           {/* TYPE: AVATAR_FRAME */}
           {formData.type === 'AVATAR_FRAME' && (
             <div className="pt-3 border-t border-border/70">
