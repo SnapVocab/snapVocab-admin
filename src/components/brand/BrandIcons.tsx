@@ -101,6 +101,15 @@ export const FrameIcon: React.FC<BrandIconProps> = ({ size = 16, className }) =>
   </svg>
 );
 
+/** Card frame: a flashcard inside a decorated border, rose like the item's artwork tint. */
+export const CardFrameIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
+  <svg {...box(size, className)}>
+    <rect x="4" y="2.5" width="16" height="19" rx="3" fill="#FB7185" />
+    <rect x="6.5" y="5" width="11" height="14" rx="1.5" fill="#FFFFFF" />
+    <path d="M12 9.2l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z" fill="#F59E0B" />
+  </svg>
+);
+
 /** 3D Streak flame (SnapVocab mobile flame.tsx). */
 export const StreakFlameIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => {
   const id = React.useId();

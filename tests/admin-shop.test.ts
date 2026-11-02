@@ -179,6 +179,7 @@ test('10. List - Format type labels in Vietnamese', () => {
   assert.equal(formatShopItemTypeLabel('AVATAR_FRAME'), 'Khung avatar');
   assert.equal(formatShopItemTypeLabel('XP_BOOSTER'), 'XP Booster');
   assert.equal(formatShopItemTypeLabel('STREAK_FREEZE'), 'Đóng băng chuỗi');
+  assert.equal(formatShopItemTypeLabel('CARD_FRAME'), 'Khung thẻ');
   assert.equal(formatShopItemTypeLabel(undefined), '—');
 });
 
@@ -395,6 +396,13 @@ test('33. Upload - Oversized icon (> 200 KB) is blocked client-side', () => {
   assert.ok(validation.error?.includes('200 KB'));
 });
 
+test('34b. Upload - card frame allows up to 500 KB', () => {
+  assert.equal(validateAssetFile({ type: 'image/png', size: 450 * 1024 } as File, 'cardFrame').valid, true);
+  const tooBig = validateAssetFile({ type: 'image/png', size: 520 * 1024 } as File, 'cardFrame');
+  assert.equal(tooBig.valid, false);
+  assert.ok(tooBig.error?.includes('500 KB'));
+});
+
 test('34. Upload - Oversized frame (> 300 KB) is blocked client-side', () => {
   const oversizedFrame = { type: 'image/webp', size: 350 * 1024 } as File;
   const validation = validateAssetFile(oversizedFrame, 'frame');
@@ -510,6 +518,9 @@ test('R1. config of another type is null for AVATAR_FRAME; booster defaults only
   assert.deepEqual(configForType('STREAK_FREEZE', { boostDurationMinutes: 30 }),
     { frameAssetKey: null, boostDurationMinutes: null, maxQuantity: 2 });
   assert.equal(configForType('STREAK_FREEZE', { maxQuantity: 3 }).maxQuantity, 3);
+  // card_frame_plan.md: a card frame keeps its own frame asset, nothing else.
+  assert.deepEqual(configForType('CARD_FRAME', { frameAssetKey: 'public/shop/c.png', maxQuantity: 3 }),
+    { frameAssetKey: 'public/shop/c.png', boostDurationMinutes: null, maxQuantity: null });
 
   const form = itemToForm(serverItem({}));
   assert.equal(form.boostDurationMinutes, null);
@@ -569,6 +580,10 @@ test('R5. asset header: icon square ≥256; frame 512×512 with alpha; magic mus
   assert.equal(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/webp', 'frame'), null);
   assert.match(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/png', 'frame')!, /hợp lệ/);
   assert.equal(readImageHeader(new Uint8Array(40)), null);
+  // Card frame: 1080×1440 with alpha (card_frame_plan.md §3).
+  assert.equal(checkAssetHeader(readImageHeader(png(1080, 1440, 6)), 'image/png', 'cardFrame'), null);
+  assert.match(checkAssetHeader(readImageHeader(png(512, 512, 6)), 'image/png', 'cardFrame')!, /1080×1440/);
+  assert.match(checkAssetHeader(readImageHeader(png(1080, 1440, 2)), 'image/png', 'cardFrame')!, /trong suốt/);
 });
 
 test('G1. price guardrail: band covers only items of the type on sale now; hint flags prices outside it', () => {

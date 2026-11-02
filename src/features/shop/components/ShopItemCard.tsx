@@ -4,7 +4,7 @@ import { DerivedSaleState, formatFullDays } from '../../../domains/shop/mappers'
 import { Badge } from '../../../components/ui';
 import { BoosterIcon, CoinIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
-import { FramedAvatar } from './ShopItemPreview';
+import { FramedAvatar, FramedCard } from './ShopItemPreview';
 import { ARTWORK_BG } from './artwork';
 
 /**
@@ -27,8 +27,9 @@ function resolveFrameAsset(item: AdminShopItemDTO): string | null {
   return null;
 }
 
-/** The item as the learner sees its artwork: frame on an avatar, otherwise the uploaded icon. */
+/** The item as the learner sees its artwork: frame on an avatar, card frame on a sample card, otherwise the uploaded icon. */
 const Artwork: React.FC<{ item: AdminShopItemDTO }> = ({ item }) => {
+  if (item.type === 'CARD_FRAME') return <FramedCard frameUrl={item.frameAssetUrl} height={120} />;
   if (item.type === 'AVATAR_FRAME') {
     const frameUrl = resolveFrameAsset(item);
     return <FramedAvatar frameUrl={frameUrl} size={104} />;

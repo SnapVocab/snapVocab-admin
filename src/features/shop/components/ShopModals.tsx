@@ -91,7 +91,7 @@ export const PublishConfirmationModal: React.FC<PublishConfirmationModalProps> =
             {item.purchasable ? `${(item.price ?? 0).toLocaleString('vi-VN')} Coin` : 'Không bán'}
           </span>
         </Row>
-        {item.type === 'AVATAR_FRAME' && (
+        {(item.type === 'AVATAR_FRAME' || item.type === 'CARD_FRAME') && (
           <Row label="Ảnh khung:"><span className="font-medium text-text">{item.frameAssetKey ? 'Đã tải lên' : 'Chưa tải lên'}</span></Row>
         )}
         {item.type === 'XP_BOOSTER' && (

@@ -2,7 +2,7 @@
  * Canonical Shop Admin Domain Contracts matching backend shop DTOs.
  */
 
-export type ShopItemType = 'AVATAR_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE';
+export type ShopItemType = 'AVATAR_FRAME' | 'CARD_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE';
 
 export type ShopItemStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 

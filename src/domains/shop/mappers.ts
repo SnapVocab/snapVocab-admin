@@ -14,7 +14,7 @@ export const SHOP_FIELD_LABELS: Record<string, string> = {
  */
 export function configForType(type: ShopItemType, from: Partial<ShopItemForm> = {}) {
   return {
-    frameAssetKey: type === 'AVATAR_FRAME' ? from.frameAssetKey ?? null : null,
+    frameAssetKey: type === 'AVATAR_FRAME' || type === 'CARD_FRAME' ? from.frameAssetKey ?? null : null,
     boostDurationMinutes: type === 'XP_BOOSTER' ? from.boostDurationMinutes ?? 30 : null,
     maxQuantity: type === 'XP_BOOSTER' ? from.maxQuantity ?? 5 : type === 'STREAK_FREEZE' ? from.maxQuantity ?? 2 : null,
   };
@@ -304,6 +304,8 @@ export function formatShopItemTypeLabel(type?: ShopItemType | string | null): st
   switch (type) {
     case 'AVATAR_FRAME':
       return 'Khung avatar';
+    case 'CARD_FRAME':
+      return 'Khung thẻ';
     case 'XP_BOOSTER':
       return 'XP Booster';
     case 'STREAK_FREEZE':
@@ -318,14 +320,18 @@ export function formatShopItemStatusLabel(status?: string | null): string {
   return ({ DRAFT: 'Bản nháp', PUBLISHED: 'Đã phát hành', ARCHIVED: 'Đã lưu trữ' } as Record<string, string>)[status ?? ''] ?? (status || '—');
 }
 
+/** Upload kinds of the Shop editor; limits mirror AdminShopService (ICON/FRAME/CARD_FRAME_MAX_BYTES). */
+export type AssetKind = 'icon' | 'frame' | 'cardFrame';
+export const ASSET_MAX_KB: Record<AssetKind, number> = { icon: 200, frame: 300, cardFrame: 500 };
+
 /**
  * Client-side validation for file uploads (MIME and size).
  * Icon max: 200 KB (204,800 bytes)
- * Frame max: 300 KB (307,200 bytes)
+ * Frame max: 300 KB (307,200 bytes); card frame max: 500 KB (512,000 bytes)
  */
 export function validateAssetFile(
   file: File,
-  type: 'icon' | 'frame'
+  type: AssetKind
 ): { valid: boolean; error?: string } {
   const allowedMime = ['image/png', 'image/webp'];
   if (!allowedMime.includes(file.type)) {
@@ -335,9 +341,8 @@ export function validateAssetFile(
     };
   }
 
-  const maxBytes = type === 'icon' ? 200 * 1024 : 300 * 1024;
-  if (file.size > maxBytes) {
-    const maxKb = type === 'icon' ? 200 : 300;
+  const maxKb = ASSET_MAX_KB[type];
+  if (file.size > maxKb * 1024) {
     return {
       valid: false,
       error: `Dung lượng file vượt quá giới hạn cho phép (${(file.size / 1024).toFixed(1)} KB > ${maxKb} KB).`,
@@ -385,8 +390,8 @@ export function readImageHeader(b: Uint8Array): ImageHeader | null {
   return null;
 }
 
-/** Pixel rules of shop.md §2.3: icon square ≥ 256×256; frame 512×512 with alpha. Null when the header passes. */
-export function checkAssetHeader(h: ImageHeader | null, mime: string, type: 'icon' | 'frame'): string | null {
+/** Pixel rules of shop.md §2.3 and card_frame_plan.md §3: icon square ≥ 256×256; frame 512×512 and card frame 1080×1440, both with alpha. Null when the header passes. */
+export function checkAssetHeader(h: ImageHeader | null, mime: string, type: AssetKind): string | null {
   if (!h || `image/${h.format}` !== mime) return 'File không phải ảnh PNG/WebP hợp lệ.';
   if (type === 'icon' && (h.width !== h.height || h.width < 256)) {
     return `Icon phải là ảnh vuông, tối thiểu 256×256 (ảnh đang chọn ${h.width}×${h.height}).`;
@@ -394,6 +399,9 @@ export function checkAssetHeader(h: ImageHeader | null, mime: string, type: 'ico
   if (type === 'frame' && (h.width !== 512 || h.height !== 512)) {
     return `Khung phải đúng 512×512 (ảnh đang chọn ${h.width}×${h.height}).`;
   }
-  if (type === 'frame' && !h.alpha) return 'Khung phải có nền trong suốt (kênh alpha).';
+  if (type === 'cardFrame' && (h.width !== 1080 || h.height !== 1440)) {
+    return `Khung thẻ phải đúng 1080×1440 (ảnh đang chọn ${h.width}×${h.height}).`;
+  }
+  if (type !== 'icon' && !h.alpha) return 'Khung phải có nền trong suốt (kênh alpha).';
   return null;
 }

@@ -39,7 +39,7 @@ import {
   PRICE_TIERS,
 } from '../../../domains/shop/mappers';
 import { useShopCatalog } from '../../../domains/shop/queries';
-import { BoosterIcon, CoinIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CardFrameIcon, CoinIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
@@ -102,6 +102,12 @@ const TYPE_OPTIONS: {
     label: 'Khung avatar',
     desc: 'Trang trí hồ sơ người học',
     icon: <FrameIcon size={20} />,
+  },
+  {
+    type: 'CARD_FRAME',
+    label: 'Khung thẻ',
+    desc: 'Trang trí thẻ học khi người học ôn tập',
+    icon: <CardFrameIcon size={20} />,
   },
   {
     type: 'XP_BOOSTER',
@@ -893,6 +899,26 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 label="Ảnh khung avatar"
                 helperText="Ảnh vuông 512×512, nền trong suốt; vòng avatar chiếm khoảng 58% ở giữa."
                 type="frame"
+                valueKey={formData.frameAssetKey}
+                previewUrl={previewUrls.frameAssetUrl}
+                disabled={!isEditable('frameAssetKey') || isSaving}
+                error={fieldErrors.frameAssetKey}
+                onUploadingChange={handleUploadingChange}
+                onChange={(objectName, localUrl) => {
+                  handleFieldChange('frameAssetKey', objectName);
+                  setPreviewUrls((prev) => ({ ...prev, frameAssetUrl: localUrl }));
+                }}
+              />
+            </div>
+          )}
+
+          {/* TYPE: CARD_FRAME (plan/shop-item/card_frame_plan.md §3) */}
+          {formData.type === 'CARD_FRAME' && (
+            <div className="pt-3 border-t border-border/70">
+              <AssetUploadField
+                label="Ảnh khung thẻ"
+                helperText="Ảnh 1080×1440 (3:4), nền trong suốt, ≤ 500 KB. Trang trí chỉ nằm ở viền (tối đa 9% mỗi cạnh); cửa sổ giữa phải trong suốt hoàn toàn theo file mẫu template_guide.png."
+                type="cardFrame"
                 valueKey={formData.frameAssetKey}
                 previewUrl={previewUrls.frameAssetUrl}
                 disabled={!isEditable('frameAssetKey') || isSaving}

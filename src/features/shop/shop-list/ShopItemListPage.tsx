@@ -20,7 +20,7 @@ import {
 import { SaleStateBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemCard } from '../components/ShopItemCard';
 import { Button, StripCell, SummaryStrip, toolbarControl } from '../../../components/ui';
-import { BoosterIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CardFrameIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
 import {
   PublishConfirmationModal,
@@ -38,9 +38,10 @@ interface ShopItemListPageProps {
 
 type Row = { item: AdminShopItemDTO; sale: DerivedSaleState };
 
-/** Order matching the LiveOps Shop shelf: Frames -> Boosters -> Streak Freeze. */
+/** Order matching the LiveOps Shop shelf: Frames -> Card frames -> Boosters -> Streak Freeze. */
 const TYPES: { type: ShopItemType; label: string; Icon: React.FC<{ size?: number }> }[] = [
   { type: 'AVATAR_FRAME', label: 'Khung avatar', Icon: FrameIcon },
+  { type: 'CARD_FRAME', label: 'Khung thẻ', Icon: CardFrameIcon },
   { type: 'XP_BOOSTER', label: 'XP Booster', Icon: BoosterIcon },
   { type: 'STREAK_FREEZE', label: 'Đóng băng chuỗi', Icon: FreezeIcon },
 ];

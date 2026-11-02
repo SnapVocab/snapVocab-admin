@@ -8,10 +8,11 @@ import {
   Package,
   User,
   Check,
+  BookOpen,
 } from 'lucide-react';
 import { ShopItemForm, ShopItemType } from '../../../domains/shop/types';
 import { formatShopItemTypeLabel } from '../../../domains/shop/mappers';
-import { ARTWORK_BG } from './artwork';
+import { ARTWORK_BG, CARD_FRAME_WINDOW } from './artwork';
 import {
   CoinIcon,
   BoosterIcon,
@@ -27,6 +28,7 @@ const INK = { text: '#1E2A44', muted: '#565879' };
 /** The button an owned item shows in Kho đồ (mobile inventory card). */
 const INVENTORY_ACTION: Record<ShopItemType, string> = {
   AVATAR_FRAME: 'Trang bị',
+  CARD_FRAME: 'Trang bị',
   XP_BOOSTER: 'Kích hoạt',
   // Passive: the app shows a status, there is nothing to press (streak_freeze.md §7).
   STREAK_FREEZE: 'Sẵn sàng',
@@ -70,7 +72,25 @@ export const FramedAvatar: React.FC<{ frameUrl?: string | null; size: number }> 
   </div>
 );
 
-export type SimulatorTab = 'shop' | 'inventory' | 'profile';
+/** A sample flashcard wearing the card frame, laid out like the app's study card (content inside the window only). */
+export const FramedCard: React.FC<{ frameUrl?: string | null; height: number; word?: string; meaning?: string }> = ({ frameUrl, height, word, meaning }) => {
+  const width = (height * 3) / 4;
+  const w = CARD_FRAME_WINDOW;
+  return (
+    <div className="relative shrink-0" style={{ width, height }}>
+      <div
+        className="absolute flex flex-col items-center justify-center gap-1 border border-slate-200 bg-white text-center"
+        style={{ left: width * w.x, top: height * w.y, width: width * w.width, height: height * w.height, borderRadius: width * w.radius }}
+      >
+        <span className="font-black text-slate-800" style={{ fontSize: Math.max(10, height * 0.09) }}>{word ?? 'Aa'}</span>
+        {meaning && <span className="text-slate-500" style={{ fontSize: Math.max(9, height * 0.045) }}>{meaning}</span>}
+      </div>
+      {frameUrl && <img src={frameUrl} alt="" className="pointer-events-none absolute inset-0 h-full w-full" />}
+    </div>
+  );
+};
+
+export type SimulatorTab = 'shop' | 'inventory' | 'profile' | 'study';
 
 interface ShopItemPreviewProps {
   form: ShopItemForm;
@@ -91,7 +111,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
 }) => {
   const type = form.type ?? 'AVATAR_FRAME';
   const [selectedTab, setSelectedTab] = useState<SimulatorTab | null>(null);
-  const activeTab = selectedTab ?? (type === 'AVATAR_FRAME' ? 'profile' : 'shop');
+  const activeTab = selectedTab ?? (type === 'AVATAR_FRAME' ? 'profile' : type === 'CARD_FRAME' ? 'study' : 'shop');
   const setActiveTab = setSelectedTab;
 
   const sold = Boolean(form.purchasable);
@@ -152,6 +172,22 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
               <User size={12} />
               <span>Hồ sơ</span>
             </button>
+
+            {type === 'CARD_FRAME' && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('study')}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-all',
+                  activeTab === 'study'
+                    ? 'bg-surface text-text shadow-xs font-bold'
+                    : 'text-text-muted hover:text-text'
+                )}
+              >
+                <BookOpen size={12} />
+                <span>Học</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -240,7 +276,9 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                       }}
                     >
                       <div className="h-[96px] flex items-center justify-center relative overflow-hidden" style={{ background: ARTWORK_BG[type] }}>
-                        {type === 'AVATAR_FRAME' ? (
+                        {type === 'CARD_FRAME' ? (
+                          <FramedCard frameUrl={frameUrl} height={88} />
+                        ) : type === 'AVATAR_FRAME' ? (
                           <FramedAvatar frameUrl={effectiveFrameUrl} size={88} />
                         ) : iconUrl ? (
                           <img src={iconUrl} alt="" className="w-[72px] h-[72px] object-contain drop-shadow-sm" />
@@ -307,7 +345,9 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                   <div className="p-3 rounded-2xl border bg-white shadow-xs space-y-2.5" style={{ borderColor: '#E5E7EB' }}>
                     <div className="flex items-center gap-3">
                       <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ background: ARTWORK_BG[type] }}>
-                        {type === 'AVATAR_FRAME' ? (
+                        {type === 'CARD_FRAME' ? (
+                          <FramedCard frameUrl={frameUrl} height={52} />
+                        ) : type === 'AVATAR_FRAME' ? (
                           <FramedAvatar frameUrl={effectiveFrameUrl} size={50} />
                         ) : iconUrl ? (
                           <img src={iconUrl} alt="" className="w-10 h-10 object-contain" />
@@ -342,6 +382,26 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                       <Check size={13} />
                       <span>{INVENTORY_ACTION[type]}</span>
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: HỌC (card frame around the study flashcard, card_frame_plan.md PD-CF-01) */}
+              {activeTab === 'study' && (
+                <div className="flex flex-col items-center gap-3 animate-in fade-in-50 duration-150">
+                  <div className="w-full flex items-center justify-between text-[11px] font-bold" style={{ color: INK.muted }}>
+                    <span>Ôn tập</span>
+                    <span>3/10</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+                    <div className="h-full w-[30%] rounded-full bg-emerald-500" />
+                  </div>
+                  <FramedCard frameUrl={frameUrl} height={330} word="apple" meaning="Chạm để lật thẻ" />
+                  {!frameUrl && (
+                    <span className="text-[10px] text-center" style={{ color: INK.muted }}>Chưa tải ảnh khung thẻ: đang hiện thẻ không khung.</span>
+                  )}
+                  <div className="w-full rounded-2xl border-2 border-b-4 border-emerald-200 border-b-emerald-400 bg-emerald-50 py-2.5 text-center text-xs font-black text-emerald-800">
+                    Hiện đáp án
                   </div>
                 </div>
               )}
