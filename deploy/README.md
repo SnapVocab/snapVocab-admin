@@ -6,6 +6,7 @@
 - Host directory: `/opt/snapvocab/admin` (inside the existing agent mount `/opt/snapvocab`).
 - Container: `snapvocab-admin`, bound to `127.0.0.1:8086` only.
 - Host Nginx proxies the admin domain to this port. Certbot manages HTTPS and renewal.
+- `/api/` is forwarded by host Nginx to the backend on `127.0.0.1:8080`, the same service behind the API domain. Production uses an empty `VITE_API_BASE_URL` to avoid cross-origin requests; local `.env` can still use the API domain directly.
 
 Jenkins loads `Jenkinsfile` from `prod`. A GitHub push webhook calls `https://jenkins.thanhthbm.online/github-webhook/`; Jenkins checks the tracked `prod` branch before scheduling a build. Pushes to other branches do not deploy. Each build runs tests sequentially, lint and the production build in Docker, then deploys an image tagged with the build number and commit. Failed container health checks restore the previous image when one exists. Images remain local to Oracle; no registry credentials are required for publication.
 
