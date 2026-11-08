@@ -118,7 +118,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-text">
-                  {type === 'icon' ? 'Ảnh biểu tượng' : 'Khung avatar'}
+                  {label}
                 </div>
                 <div className="text-xs text-text-muted truncate max-w-[200px] sm:max-w-xs" title={valueKey ?? undefined}>
                   {valueKey ? 'Đã tải lên' : 'Đã chọn ảnh'}

@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import { badgeArt } from './badgeArt';
 
 // ponytail: geometry hand-ported from SnapVocab/src/components/snapvocab/achievements/achievement-artifact.tsx (light
 // mode only); move both to a shared package if the medal set grows.
@@ -35,6 +36,8 @@ const EMBLEMS: Record<string, React.ReactElement> = {
 const BLANK = { body: '#E8ECF2', edge: '#7C889C', face: '#F1F5F9', emblem: '#64748B', plate: '#FFFFFF', plateText: '#64748B' };
 
 interface BadgeArtifactProps {
+  /** Catalog code; a code with illustrated art shows the art instead of the drawn medal. */
+  code?: string;
   metric: string;
   iconKey: string;
   /** "locked" is what a learner who has not earned it sees; it never means the badge is switched off. */
@@ -47,9 +50,23 @@ interface BadgeArtifactProps {
 }
 
 /** Decorative: the badge name always sits next to it. */
-export function BadgeArtifact({ metric, iconKey, state = 'earned', size = 32, threshold, focused = false }: BadgeArtifactProps) {
+export function BadgeArtifact({ code, metric, iconKey, state = 'earned', size = 32, threshold, focused = false }: BadgeArtifactProps) {
   const gradientId = `bdg${useId().replace(/\W/g, '')}`;
   const earned = state === 'earned';
+  const art = code ? badgeArt(code) : undefined;
+  if (art) {
+    // Same as the app: a not-yet-earned badge is the art at 35% under a padlock.
+    return (
+      <span aria-hidden="true" className={`relative inline-grid shrink-0 place-items-center rounded-full ${focused ? 'ring-2 ring-text ring-offset-1' : ''}`} style={{ width: size, height: size }}>
+        <img src={art} alt="" width={size} height={size} draggable={false} className="object-contain" style={{ opacity: earned ? 1 : 0.35 }} />
+        {!earned && size >= 40 && (
+          <span className="absolute grid h-6 w-6 place-items-center rounded-full border border-white/50 bg-black/60">
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><rect x={4} y={11} width={16} height={10} rx={2} /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+          </span>
+        )}
+      </span>
+    );
+  }
   const shape = SHAPES[metric] ?? roundShape;
   const emblem = EMBLEMS[iconKey] ?? EMBLEMS.award;
   const plaque = size >= 56 && threshold !== undefined;

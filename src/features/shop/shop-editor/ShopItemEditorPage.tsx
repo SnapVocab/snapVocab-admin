@@ -218,7 +218,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   const [initialData, setInitialData] = useState<ShopItemForm>(DEFAULT_FORM_DATA);
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [itemStatus, setItemStatus] = useState<ShopItemStatus>('DRAFT');
-  const [availabilityMode, setAvailabilityMode] = useState<'UNLIMITED' | 'SCHEDULED'>('UNLIMITED');
   const [previewUrls, setPreviewUrls] = useState<{
     iconUrl?: string | null;
     frameAssetUrl?: string | null;
@@ -272,7 +271,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     setInitialData(populated);
     setCurrentVersion(item.version);
     setItemStatus(item.status);
-    setAvailabilityMode(item.availableFrom || item.availableUntil ? 'SCHEDULED' : 'UNLIMITED');
     setPreviewUrls({ iconUrl: item.iconUrl, frameAssetUrl: item.frameAssetUrl });
     setVersionConflict({ isConflict: false });
     setFieldErrors({});
@@ -353,15 +351,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     handleFieldChange('purchasable', checked);
     if (checked && (formData.price == null || formData.price === 0)) {
       handleFieldChange('price', 100);
-    }
-  };
-
-  // Toggle availability mode (unlimited vs scheduled)
-  const handleSelectAvailabilityMode = (newMode: 'UNLIMITED' | 'SCHEDULED') => {
-    setAvailabilityMode(newMode);
-    if (newMode === 'UNLIMITED') {
-      handleFieldChange('availableFrom', null);
-      handleFieldChange('availableUntil', null);
     }
   };
 
@@ -734,7 +723,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
         <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-center justify-between gap-2 text-body text-danger-dark">
           <span className="flex items-center gap-2">
             <AlertCircle size={16} className="shrink-0" />
-            Không tải được cấu hình biểu mẫu (bộ giao diện còn trống, trường được phép sửa).
+            Không tải được cấu hình biểu mẫu (trường được phép sửa sau phát hành).
           </span>
           <Button size="sm" onClick={() => void refetchMetadata()}>Thử lại</Button>
         </div>
@@ -804,7 +793,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 value={formData.name}
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 disabled={!isEditable('name') || isSaving}
-                placeholder="VD: Giao diện Neon Dạ Quang"
+                placeholder="VD: Khung Hoa Anh Đào"
                 className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                   fieldErrors.name
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
@@ -856,7 +845,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
               {!isEditable('type') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {TYPE_OPTIONS.map((opt) => {
                 const isSelected = formData.type === opt.type;
                 const canChange = isEditable('type');
@@ -1045,25 +1034,27 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           )}
         </div>
 
-        {/* HÌNH ẢNH: icon shown on the Shop / Kho đồ card */}
-        <div className="px-5 pt-3 pb-3 space-y-3">
-          <SectionLabel>Hình ảnh</SectionLabel>
+        {/* HÌNH ẢNH: icon shown on the Shop / Kho đồ card. Frames draw their own artwork, so they have no icon. */}
+        {formData.type !== 'AVATAR_FRAME' && formData.type !== 'CARD_FRAME' && (
+          <div className="px-5 pt-3 pb-3 space-y-3">
+            <SectionLabel>Hình ảnh</SectionLabel>
 
-          <AssetUploadField
-            label="Icon vật phẩm"
-            helperText="Hiển thị trên card trong Cửa hàng và Kho đồ."
-            type="icon"
-            valueKey={formData.iconKey}
-            previewUrl={previewUrls.iconUrl}
-            disabled={!isEditable('iconKey') || isSaving}
-            error={fieldErrors.iconKey}
-            onUploadingChange={handleUploadingChange}
-            onChange={(objectName, localUrl) => {
-              handleFieldChange('iconKey', objectName);
-              setPreviewUrls((prev) => ({ ...prev, iconUrl: localUrl }));
-            }}
-          />
-        </div>
+            <AssetUploadField
+              label="Icon vật phẩm"
+              helperText="Hiển thị trên card trong Cửa hàng và Kho đồ."
+              type="icon"
+              valueKey={formData.iconKey}
+              previewUrl={previewUrls.iconUrl}
+              disabled={!isEditable('iconKey') || isSaving}
+              error={fieldErrors.iconKey}
+              onUploadingChange={handleUploadingChange}
+              onChange={(objectName, localUrl) => {
+                handleFieldChange('iconKey', objectName);
+                setPreviewUrls((prev) => ({ ...prev, iconUrl: localUrl }));
+              }}
+            />
+          </div>
+        )}
 
         {/* BÁN TRONG CỬA HÀNG: purchasable, price (with guardrail), sort order, sale window */}
         <div className="px-5 pt-3 pb-5 space-y-4">
@@ -1193,48 +1184,13 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             </div>
           </div>
 
-          {/* Thời gian bán */}
-          <div className="space-y-3 pt-2 border-t border-border/70">
-            <div className="flex items-center justify-between">
-              <label className="text-body font-semibold text-text">
-                Thời gian bán
-              </label>
-            </div>
-
-            {/* Radio mode selection */}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-xs text-text cursor-pointer">
-                <input
-                  type="radio"
-                  name="availabilityMode"
-                  checked={availabilityMode === 'UNLIMITED'}
-                  onChange={() => handleSelectAvailabilityMode('UNLIMITED')}
-                  disabled={(!isEditable('availableFrom') && !isEditable('availableUntil')) || isSaving}
-                  className="w-3.5 h-3.5 accent-primary-solid cursor-pointer"
-                />
-                <span>Không giới hạn</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs text-text cursor-pointer">
-                <input
-                  type="radio"
-                  name="availabilityMode"
-                  checked={availabilityMode === 'SCHEDULED'}
-                  onChange={() => handleSelectAvailabilityMode('SCHEDULED')}
-                  disabled={(!isEditable('availableFrom') && !isEditable('availableUntil')) || isSaving}
-                  className="w-3.5 h-3.5 accent-primary-solid cursor-pointer"
-                />
-                <span>Theo thời gian</span>
-              </label>
-            </div>
-
-            {/* Scheduled date range inputs */}
-            {availabilityMode === 'SCHEDULED' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 animate-in fade-in-50 duration-150">
+          {/* Mở bán từ: optional start. No end date for new sales (PD-SHX-05); a legacy one stays visible so it can be cleared. */}
+          <div className="pt-2 border-t border-border/70">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label htmlFor="shop-availableFrom" className="text-body font-semibold text-text flex items-center gap-1.5">
                     <Calendar size={12} className="text-text-muted" />
-                    Bắt đầu bán từ ({SHOP_TZ_LABEL})
+                    Mở bán từ ({SHOP_TZ_LABEL})
                   </label>
                   <input
                     {...a11y('availableFrom')}
@@ -1250,11 +1206,14 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                         : 'border-border focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   />
-                  {fieldErrors.availableFrom && (
+                  {fieldErrors.availableFrom ? (
                     <p id="shop-availableFrom-error" className="text-xs text-danger-dark">{fieldErrors.availableFrom}</p>
+                  ) : (
+                    <p className="text-xs text-text-muted">Để trống: hiện trong Cửa hàng ngay khi phát hành.</p>
                   )}
                 </div>
 
+                {initialData.availableUntil && (
                 <div className="space-y-1">
                   <label htmlFor="shop-availableUntil" className="text-body font-semibold text-text flex items-center gap-1.5">
                     <Calendar size={12} className="text-text-muted" />
@@ -1278,15 +1237,15 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     <p id="shop-availableUntil-error" className="text-xs text-danger-dark">{fieldErrors.availableUntil}</p>
                   )}
                 </div>
+                )}
                 {/* PD-SHX-05: no seasonal selling; the app shows no end date, so the item would just vanish. */}
                 {formData.availableUntil && (
                   <p role="status" className="sm:col-span-2 flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-xs font-medium text-warning-dark">
                     <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                    <span>App người học không hiện hạn bán: tới giờ kết thúc, vật phẩm tự biến mất khỏi Cửa hàng mà không báo trước. Hiện không bán vật phẩm theo mùa.</span>
+                    <span>Không còn bán theo mùa: xóa hạn kết thúc. App người học không hiện hạn bán, tới giờ vật phẩm tự biến mất khỏi Cửa hàng mà không báo trước.</span>
                   </p>
                 )}
               </div>
-            )}
           </div>
         </div>
       </div>

@@ -11,6 +11,7 @@ import type { MissionTemplate } from '../../domains/admin-missions/types';
 import { catalogSummary, categoryLabels, CLIENTS, dailyOutlook } from '../../domains/admin-missions/mappers';
 import { openIssues, pct, seconds, THRESHOLDS, type ChangeEvent, type Check as Rule, type CheckArea, type Severity } from '../../domains/admin-overview/mappers';
 import type { AdminOverview } from '../../domains/admin-overview/types';
+import { overviewUsesFixtures } from '../../domains/admin-overview/api';
 import { COIN_BAND, coinVerdict } from '../../domains/admin-analytics/mappers';
 import { RELIABILITY_LABEL, scanErrorLabel } from '../../domains/scan/labels';
 
@@ -230,7 +231,7 @@ const MissionsColumn: React.FC<{ missions: MissionTemplate[]; o?: AdminOverview 
         <Mini value={outlook.xp ? range(outlook.xp) : '—'} label="XP mỗi người/ngày" />
       </MiniStrip>
       <div>
-        <p className="text-xs font-medium text-text-muted">Tỉ lệ hoàn thành 7 ngày{o && <span className="font-normal text-text-light"> · dữ liệu mẫu</span>}</p>
+        <p className="text-xs font-medium text-text-muted">Tỉ lệ hoàn thành 7 ngày{o && overviewUsesFixtures && <span className="font-normal text-text-light"> · dữ liệu mẫu</span>}</p>
         <table className="mt-1 w-full text-left text-xs">
           <tbody className="divide-y divide-border">
             {active.map((m) => {
@@ -329,7 +330,7 @@ const ShopColumn: React.FC<{ shop: AdminShopItemDTO[]; o?: AdminOverview; now: D
       </div>
       {o && (
         <div>
-          <p className="text-xs font-medium text-text-muted">Bán chạy 30 ngày <span className="font-normal text-text-light">· dữ liệu mẫu</span></p>
+          <p className="text-xs font-medium text-text-muted">Bán chạy 30 ngày{overviewUsesFixtures && <span className="font-normal text-text-light"> · dữ liệu mẫu</span>}</p>
           <ul className="mt-1.5 space-y-1">
             {sold.map((x) => (
               <li key={x.code}>

@@ -100,7 +100,7 @@ Quản lý danh mục… Giá quy ra ngày: số ngày làm đủ 5 nhiệm vụ
 | :--- | :--- | :--- |
 | **CƠ BẢN** | Mã, Tên, Mô tả | Mã: chữ HOA, 3–64 ký tự `[A-Z][A-Z0-9_]`, khóa sau phát hành. Tên ≤ 100. Mô tả ≤ 500 |
 | **LOẠI & CẤU HÌNH** | Loại (4 thẻ chọn có icon brand) và cấu hình riêng | Đổi loại phải xác nhận. Khung: ảnh PNG/WebP 512×512 có alpha, ≤ 300 KB. Khung thẻ: 1080×1440 có alpha, ≤ 500 KB, cửa sổ chuẩn theo [card_frame_plan.md](../../../plan/shop-item/card_frame_plan.md) §3. Booster: ×2 cố định, thời lượng 5–180 phút (mặc định 30), giữ tối đa 1–10 thẻ (mặc định 5). Đóng băng chuỗi (2026-10-22, [streak_freeze.md](../../../docs/decisions/streak_freeze.md)): chỉ giữ tối đa 1–5 (mặc định 2), một dòng giải thích cách tự dùng; chỉ một item loại này được phát hành (backend từ chối item thứ hai) |
-| **HÌNH ẢNH** | Icon vật phẩm | PNG/WebP vuông ≥ 256×256, ≤ 200 KB. Kiểm header ảnh ngay trên client |
+| **HÌNH ẢNH** | Icon vật phẩm (ẩn với Khung avatar và Khung thẻ: khung tự vẽ artwork, không cần icon) | PNG/WebP vuông ≥ 256×256, ≤ 200 KB. Kiểm header ảnh ngay trên client |
 | **BÁN TRONG CỬA HÀNG** | Kết luận trạng thái bán trực tiếp, Cho phép mua, Giá, Thứ tự, Thời gian bán | Bản nháp hiện "Sau khi phát hành: …". Giá 1–100.000 khi bán, kèm guardrail (§4.3). Thời gian bán: Không giới hạn hoặc Theo thời gian, nhập theo UTC+7 |
 
 Khóa theo trạng thái lấy từ siêu dữ liệu. Mặc định chỉ sửa được khi ở DRAFT. Item đã lưu trữ chỉ còn sửa được tên, mô tả, icon và thứ tự. Mỗi trường bị khóa có nhãn và lý do khi hover.

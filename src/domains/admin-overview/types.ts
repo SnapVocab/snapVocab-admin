@@ -1,7 +1,7 @@
 /**
- * Proposed contract for the Dashboard's MOCK blocks (admin_product_review_2026-10-19 §6, design.md §4.1 · Dashboard C).
- * Backend implementation spec, with the source and formula of every field: docs/sa/admin_overview_backend.md.
- * NOT implemented on the backend yet: dev/demo builds run on fixtures (api.ts).
+ * Contract for the Dashboard's overview blocks (admin_product_review_2026-10-19 §6, design.md §4.1 · Dashboard C).
+ * Backend spec, with the source and formula of every field: docs/sa/admin_overview_backend.md.
+ * Implemented by the backend (module vn.ptit.snapvocab.adminstats); fixtures only with VITE_ADMIN_OVERVIEW_FIXTURES=true (api.ts).
  *
  *   GET /api/admin/overview → AdminOverview   (every series: 14 days ending today, Asia/Ho_Chi_Minh, oldest first)
  *

@@ -112,9 +112,10 @@ test('P1 editor view hides absent version and displays a real zero version when 
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /Lưu thay đổi|Bật huy hiệu|Tắt huy hiệu/);
 });
 
-test('AC-PRV-2/3: the editor warns about an unknown icon, a four-milestone shelf, an inactive badge, an unmapped metric', () => {
+test('AC-PRV-2/3: the editor warns about an unknown icon, previews the app card and sheet, an inactive badge, an unmapped metric', () => {
   assert.match(editor(byCode('PERFECT_25')), /ứng dụng không có biểu tượng “rocket”/);
-  assert.match(editor(byCode('PERFECT_25')), /ứng dụng chuyển kệ sang dạng cuộn ngang/);
+  assert.match(editor(byCode('PERFECT_25')), /Thẻ trên lưới Thành tựu[\s\S]*Đã mở khóa[\s\S]*Tiến độ chinh phục/);
+  assert.match(editor(byCode('PERFECT_1')), /Phổ biến/);
   assert.match(editor(byCode('WORDS_250')), /Người học chưa đạt hiện không thấy huy hiệu này/);
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /hiện không thấy huy hiệu này/);
   assert.match(editor(byCode('SCAN_10')), /Admin chưa có tên chuỗi, đơn vị và cách đếm cho chỉ số “SCAN_SAVED”/);
