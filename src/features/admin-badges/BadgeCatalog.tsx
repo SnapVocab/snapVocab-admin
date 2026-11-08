@@ -39,7 +39,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
   return (
     <div className="space-y-4">
       <PageHeader title="Huy hiệu"
-        description="Người học nhận huy hiệu khi đạt mốc, ghi nhận lúc ứng dụng đồng bộ; mỗi người nhận một lần, không bị thu hồi và không kèm Coin hay XP."
+        description="Người học nhận huy hiệu khi đạt mốc, ghi nhận lúc ứng dụng đồng bộ; mỗi người nhận một lần, không bị thu hồi. Phần thưởng (Coin, XP, khung ở mốc cuối) cộng ngay lúc nhận."
         actions={<>
           {updatedAt ? <span className="hidden text-xs tabular-nums text-text-muted sm:inline">Cập nhật {time(updatedAt)}</span> : null}
           <Button icon={<RefreshCw />} label="Làm mới" loading={refreshing} onClick={onRefresh} />

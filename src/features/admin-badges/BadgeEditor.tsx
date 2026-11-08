@@ -303,7 +303,12 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
               {rewardLabel(draft) !== 'Không có' && (
                 <div className="w-full rounded-lg border border-border bg-neutral-50 p-2 text-left">
                   <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-text-muted">Phần thưởng khi đạt</span><AppRewardChips badge={draft} /></div>
-                  {draft.rewardItemCode && <p className="mt-1.5 text-xs"><span className="font-semibold">{draft.rewardItem?.name ?? draft.rewardItemCode}</span>{draft.rewardItem && <span className="text-text-muted"> · {formatShopItemTypeLabel(draft.rewardItem.type)}</span>}</p>}
+                  {draft.rewardItemCode && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {draft.rewardItem?.previewUrl && <img alt="" src={draft.rewardItem.previewUrl} className="h-12 w-12 shrink-0 rounded-md object-contain" />}
+                      <p className="text-xs"><span className="font-semibold">{draft.rewardItem?.name ?? draft.rewardItemCode}</span>{draft.rewardItem && <span className="text-text-muted"> · {formatShopItemTypeLabel(draft.rewardItem.type)}</span>}</p>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="w-full rounded-lg border border-border p-2 text-left">
