@@ -102,7 +102,7 @@ test('PD-BDG-14 rewards: validated 0–1000, patched only when changed, labelled
   assert.deepEqual(contentPatch(b, { ...toForm(b), rewardCoin: '0', rewardItemCode: 'FRAME_QUIZ' }), { version: 3, rewardCoin: 0, rewardItemCode: 'FRAME_QUIZ' });
   const last = { ...byCode('QUIZ_50'), rewardItemCode: 'FRAME_QUIZ', rewardItem: { name: 'Khung Chiến Binh', type: 'AVATAR_FRAME', status: 'PUBLISHED', purchasable: false, previewUrl: null } };
   assert.deepEqual(contentPatch(last, { ...toForm(last), rewardItemCode: null }), { version: 0, rewardItemCode: null });
-  assert.equal(rewardLabel(b), '+60 Xu · +150 XP');
+  assert.equal(rewardLabel(b), '+60 Coin · +150 XP');
   assert.equal(rewardLabel(last), '+300 XP · Khung Chiến Binh');
   assert.equal(rewardLabel({ ...b, rewardCoin: 0, rewardXp: 0 }), 'Không có');
   assert.deepEqual(reviewIssues(last), []);
@@ -134,7 +134,9 @@ test('P1 editor view hides absent version and displays a real zero version when 
 test('AC-PRV-2/3: the editor warns about an unknown icon, previews the app card and sheet, an inactive badge, an unmapped metric', () => {
   assert.match(editor(byCode('PERFECT_25')), /ứng dụng không có biểu tượng “rocket”/);
   assert.match(editor(byCode('PERFECT_25')), /Thẻ trên lưới Thành tựu[\s\S]*Đã mở khóa[\s\S]*Tiến độ chinh phục/);
-  assert.match(editor(byCode('PERFECT_1')), /Phổ biến/);
+  // PD-BDG-14: the app shows rewards, never a rarity.
+  assert.doesNotMatch(editor(byCode('PERFECT_1')), /Phổ biến|Hiếm|Huyền thoại/);
+  assert.match(editor(byCode('PERFECT_1')), /\+20 Coin[\s\S]*\+50 XP[\s\S]*Phần thưởng khi đạt/);
   assert.match(editor(byCode('WORDS_250')), /Người học chưa đạt hiện không thấy huy hiệu này/);
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /hiện không thấy huy hiệu này/);
   assert.match(editor(byCode('SCAN_10')), /Admin chưa có tên chuỗi, đơn vị và cách đếm cho chỉ số “SCAN_SAVED”/);

@@ -119,7 +119,7 @@ const mentions = (text: string, n: number) =>
  */
 export function reviewIssues(b: Pick<AdminBadge, 'metric' | 'iconKey' | 'description' | 'threshold' | 'rewardCoin' | 'rewardXp' | 'rewardItemCode' | 'rewardItem'>): string[] {
   const issues: string[] = [];
-  if (!b.rewardCoin && !b.rewardXp && !b.rewardItemCode) issues.push('Chưa có phần thưởng: người học đạt huy hiệu mà không nhận Xu, XP hay vật phẩm.');
+  if (!b.rewardCoin && !b.rewardXp && !b.rewardItemCode) issues.push('Chưa có phần thưởng: người học đạt huy hiệu mà không nhận Coin, XP hay vật phẩm.');
   const item = b.rewardItem;
   if (b.rewardItemCode && !item) issues.push(`Không tìm thấy vật phẩm thưởng ${b.rewardItemCode} trong Cửa hàng.`);
   // ARCHIVED still grants (ShopRewardService); only a draft is never granted.
@@ -142,9 +142,9 @@ export const toForm = (b: AdminBadge): BadgeForm => ({
 export const REWARD_MAX = 1000;
 const reward = (s: string) => (/^\d+$/.test(s.trim()) && Number(s) <= REWARD_MAX ? Number(s) : null);
 
-/** "+20 Xu · +50 XP · Khung Lửa"; "Không có" when the badge pays nothing. */
+/** "+20 Coin · +50 XP · Khung Lửa"; "Không có" when the badge pays nothing. */
 export function rewardLabel(b: Pick<AdminBadge, 'rewardCoin' | 'rewardXp' | 'rewardItemCode' | 'rewardItem'>): string {
-  const parts = [b.rewardCoin > 0 && `+${formatCount(b.rewardCoin)} Xu`, b.rewardXp > 0 && `+${formatCount(b.rewardXp)} XP`,
+  const parts = [b.rewardCoin > 0 && `+${formatCount(b.rewardCoin)} Coin`, b.rewardXp > 0 && `+${formatCount(b.rewardXp)} XP`,
     b.rewardItemCode && (b.rewardItem?.name ?? b.rewardItemCode)].filter(Boolean);
   return parts.length ? parts.join(' · ') : 'Không có';
 }

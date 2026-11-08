@@ -9,7 +9,7 @@ import {
 } from '../../domains/admin-badges/catalog';
 import { badgeKeys } from '../../domains/admin-badges/queries';
 import type { AdminBadge, BadgeForm } from '../../domains/admin-badges/types';
-import { formatVnDateTime } from '../../domains/shop/mappers';
+import { formatShopItemTypeLabel, formatVnDateTime } from '../../domains/shop/mappers';
 import { ApiClientError } from '../../lib/api-client';
 import { cn } from '../../lib/utils';
 import { ErrorBanner } from '../admin-missions/components';
@@ -20,7 +20,7 @@ import { badgeArt } from './badgeArt';
 import { badgeErrorMessage } from './ui';
 
 const FIELD_LABEL: Record<keyof BadgeForm, string> = {
-  name: 'Tên', description: 'Mô tả', iconKey: 'Biểu tượng', sortOrder: 'Thứ tự', rewardCoin: 'Xu thưởng', rewardXp: 'XP thưởng',
+  name: 'Tên', description: 'Mô tả', iconKey: 'Biểu tượng', sortOrder: 'Thứ tự', rewardCoin: 'Coin thưởng', rewardXp: 'XP thưởng',
   rewardItemCode: 'Vật phẩm thưởng',
 };
 const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'iconKey' ? EMBLEM_LABELS[f.iconKey] ?? f.iconKey : f[k] ?? 'Không có');
@@ -98,7 +98,6 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   const shelf = previewShelf(all.map((x) => (x.id === draft.id ? draft : x)), draft);
   // Illustrated art replaces the drawn emblem, so its icon is neither shown nor validated.
   const hasArt = !!badgeArt(original.code);
-  const tier = appTier(shelf.findIndex((b) => b.id === draft.id) + 1, shelf.length);
   const rankNow = shelfRank(all, original);
   const rankDraft = shelfRank(all, draft);
   const reason = statusReason(original);
@@ -261,7 +260,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             <p className="text-xs text-text-muted">Cộng một lần khi người học nhận huy hiệu. Đổi phần thưởng chỉ áp dụng cho người nhận sau khi lưu; người đã nhận giữ phần thưởng cũ, không cộng bù. XP này không tính vào bảng xếp hạng.</p>
             {editable ? <>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Xu" error={errors.rewardCoin} hint={`0–${formatCount(REWARD_MAX)}`}>
+                <Field label="Coin" error={errors.rewardCoin} hint={`0–${formatCount(REWARD_MAX)}`}>
                   <input type="number" min={0} max={REWARD_MAX} step={1} className={fieldControl} value={form.rewardCoin} onChange={(e) => change('rewardCoin', e.target.value)} />
                 </Field>
                 <Field label="XP" error={errors.rewardXp} hint={`0–${formatCount(REWARD_MAX)}, không nhân Booster`}>
@@ -292,18 +291,21 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             <SectionLabel>Xem trước trên ứng dụng</SectionLabel>
             <p className="text-xs text-text-muted">Thẻ trên lưới Thành tựu</p>
             <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#F7F8FA] p-2">
-              <AppCard badge={draft} tier={tier} unit={info?.unit} earned />
-              <AppCard badge={draft} tier={tier} unit={info?.unit} />
+              <AppCard badge={draft} unit={info?.unit} earned />
+              <AppCard badge={draft} unit={info?.unit} />
             </div>
             <p className="text-xs text-text-muted">Màn chi tiết khi chạm vào thẻ (người chưa đạt)</p>
             <div className="grid justify-items-center gap-2 rounded-lg border border-border p-3 text-center">
               <BadgeArtifact code={draft.code} metric={draft.metric} iconKey={draft.iconKey} state="locked" size={88} />
-              <div className="flex gap-1.5">
-                <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-2xs font-bold uppercase text-neutral-600">Đang khóa</span>
-                <TierPill tier={tier} />
-              </div>
+              <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-2xs font-bold uppercase text-neutral-600">Đang khóa</span>
               <p className="text-base font-bold">{draft.name}</p>
               <p className="text-xs text-text-muted">{draft.description}</p>
+              {rewardLabel(draft) !== 'Không có' && (
+                <div className="w-full rounded-lg border border-border bg-neutral-50 p-2 text-left">
+                  <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-text-muted">Phần thưởng khi đạt</span><AppRewardChips badge={draft} /></div>
+                  {draft.rewardItemCode && <p className="mt-1.5 text-xs"><span className="font-semibold">{draft.rewardItem?.name ?? draft.rewardItemCode}</span>{draft.rewardItem && <span className="text-text-muted"> · {formatShopItemTypeLabel(draft.rewardItem.type)}</span>}</p>}
+                </div>
+              )}
               <div className="w-full rounded-lg border border-border p-2 text-left">
                 <p className="flex justify-between text-xs"><span className="text-text-muted">Tiến độ chinh phục</span><span className="font-semibold tabular-nums">0 / {formatCount(draft.threshold)}{info?.unit ? ` ${info.unit}` : ''}</span></p>
                 <div className="mt-1.5 h-2 rounded-full bg-neutral-100" />
@@ -393,33 +395,27 @@ function IconPicker({ value, metric, error, onChange }: { value: string; metric:
   );
 }
 
-type Tier = 'common' | 'rare' | 'epic' | 'legendary';
-const TIERS: Record<Tier, { label: string; className: string }> = {
-  common: { label: 'Phổ biến', className: 'border-neutral-200 bg-neutral-100 text-neutral-600' },
-  rare: { label: 'Hiếm', className: 'border-sky-200 bg-sky-50 text-sky-700' },
-  epic: { label: 'Cực hiếm', className: 'border-purple-200 bg-purple-50 text-purple-700' },
-  legendary: { label: 'Huyền thoại', className: 'border-amber-300 bg-amber-50 text-amber-700' },
-};
+const APP_CHIP = 'rounded border px-1 text-2xs font-bold';
+const FRAME_CHIP: Record<string, string> = { AVATAR_FRAME: 'Khung avatar', CARD_FRAME: 'Khung thẻ' };
 
-// ponytail: mirrors badgeTier in SnapVocab/src/features/badges/model.ts; share once a package exists.
-function appTier(index: number, count: number): Tier {
-  if (index <= 1) return 'common';
-  if (index === count && count >= 3) return 'legendary';
-  return index === 2 ? 'rare' : 'epic';
+/** The app's reward chips (SnapVocab reward-chips.tsx): Coin, XP, frame type. */
+function AppRewardChips({ badge }: { badge: AdminBadge }) {
+  return (
+    <span className="inline-flex flex-wrap justify-center gap-1">
+      {badge.rewardCoin > 0 && <span className={cn(APP_CHIP, 'border-amber-200 bg-amber-50 text-amber-700')}>+{badge.rewardCoin} Coin</span>}
+      {badge.rewardXp > 0 && <span className={cn(APP_CHIP, 'border-sky-200 bg-sky-50 text-sky-700')}>+{badge.rewardXp} XP</span>}
+      {badge.rewardItemCode && <span className={cn(APP_CHIP, 'border-purple-200 bg-purple-50 text-purple-700')}>{FRAME_CHIP[badge.rewardItem?.type ?? ''] ?? 'Vật phẩm'}</span>}
+    </span>
+  );
 }
 
-function TierPill({ tier }: { tier: Tier }) {
-  return <span className={cn('rounded-full border px-2 py-0.5 text-2xs font-bold uppercase', TIERS[tier].className)}>{TIERS[tier].label}</span>;
-}
-
-/** One card of the app's 2-column achievements grid (SnapVocab achievements-screen.tsx BadgeCard). */
-function AppCard({ badge, tier, unit, earned = false }: { badge: AdminBadge; tier: Tier; unit?: string; earned?: boolean }) {
+/** One card of the app's 2-column achievements grid (SnapVocab achievements-screen.tsx BadgeCard); no rarity (PD-BDG-14). */
+function AppCard({ badge, unit, earned = false }: { badge: AdminBadge; unit?: string; earned?: boolean }) {
   return (
     <figure className="m-0 grid justify-items-center gap-1.5 rounded-xl border-2 border-b-4 border-neutral-200 bg-white p-2 text-center">
-      <div className="w-full"><TierPill tier={tier} /></div>
       <BadgeArtifact code={badge.code} metric={badge.metric} iconKey={badge.iconKey} state={earned ? 'earned' : 'locked'} size={64} />
       <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-text">{badge.name}</p>
-      <p className="text-2xs font-semibold text-text-muted">{rewardLabel(badge)}</p>
+      <AppRewardChips badge={badge} />
       {earned
         ? <p className="w-full rounded-md border border-primary/40 bg-primary-light py-0.5 text-2xs font-bold uppercase text-primary-dark">Đã mở khóa</p>
         : (
