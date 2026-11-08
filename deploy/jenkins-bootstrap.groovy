@@ -1,6 +1,7 @@
 // Run once from Jenkins init.groovy.d on the Oracle controller.
 import jenkins.model.Jenkins
 import hudson.model.Cause
+import hudson.model.CauseAction
 import hudson.plugins.git.GitSCM
 import hudson.plugins.git.BranchSpec
 import hudson.plugins.git.UserRemoteConfig
@@ -45,5 +46,5 @@ job.save()
 secretFile.delete()
 def initFile = new File(j.rootDir, 'init.groovy.d/92-snapvocab-admin.groovy')
 if (!initFile.renameTo(new File(initFile.path + '.applied'))) throw new IllegalStateException('Cannot mark bootstrap as applied')
-job.scheduleBuild2(15, new Cause.RemoteCause('localhost', 'Initial authorized admin deployment'))
+job.scheduleBuild2(15, new CauseAction(new Cause.RemoteCause('localhost', 'Initial authorized admin deployment')))
 println('SNAPVOCAB_ADMIN: created prod job with SHA256 GitHub webhook verification')
