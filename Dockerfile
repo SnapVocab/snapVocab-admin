@@ -9,9 +9,10 @@ RUN node node_modules/tsx/dist/cli.mjs --test --test-concurrency=1 tests/*.test.
 RUN npm run lint
 
 FROM verify AS build
+ARG FRONTEND_ENV_SHA
 # Vite values are public build-time settings; local .env files are excluded from the context.
 RUN --mount=type=secret,id=frontend_env,required=true \
-    set -a && . /run/secrets/frontend_env && set +a && npm run build
+    test -n "$FRONTEND_ENV_SHA" && set -a && . /run/secrets/frontend_env && set +a && npm run build
 
 FROM nginxinc/nginx-unprivileged:1.28-alpine AS runtime
 COPY deploy/container.nginx.conf /etc/nginx/conf.d/default.conf

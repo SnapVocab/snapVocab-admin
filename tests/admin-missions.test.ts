@@ -193,7 +193,7 @@ test('Daily outlook mirrors MissionTracker.choose: seed catalog pays 80–85 Coi
 // TD-ADS-09: the backend's MissionOutlookVectorsTest reads the same vectors, so dailyOutlook cannot drift from
 // MissionTracker.choose unnoticed. Regenerate only together with a deliberate change on both sides.
 test('Daily outlook matches the shared backend vectors', () => {
-  const vectors = JSON.parse(readFileSync(new URL('../../snap-vocab-backend/src/test/resources/mission/outlook-vectors.json', import.meta.url), 'utf8')) as {
+  const vectors = JSON.parse(readFileSync(process.env.MISSION_OUTLOOK_VECTORS_PATH ?? new URL('./fixtures/mission-outlook-vectors.json', import.meta.url), 'utf8')) as {
     name: string; clients: (keyof typeof CLIENTS)[]; templates: MissionTemplate[];
     expect: { coin: [number, number] | null; xp: [number, number] | null; insufficient: boolean; reachable: string[][] };
   }[];

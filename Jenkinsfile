@@ -26,7 +26,8 @@ pipeline {
                 sh '''
                     set -eu
                     test -r "$DEPLOY_DIR/.env.production"
-                    DOCKER_BUILDKIT=1 docker build --network host --secret id=frontend_env,src="$DEPLOY_DIR/.env.production" -t "$ADMIN_IMAGE" .
+                    FRONTEND_ENV_SHA=$(sha256sum "$DEPLOY_DIR/.env.production" | cut -d ' ' -f 1)
+                    DOCKER_BUILDKIT=1 docker build --network host --build-arg FRONTEND_ENV_SHA="$FRONTEND_ENV_SHA" --secret id=frontend_env,src="$DEPLOY_DIR/.env.production" -t "$ADMIN_IMAGE" .
                 '''
             }
         }
