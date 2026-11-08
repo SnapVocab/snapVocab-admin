@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Check, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, PageHeader } from '../../components/ui';
 import { useSystemCollections, useTopics } from '../../domains/admin-content/queries';
 import type { ItemSummary } from '../../domains/admin-content/mappers';
@@ -10,6 +10,7 @@ import { TopicTree } from './TopicTree';
 import { TopicDetail } from './TopicDetail';
 import { AddItemDrawer } from './AddItemDrawer';
 import { CollectionDialog, DeleteCollectionDialog, TemplateDialog, TopicDialog } from './dialogs';
+import { useToast } from '../../components/ui/Toast';
 
 type Dialog =
   | { kind: 'collection'; collection?: CollectionDTO }
@@ -37,14 +38,13 @@ export function TopicsPage({ rest }: { rest: string[] }) {
   const topic = child ?? root;
 
   const [dialog, setDialog] = useState<Dialog | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const flash = (t: string) => { setToast(t); window.setTimeout(() => setToast(null), 3500); };
+  const { show: flash, node: toastNode } = useToast();
   const go = (c: CollectionDTO | null, r?: TopicDTO | null, ch?: TopicDTO | null) =>
     navigate(['/topics', c?.id, r?.id, ch?.id].filter((x) => x !== undefined && x !== null).join('/'));
 
   return (
     <div className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
-      {toast && <div role="status" className="fixed right-6 top-6 z-40 flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs font-medium text-text shadow-elevated"><Check size={16} className="text-primary-dark" />{toast}</div>}
+      {toastNode}
       <PageHeader title="Chủ đề"
         description="Nội dung hệ thống mà người học duyệt và lưu. Sửa hoặc xóa chủ đề và mục từ chưa có API nên đang bị khóa."
         actions={<Button icon={<Plus />} onClick={() => setDialog({ kind: 'collection' })}>Tạo collection</Button>} />

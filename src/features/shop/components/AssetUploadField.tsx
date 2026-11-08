@@ -2,12 +2,12 @@ import { Button } from '../../../components/ui';
 import React, { useId, useState, useRef } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { uploadShopAsset } from '../../../domains/shop/api';
-import { checkAssetHeader, readImageHeader, validateAssetFile } from '../../../domains/shop/mappers';
+import { ASSET_MAX_KB, type AssetKind, checkAssetHeader, readImageHeader, validateAssetFile } from '../../../domains/shop/mappers';
 
 interface AssetUploadFieldProps {
   label: string;
   helperText?: string;
-  type: 'icon' | 'frame';
+  type: AssetKind;
   valueKey?: string | null;
   previewUrl?: string | null;
   disabled?: boolean;
@@ -33,7 +33,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const errorId = useId();
 
-  const maxKb = type === 'icon' ? 200 : 300;
+  const maxKb = ASSET_MAX_KB[type];
   const pickFile = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +118,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-text">
-                  {type === 'icon' ? 'Ảnh biểu tượng' : 'Khung avatar'}
+                  {label}
                 </div>
                 <div className="text-xs text-text-muted truncate max-w-[200px] sm:max-w-xs" title={valueKey ?? undefined}>
                   {valueKey ? 'Đã tải lên' : 'Đã chọn ảnh'}

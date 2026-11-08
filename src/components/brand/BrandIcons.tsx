@@ -84,11 +84,11 @@ export const BoosterIcon: React.FC<BrandIconProps> = ({ size = 16, className }) 
   </svg>
 );
 
-/** Shop theme sparkles (mobile sparkles.tsx), violet like the theme artwork tint. */
-export const ThemeIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
+/** Streak Freeze snowflake, sky like the item's artwork tint (streak_freeze.md). */
+export const FreezeIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
   <svg {...box(size, className)}>
-    <path d="M9 3l1.6 4.4L15 9l-4.4 1.6L9 15l-1.6-4.4L3 9l4.4-1.6L9 3z" fill="#8B5CF6" />
-    <path d="M17.5 13l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" fill="#C4B5FD" />
+    <path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="#0EA5E9" strokeWidth={2} strokeLinecap="round" />
+    <path d="M9 4l3 2 3-2M9 20l3-2 3 2M4.2 11l1.3 1 -1.3 1M19.8 11l-1.3 1 1.3 1" stroke="#7DD3FC" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -98,6 +98,15 @@ export const FrameIcon: React.FC<BrandIconProps> = ({ size = 16, className }) =>
     <circle cx="12" cy="12" r="9" stroke="#F59E0B" strokeWidth={3} />
     <circle cx="12" cy="12" r="9" stroke="#FEF08A" strokeWidth={1} strokeDasharray="3 4" />
     <circle cx="12" cy="12" r="5" fill="#475569" />
+  </svg>
+);
+
+/** Card frame: a flashcard inside a decorated border, rose like the item's artwork tint. */
+export const CardFrameIcon: React.FC<BrandIconProps> = ({ size = 16, className }) => (
+  <svg {...box(size, className)}>
+    <rect x="4" y="2.5" width="16" height="19" rx="3" fill="#FB7185" />
+    <rect x="6.5" y="5" width="11" height="14" rx="1.5" fill="#FFFFFF" />
+    <path d="M12 9.2l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z" fill="#F59E0B" />
   </svg>
 );
 

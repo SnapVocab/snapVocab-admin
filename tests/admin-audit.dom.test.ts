@@ -115,6 +115,16 @@ test('D4. CSV export walks every page of the list endpoint (no export endpoint),
   }
 });
 
+test('D5. editors\' "Vòng đời" panel lists the object\'s 5 latest writes and links to its full history (FE-AUD-03)', async () => {
+  const { TargetHistory } = await import('../src/features/activity-log/TargetHistory');
+  await render(React.createElement(TargetHistory, { target: { type: 'SHOP_ITEM', id: '11' } }));
+  await waitFor(() => document.querySelectorAll('li').length > 0, 'history rows');
+  assert.deepEqual([calls[0].get('targetType'), calls[0].get('targetId'), calls[0].get('days'), calls[0].get('size')], ['SHOP_ITEM', '11', '90', '5']);
+  assert.equal(document.querySelectorAll('li').length, 5);
+  assert.ok(text().includes('Nhật ký gần đây'));
+  assert.ok(document.querySelector('a[href="/activity-log/vat-pham/11"]'), 'link to the object history');
+});
+
 test('D2. one object\'s history (linked from the editors\' "Vòng đời"): 90 days, name and link to the object', async () => {
   await render(React.createElement(ActivityLogPage, { rest: ['vat-pham', '11'] }));
   await waitFor(() => text().includes('Lịch sử của vật phẩm Bậc Thầy Hoàng Kim'), 'history bar');

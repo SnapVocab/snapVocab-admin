@@ -101,7 +101,6 @@ export async function fixtureOverview(): Promise<AdminOverview> {
     shopSales30d: [
       { code: 'XP_BOOSTER_X2_30M', purchases: 41 },
       { code: 'FRAME_BRONZE_LEARNER', purchases: 12 },
-      { code: 'THEME_MIDNIGHT_NEON', purchases: 7 },
     ],
   };
 }

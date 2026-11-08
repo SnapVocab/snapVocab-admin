@@ -72,7 +72,7 @@ const MISSIONS: [code: string, weight: number][] = [
 /** shop_items code → [price, purchases per 30 days]: learners spend ≈ 40% of what they earn, as on the Dashboard. ON_SALE items missing here sold nothing. */
 const SALES: [code: string, price: number, per30: number][] = [
   ['XP_BOOSTER_X2_30M', 100, 24], ['XP_BOOSTER_X2_60M', 180, 7], ['FRAME_BRONZE_LEARNER', 350, 4], ['XP_BOOSTER_AUTUMN_45M', 120, 4],
-  ['THEME_MIDNIGHT_NEON', 500, 2], ['THEME_SUNSET_AMBER', 400, 2], ['FRAME_NATURE_EXPLORER', 550, 1], ['FRAME_SILVER_SCHOLAR', 600, 1],
+  ['FRAME_NATURE_EXPLORER', 550, 1], ['FRAME_SILVER_SCHOLAR', 600, 1],
   ['FRAME_FIRE_STREAK', 850, 1],
 ];
 const ERROR_MIX: [ScanErrorCode, number][] = [['AI_QUEUE_FULL', 0.4], ['AI_TIMEOUT', 0.2], ['INVALID_IMAGE', 0.15], ['AI_UNAVAILABLE', 0.1], ['AI_ERROR', 0.1], ['INTERRUPTED', 0.05]];

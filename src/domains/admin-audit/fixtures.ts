@@ -63,15 +63,6 @@ lifecycle('SHOP', item(6, 'XP_BOOSTER_X2_10M_LEGACY', 'Thẻ ×2 XP · 10 phút 
   ['2026-09-15T04:30:00Z', ADMIN, 'SHOP_ITEM_UPDATED', [c('purchasable', true, false)], { reason: 'Đã có Thẻ ×2 Kinh nghiệm · 30 phút thay thế, ngừng bán bản 10 phút.' }],
   ['2026-10-06T07:31:06Z', ADMIN, 'SHOP_ITEM_ARCHIVED', [c('status', 'PUBLISHED', 'ARCHIVED')], { reason: 'Không còn nhiệm vụ nào thưởng vật phẩm này.' }],
 ]);
-seeded(item(7, 'THEME_MIDNIGHT_NEON', 'Đêm Neon Huyền Ảo'), [c('type', null, 'THEME'), c('price', null, 500)],
-  { c: '2026-09-15T04:16:12Z', p: '2026-09-16T04:16:26Z', icon: '2026-10-06T07:31:11Z' }, '6f375fea-b23e-4940-92ec-4d027a1f9e2e');
-seeded(item(8, 'THEME_SUNSET_AMBER', 'Hoàng Hôn Hổ Phách'), [c('type', null, 'THEME'), c('price', null, 400), c('availableUntil', null, '2026-11-05T04:16:00Z')],
-  { c: '2026-09-30T04:16:12Z', p: '2026-10-01T04:16:26Z', icon: '2026-10-06T07:31:15Z' }, '11fbeeab-f7ea-4381-9e30-80a89fda57e9');
-lifecycle('SHOP', item(9, 'THEME_FOREST_MINT', 'Rừng Bạc Hà'), [
-  ['2026-10-05T04:16:12Z', SYSTEM, 'SHOP_ITEM_CREATED', [c('name', null, 'Rừng Bạc Hà'), c('type', null, 'THEME')]],
-  ['2026-10-06T07:20:30Z', ADMIN, 'SHOP_ITEM_UPDATED', [c('price', null, 450)]],
-  ['2026-10-06T07:31:20Z', ADMIN, 'SHOP_ITEM_UPDATED', [icon('b6ebbb25-8b04-4555-b467-5c0b92587199')]],
-]);
 lifecycle('SHOP', item(10, 'FRAME_BRONZE_LEARNER', 'Khung Đồng Mở Lối'), [
   ['2026-10-05T04:16:12Z', SYSTEM, 'SHOP_ITEM_CREATED', [c('name', null, 'Khung Đồng Mở Lối'), c('type', null, 'AVATAR_FRAME'), c('price', null, 300)]],
   ['2026-10-06T07:24:40Z', ADMIN, 'SHOP_ITEM_UPDATED', [icon('6bf5d6b9-5f7c-4316-99a3-38e28766d48d'), frame('e2037841-069c-49d2-8a09-e90631729c70')]],

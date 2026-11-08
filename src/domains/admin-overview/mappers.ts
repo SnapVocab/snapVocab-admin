@@ -1,11 +1,12 @@
 /**
  * Dashboard C · "Cần xử lý": every rule the page checks, pass or fail (admin_product_review_2026-10-19 §6).
- * NOW rules read the real Shop and Missions catalogs; MOCK rules read the overview contract (types.ts).
+ * Shop and Missions rules read the real catalogs; overview rules read GET /api/admin/overview (types.ts), and are
+ * MOCK only while that runs on fixtures.
  */
 import type { AdminShopItemDTO } from '../shop/types';
 import { deriveSaleState, formatShopItemStatusLabel, formatVnDateTime, MAX_COIN_PER_DAY, priceBand, priceHint } from '../shop/mappers';
 import type { MissionTemplate } from '../admin-missions/types';
-import { catalogSummary, dailyOutlook, poolShortage } from '../admin-missions/mappers';
+import { catalogSummary, CLIENTS, dailyOutlook, poolShortage } from '../admin-missions/mappers';
 import { scanErrorLabel } from '../scan/labels';
 import type { AdminOverview } from './types';
 
@@ -85,7 +86,7 @@ function missionChecks(missions: MissionTemplate[], shop?: AdminShopItemDTO[]): 
     });
   }
 
-  const top = dailyOutlook(missions).coin?.[1] ?? 0;
+  const top = dailyOutlook(missions, [CLIENTS.current]).coin?.[1] ?? 0;
   out.push({
     id: 'mission-budget', area: 'MISSIONS', scope: 'NOW', rule: `Thưởng tối đa mỗi người/ngày ≤ ${MAX_COIN_PER_DAY} Coin`,
     issue: top > MAX_COIN_PER_DAY ? {
@@ -137,7 +138,7 @@ function shopChecks(shop: AdminShopItemDTO[], now: Date): Check[] {
   ];
 }
 
-function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[] {
+function overviewChecks(o: AdminOverview, missions: MissionTemplate[] | undefined, scope: Check['scope']): Check[] {
   const t = o.scan.today;
   const rate = t.total ? t.failed / t.total : 0;
   const topError = [...o.scan.errors7d].sort((a, b) => b.count - a.count)[0];
@@ -147,7 +148,7 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
 
   return [
     {
-      id: 'scan-errors', area: 'SCAN', scope: 'MOCK', rule: `Tỉ lệ scan lỗi hôm nay ≤ ${pct(THRESHOLDS.scanErrorRate)}`,
+      id: 'scan-errors', area: 'SCAN', scope, rule: `Tỉ lệ scan lỗi hôm nay ≤ ${pct(THRESHOLDS.scanErrorRate)}`,
       issue: rate > THRESHOLDS.scanErrorRate ? {
         severity: rate > THRESHOLDS.scanErrorRateDanger ? 'danger' : 'warning',
         title: `Scan lỗi ${pct(rate)} hôm nay`,
@@ -156,7 +157,7 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
       } : null,
     },
     {
-      id: 'scan-p95', area: 'SCAN', scope: 'MOCK', rule: `p95 thời gian xử lý scan ≤ ${seconds(THRESHOLDS.scanP95Ms)}`,
+      id: 'scan-p95', area: 'SCAN', scope, rule: `p95 thời gian xử lý scan ≤ ${seconds(THRESHOLDS.scanP95Ms)}`,
       issue: t.p95Ms !== null && t.p95Ms > THRESHOLDS.scanP95Ms ? {
         severity: 'warning', title: `Scan chậm: p95 ${seconds(t.p95Ms)}`,
         detail: `p50 ${seconds(t.p50Ms)}; máy chủ có ${o.scan.config.workers} worker xử lý lần lượt. Báo đội kỹ thuật kiểm tra dịch vụ AI.`,
@@ -164,7 +165,7 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
       } : null,
     },
     {
-      id: 'scan-queue', area: 'SCAN', scope: 'MOCK', rule: 'Hàng đợi scan không bị đầy hôm nay',
+      id: 'scan-queue', area: 'SCAN', scope, rule: 'Hàng đợi scan không bị đầy hôm nay',
       issue: t.queueFull > 0 ? {
         severity: 'warning', title: `Hàng đợi scan đầy ${t.queueFull} lần hôm nay`,
         detail: `Máy chủ có ${o.scan.config.workers} worker và hàng đợi ${o.scan.config.queueCapacity} chỗ; người học bị báo "${scanErrorLabel('AI_QUEUE_FULL')}" và phải chụp lại. Tăng worker hoặc hàng đợi là cấu hình máy chủ.`,
@@ -172,7 +173,7 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
       } : null,
     },
     {
-      id: 'scan-unmapped', area: 'SCAN', scope: 'MOCK', rule: `Nhãn scan gặp ≥ ${THRESHOLDS.unmappedScans7d} lượt/7 ngày đều đã có từ`,
+      id: 'scan-unmapped', area: 'SCAN', scope, rule: `Nhãn scan gặp ≥ ${THRESHOLDS.unmappedScans7d} lượt/7 ngày đều đã có từ`,
       issue: labels.length ? {
         severity: 'info', title: `${labels.length} nhãn hay gặp chưa ra từ vựng`,
         detail: `${list(labels.map((l) => `"${l.label}" ${l.scans7d} lượt`))}. Người học scan ra nhãn nhưng không lưu được từ.`,
@@ -181,7 +182,7 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
       } : null,
     },
     {
-      id: 'mission-completion', area: 'MISSIONS', scope: 'MOCK', rule: `Nhiệm vụ được giao ≥ ${THRESHOLDS.missionMinAssigned} lần có tỉ lệ hoàn thành ≥ ${pct(THRESHOLDS.missionMinRate)} (7 ngày)`,
+      id: 'mission-completion', area: 'MISSIONS', scope, rule: `Nhiệm vụ được giao ≥ ${THRESHOLDS.missionMinAssigned} lần có tỉ lệ hoàn thành ≥ ${pct(THRESHOLDS.missionMinRate)} (7 ngày)`,
       issue: low.length ? {
         severity: 'info', title: `${low.length} nhiệm vụ ít người hoàn thành`,
         detail: `${list(low.map((m) => `${template(m.code)?.name ?? m.code}: ${pct(m.completed7d / m.assigned7d)} (${m.completed7d}/${m.assigned7d})`))}. Có thể quá khó hoặc bị bỏ qua.`,
@@ -192,11 +193,11 @@ function overviewChecks(o: AdminOverview, missions?: MissionTemplate[]): Check[]
 }
 
 /** Checks for every source that has loaded; a source still loading or failed contributes none. */
-export function runChecks(src: { missions?: MissionTemplate[]; shop?: AdminShopItemDTO[]; overview?: AdminOverview; now: Date }): Check[] {
+export function runChecks(src: { missions?: MissionTemplate[]; shop?: AdminShopItemDTO[]; overview?: AdminOverview; overviewSample?: boolean; now: Date }): Check[] {
   return [
     ...(src.missions ? missionChecks(src.missions, src.shop) : []),
     ...(src.shop ? shopChecks(src.shop, src.now) : []),
-    ...(src.overview ? overviewChecks(src.overview, src.missions) : []),
+    ...(src.overview ? overviewChecks(src.overview, src.missions, src.overviewSample ? 'MOCK' : 'NOW') : []),
   ];
 }
 

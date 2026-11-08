@@ -26,7 +26,7 @@ export function DashboardPage() {
   const o = overview.data;
   const items = shop.data?.data;
 
-  const checks = runChecks({ missions: missions.data, shop: items, overview: o, now });
+  const checks = runChecks({ missions: missions.data, shop: items, overview: o, overviewSample: overviewUsesFixtures, now });
   const sources = [
     { what: 'catalog nhiệm vụ', q: missions },
     { what: 'catalog Cửa hàng', q: shop },

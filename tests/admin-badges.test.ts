@@ -101,7 +101,9 @@ test('AC-CAT-4: a catalog without earner counts has no "Đã đạt" column and 
   assert.equal(page.match(/scope="rowgroup"/g)?.length, 4);
   assert.ok(page.indexOf('Chuỗi ngày học') < page.indexOf('Quiz hoàn thành'));
   assert.doesNotMatch(page, /Dữ liệu mẫu/, 'outside dev the real API needs no sample-data notice');
-  assert.doesNotMatch(page, />Sửa</, 'P1 is read-only');
+  // P2 shipped (PATCH /api/admin/badges/{id}): every row can be edited and switched on/off.
+  assert.match(page, />Sửa</);
+  assert.match(page, />(Bật|Tắt)</);
 });
 
 test('P1 editor view hides absent version and displays a real zero version when provided', () => {
@@ -110,9 +112,10 @@ test('P1 editor view hides absent version and displays a real zero version when 
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /Lưu thay đổi|Bật huy hiệu|Tắt huy hiệu/);
 });
 
-test('AC-PRV-2/3: the editor warns about an unknown icon, a four-milestone shelf, an inactive badge, an unmapped metric', () => {
+test('AC-PRV-2/3: the editor warns about an unknown icon, previews the app card and sheet, an inactive badge, an unmapped metric', () => {
   assert.match(editor(byCode('PERFECT_25')), /ứng dụng không có biểu tượng “rocket”/);
-  assert.match(editor(byCode('PERFECT_25')), /ứng dụng chuyển kệ sang dạng cuộn ngang/);
+  assert.match(editor(byCode('PERFECT_25')), /Thẻ trên lưới Thành tựu[\s\S]*Đã mở khóa[\s\S]*Tiến độ chinh phục/);
+  assert.match(editor(byCode('PERFECT_1')), /Phổ biến/);
   assert.match(editor(byCode('WORDS_250')), /Người học chưa đạt hiện không thấy huy hiệu này/);
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /hiện không thấy huy hiệu này/);
   assert.match(editor(byCode('SCAN_10')), /Admin chưa có tên chuỗi, đơn vị và cách đếm cho chỉ số “SCAN_SAVED”/);

@@ -18,7 +18,6 @@ import {
 import {
   isFieldEditable,
   deriveSaleState,
-  formatThemeKeyLabel,
   mapBackendErrorsToFields,
   SHOP_TZ_LABEL,
   vnInputToIso,
@@ -36,15 +35,16 @@ import {
   formatVnDateTime,
   priceBand,
   priceHint,
+  priceTier,
+  PRICE_TIERS,
 } from '../../../domains/shop/mappers';
 import { useShopCatalog } from '../../../domains/shop/queries';
-import { BoosterIcon, CoinIcon, FrameIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CardFrameIcon, CoinIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { ApiClientError } from '../../../lib/api-client';
 import { SaleStateBadge, ShopItemStatusBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemPreview } from '../components/ShopItemPreview';
-import { Badge, Button, ConfirmModal, SectionLabel, TextLink } from '../../../components/ui';
-import { auditUsesFixtures } from '../../../domains/admin-audit/config';
-import { historyPath } from '../../../domains/admin-audit/mappers';
+import { Badge, Button, ConfirmModal, SectionLabel } from '../../../components/ui';
+import { TargetHistory } from '../../activity-log/TargetHistory';
 import { AssetUploadField } from '../components/AssetUploadField';
 import {
   PublishConfirmationModal,
@@ -53,6 +53,7 @@ import {
   TypeChangeConfirmationModal,
   VersionConflictBanner,
 } from '../components/ShopModals';
+import { ReasonCancelled, useReasonPrompt } from '../../activity-log/reason';
 import {
   ArrowLeft,
   Save,
@@ -80,14 +81,14 @@ const DEFAULT_FORM_DATA: ShopItemForm = {
   code: '',
   name: '',
   description: '',
-  type: 'THEME',
+  type: 'AVATAR_FRAME',
   iconKey: null,
   purchasable: false,
   price: null,
   availableFrom: null,
   availableUntil: null,
   sortOrder: 0,
-  ...configForType('THEME'),
+  ...configForType('AVATAR_FRAME'),
 };
 
 const TYPE_OPTIONS: {
@@ -97,22 +98,28 @@ const TYPE_OPTIONS: {
   icon: React.ReactNode;
 }[] = [
   {
-    type: 'THEME',
-    label: 'Giao diện cửa hàng',
-    desc: 'Đổi giao diện Cửa hàng, Kho đồ và Ví Coin',
-    icon: <ThemeIcon size={20} />,
-  },
-  {
     type: 'AVATAR_FRAME',
     label: 'Khung avatar',
     desc: 'Trang trí hồ sơ người học',
     icon: <FrameIcon size={20} />,
   },
   {
+    type: 'CARD_FRAME',
+    label: 'Khung thẻ',
+    desc: 'Trang trí thẻ học khi người học ôn tập',
+    icon: <CardFrameIcon size={20} />,
+  },
+  {
     type: 'XP_BOOSTER',
     label: 'XP Booster',
     desc: 'Nhân đôi XP trong thời gian giới hạn',
     icon: <BoosterIcon size={20} />,
+  },
+  {
+    type: 'STREAK_FREEZE',
+    label: 'Đóng băng chuỗi',
+    desc: 'Tự giữ chuỗi khi người học lỡ một ngày học',
+    icon: <FreezeIcon size={20} />,
   },
 ];
 
@@ -124,6 +131,7 @@ const fmt = (n: number) => n.toLocaleString('vi-VN');
  */
 const PriceGuard: React.FC<{ price: number | null | undefined; band: PriceBand | null; typeLabel: string }> = ({ price, band, typeLabel }) => {
   const hint = priceHint(price, band);
+  const tier = priceTier(price);
   const what = /^[A-Z]{2}/.test(typeLabel) ? typeLabel : typeLabel.toLowerCase();
   const factor = PRICE_HINT_FACTOR.toLocaleString('vi-VN');
   return (
@@ -148,6 +156,15 @@ const PriceGuard: React.FC<{ price: number | null | undefined; band: PriceBand |
           ? `${typeLabel} khác đang bán: ${fmt(band.min)} Coin (1 vật phẩm).`
           : `${typeLabel} đang bán: ${fmt(band.min)}–${fmt(band.max)} Coin, trung vị ${fmt(band.median)} Coin (${band.count} vật phẩm).`}
       </p>
+      {tier && <p>Bậc giá: {tier.label} ({fmt(tier.min)}–{fmt(tier.max)} Coin).</p>}
+      {price != null && price > 0 && !tier && (
+        <div role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-warning-dark text-xs font-medium">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          <span>
+            Ngoài 3 bậc giá đã duyệt: {PRICE_TIERS.map(t => `${t.label} ${fmt(t.min)}–${fmt(t.max)}`).join(', ')} Coin.
+          </span>
+        </div>
+      )}
       {hint && (
         <div role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-warning-dark text-xs font-medium">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -201,7 +218,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   const [initialData, setInitialData] = useState<ShopItemForm>(DEFAULT_FORM_DATA);
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [itemStatus, setItemStatus] = useState<ShopItemStatus>('DRAFT');
-  const [availabilityMode, setAvailabilityMode] = useState<'UNLIMITED' | 'SCHEDULED'>('UNLIMITED');
   const [previewUrls, setPreviewUrls] = useState<{
     iconUrl?: string | null;
     frameAssetUrl?: string | null;
@@ -236,6 +252,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   const publishMutation = usePublishShopItem();
   const archiveMutation = useArchiveShopItem();
   const deleteMutation = useDeleteShopItem();
+  // Save/publish past the price guardrail: the server asks for a reason, this re-sends with it (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
 
   const isDirty = JSON.stringify(formData) !== JSON.stringify(initialData);
 
@@ -253,7 +271,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     setInitialData(populated);
     setCurrentVersion(item.version);
     setItemStatus(item.status);
-    setAvailabilityMode(item.availableFrom || item.availableUntil ? 'SCHEDULED' : 'UNLIMITED');
     setPreviewUrls({ iconUrl: item.iconUrl, frameAssetUrl: item.frameAssetUrl });
     setVersionConflict({ isConflict: false });
     setFieldErrors({});
@@ -276,11 +293,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   const currentTypeMetadata = useMemo(() => {
     return metadata?.types.find((t) => t.type === formData.type);
   }, [metadata, formData.type]);
-
-  // Backend lists only themes not yet sold by another item; none left means nothing can be chosen here.
-  const themeOptionsEmpty = Boolean(metadata) && formData.type === 'THEME'
-    && !initialData.themeKey
-    && (currentTypeMetadata?.fields.find((f) => f.name === 'themeKey')?.options?.length ?? 0) === 0;
 
   const getFieldSpec = (fieldName: string): FieldSpec | undefined => {
     const common = metadata?.commonFields.find((f) => f.name === fieldName);
@@ -342,15 +354,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     }
   };
 
-  // Toggle availability mode (unlimited vs scheduled)
-  const handleSelectAvailabilityMode = (newMode: 'UNLIMITED' | 'SCHEDULED') => {
-    setAvailabilityMode(newMode);
-    if (newMode === 'UNLIMITED') {
-      handleFieldChange('availableFrom', null);
-      handleFieldChange('availableUntil', null);
-    }
-  };
-
   // Handle Type Change with confirmation
   const handleTypeSelect = (newType: ShopItemType) => {
     if (newType === formData.type) return;
@@ -408,10 +411,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       }
     }
 
-    if (formData.type === 'THEME' && !formData.themeKey) {
-      errors.themeKey = 'Vui lòng chọn bộ giao diện.';
-    }
-
     if (formData.type === 'XP_BOOSTER') {
       if (
         formData.boostDurationMinutes == null ||
@@ -427,6 +426,11 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       ) {
         errors.maxQuantity = 'Số lượng tối đa người dùng có thể giữ phải từ 1 đến 10.';
       }
+    }
+
+    // streak_freeze.md PD-SF-03: more than a few units and a long break still keeps the chain.
+    if (formData.type === 'STREAK_FREEZE' && (formData.maxQuantity == null || formData.maxQuantity < 1 || formData.maxQuantity > 5)) {
+      errors.maxQuantity = 'Số lượng tối đa người học có thể giữ phải từ 1 đến 5.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -449,7 +453,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     ownWriteRef.current = true;
     try {
       if (mode === 'create') {
-        const created = await createMutation.mutateAsync(toPayload(formData));
+        const created = await reasonPrompt.run((reason) => createMutation.mutateAsync({ ...toPayload(formData), reason }));
         setInitialData(formData);
         onToast?.(`Đã lưu bản nháp "${created.name}".`);
         onSaved?.(created);
@@ -459,10 +463,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           throw new Error('Thiếu thông tin phiên bản để cập nhật.');
         }
 
-        const updated = await updateMutation.mutateAsync({
-          id: itemId,
-          payload: buildUpdatePayload(formData, initialData, currentVersion),
-        });
+        const payload = buildUpdatePayload(formData, initialData, currentVersion);
+        const updated = await reasonPrompt.run((reason) => updateMutation.mutateAsync({ id: itemId, payload: { ...payload, reason } }));
 
         loadItem(updated);
         onToast?.(`Đã lưu "${updated.name}" (v${updated.version}).`);
@@ -471,6 +473,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
       }
       return null;
     } catch (err) {
+      if (err instanceof ReasonCancelled) return null; // nothing was saved; the edits stay on screen
       const mapped = mapBackendErrorsToFields(err);
       setFieldErrors(mapped.fieldErrors);
       // A conflict has its own banner with the way out.
@@ -500,12 +503,13 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     if (!itemId) return;
     ownWriteRef.current = true;
     try {
-      const published = await publishMutation.mutateAsync(itemId);
+      const published = await reasonPrompt.run((reason) => publishMutation.mutateAsync({ id: itemId, reason }));
       loadItem(published);
       setIsPublishModalOpen(false);
       onToast?.(`Vật phẩm "${published.name}" đã được phát hành thành công.`);
       onSaved?.(published);
     } catch (err) {
+      if (err instanceof ReasonCancelled) return; // still a draft; the publish dialog stays open
       const mapped = mapBackendErrorsToFields(err);
       setFieldErrors(mapped.fieldErrors);
       setModalError(mapped.generalError || 'Phát hành thất bại. Kiểm tra các trường được đánh dấu.');
@@ -522,11 +526,11 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
   };
 
   // ARCHIVE HANDLER
-  const handleConfirmArchive = async () => {
+  const handleConfirmArchive = async (reason: string) => {
     if (!itemId) return;
     ownWriteRef.current = true;
     try {
-      const archived = await archiveMutation.mutateAsync(itemId);
+      const archived = await archiveMutation.mutateAsync({ id: itemId, reason });
       loadItem(archived);
       setIsArchiveModalOpen(false);
       onToast?.(`Vật phẩm "${archived.name}" đã được lưu trữ.`);
@@ -587,7 +591,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
     availableFrom: vnInputToIso(formData.availableFrom),
     availableUntil: vnInputToIso(formData.availableUntil),
   });
-  const band = priceBand(catalog?.data ?? [], formData.type ?? 'THEME', itemId);
+  const band = priceBand(catalog?.data ?? [], formData.type ?? 'AVATAR_FRAME', itemId);
 
 
   if (mode === 'edit' && !existingItem && itemError) {
@@ -719,7 +723,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
         <div role="alert" className="p-3 bg-danger-light border border-danger/30 rounded-lg flex items-center justify-between gap-2 text-body text-danger-dark">
           <span className="flex items-center gap-2">
             <AlertCircle size={16} className="shrink-0" />
-            Không tải được cấu hình biểu mẫu (bộ giao diện còn trống, trường được phép sửa).
+            Không tải được cấu hình biểu mẫu (trường được phép sửa sau phát hành).
           </span>
           <Button size="sm" onClick={() => void refetchMetadata()}>Thử lại</Button>
         </div>
@@ -756,7 +760,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 value={formData.code}
                 onChange={(e) => handleFieldChange('code', e.target.value.toUpperCase())}
                 disabled={!isEditable('code') || isSaving}
-                placeholder="VD: THEME_NEON_NIGHT"
+                placeholder="VD: FRAME_GOLD_WEEKLY"
                 className={`w-full px-3 py-2 text-body font-mono rounded-lg border bg-surface text-text ${
                   fieldErrors.code
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
@@ -789,7 +793,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 value={formData.name}
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 disabled={!isEditable('name') || isSaving}
-                placeholder="VD: Giao diện Neon Dạ Quang"
+                placeholder="VD: Khung Hoa Anh Đào"
                 className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
                   fieldErrors.name
                     ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
@@ -841,7 +845,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
               {!isEditable('type') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {TYPE_OPTIONS.map((opt) => {
                 const isSelected = formData.type === opt.type;
                 const canChange = isEditable('type');
@@ -877,57 +881,6 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           </div>
 
           {/* Cấu hình đặc thù theo loại */}
-          {/* TYPE: THEME */}
-          {formData.type === 'THEME' && (
-            <div className="space-y-1.5 max-w-md pt-3 border-t border-border/70">
-              <div className="flex items-center justify-between">
-                <label htmlFor="shop-themeKey" className="text-body font-semibold text-text">
-                  Bộ giao diện <span className="text-danger">*</span>
-                </label>
-                {!isEditable('themeKey') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
-              </div>
-              {(() => {
-                const free = currentTypeMetadata?.fields.find((f) => f.name === 'themeKey')?.options ?? [];
-                const own = initialData.type === 'THEME' && initialData.themeKey ? [initialData.themeKey] : [];
-                const options = [...new Set([...own, ...free])];
-
-                return (
-                  <select
-                    {...a11y('themeKey')}
-                    value={formData.themeKey || ''}
-                    onChange={(e) => handleFieldChange('themeKey', e.target.value)}
-                    disabled={!isEditable('themeKey') || isSaving}
-                    className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text cursor-pointer ${
-                      fieldErrors.themeKey
-                        ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
-                        : !isEditable('themeKey')
-                        ? 'border-border bg-surface-subtle text-text-muted cursor-not-allowed'
-                        : 'border-border focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                    }`}
-                  >
-                    <option value="" disabled>-- Chọn bộ giao diện --</option>
-                    {options.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {formatThemeKeyLabel(opt)}
-                      </option>
-                    ))}
-                  </select>
-                );
-              })()}
-              {fieldErrors.themeKey ? (
-                <p id="shop-themeKey-error" className="text-xs text-danger-dark">{fieldErrors.themeKey}</p>
-              ) : themeOptionsEmpty ? (
-                <p className="text-xs text-warning-dark">
-                  Cả 3 bộ giao diện đã có vật phẩm (mỗi bộ chỉ bán bằng một vật phẩm). Hãy sửa vật phẩm giao diện sẵn có.
-                </p>
-              ) : (
-                <p className="text-xs text-text-muted">
-                  Áp dụng cho Cửa hàng, Kho đồ và Ví Coin của người học (không đổi toàn ứng dụng).
-                </p>
-              )}
-            </div>
-          )}
-
           {/* TYPE: AVATAR_FRAME */}
           {formData.type === 'AVATAR_FRAME' && (
             <div className="pt-3 border-t border-border/70">
@@ -935,6 +888,26 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 label="Ảnh khung avatar"
                 helperText="Ảnh vuông 512×512, nền trong suốt; vòng avatar chiếm khoảng 58% ở giữa."
                 type="frame"
+                valueKey={formData.frameAssetKey}
+                previewUrl={previewUrls.frameAssetUrl}
+                disabled={!isEditable('frameAssetKey') || isSaving}
+                error={fieldErrors.frameAssetKey}
+                onUploadingChange={handleUploadingChange}
+                onChange={(objectName, localUrl) => {
+                  handleFieldChange('frameAssetKey', objectName);
+                  setPreviewUrls((prev) => ({ ...prev, frameAssetUrl: localUrl }));
+                }}
+              />
+            </div>
+          )}
+
+          {/* TYPE: CARD_FRAME (plan/shop-item/card_frame_plan.md §3) */}
+          {formData.type === 'CARD_FRAME' && (
+            <div className="pt-3 border-t border-border/70">
+              <AssetUploadField
+                label="Ảnh khung thẻ"
+                helperText="Ảnh 1080×1440 (3:4), nền trong suốt, ≤ 500 KB. Trang trí chỉ nằm ở viền (tối đa 9% mỗi cạnh); cửa sổ giữa phải trong suốt hoàn toàn theo file mẫu template_guide.png."
+                type="cardFrame"
                 valueKey={formData.frameAssetKey}
                 previewUrl={previewUrls.frameAssetUrl}
                 disabled={!isEditable('frameAssetKey') || isSaving}
@@ -1021,27 +994,67 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
               </div>
             </div>
           )}
+
+          {/* TYPE: STREAK_FREEZE (streak_freeze.md §6, §7) */}
+          {formData.type === 'STREAK_FREEZE' && (
+            <div className="space-y-3 pt-3 border-t border-border/70">
+              <p className="text-xs text-text-muted">
+                Tự dùng, mỗi ngày người học lỡ học dùng 1 vật phẩm; ngày được giữ không cộng vào số chuỗi. Chỉ một vật phẩm loại này được phát hành.
+              </p>
+              <div className="space-y-1 sm:max-w-[50%]">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="shop-maxQuantity" className="text-body font-semibold text-text">
+                    Số lượng tối đa trong túi đồ <span className="text-danger">*</span>
+                  </label>
+                  {!isEditable('maxQuantity') && <LockTag archived={itemStatus === 'ARCHIVED'} />}
+                </div>
+                <input
+                  {...a11y('maxQuantity')}
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={formData.maxQuantity ?? 2}
+                  onChange={(e) => handleFieldChange('maxQuantity', parseInt(e.target.value, 10) || 0)}
+                  disabled={!isEditable('maxQuantity') || isSaving}
+                  className={`w-full px-3 py-2 text-body rounded-lg border bg-surface text-text ${
+                    fieldErrors.maxQuantity
+                      ? 'border-danger bg-danger-light/30 ring-1 ring-danger'
+                      : !isEditable('maxQuantity')
+                      ? 'border-border bg-surface-subtle text-text-muted cursor-not-allowed'
+                      : 'border-border focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
+                />
+                {fieldErrors.maxQuantity ? (
+                  <p id="shop-maxQuantity-error" className="text-xs text-danger-dark">{fieldErrors.maxQuantity}</p>
+                ) : (
+                  <p className="text-xs text-text-muted">1 đến 5 vật phẩm (mặc định: 2).</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* HÌNH ẢNH: icon shown on the Shop / Kho đồ card */}
-        <div className="px-5 pt-3 pb-3 space-y-3">
-          <SectionLabel>Hình ảnh</SectionLabel>
+        {/* HÌNH ẢNH: icon shown on the Shop / Kho đồ card. Frames draw their own artwork, so they have no icon. */}
+        {formData.type !== 'AVATAR_FRAME' && formData.type !== 'CARD_FRAME' && (
+          <div className="px-5 pt-3 pb-3 space-y-3">
+            <SectionLabel>Hình ảnh</SectionLabel>
 
-          <AssetUploadField
-            label="Icon vật phẩm"
-            helperText="Hiển thị trên card trong Cửa hàng và Kho đồ."
-            type="icon"
-            valueKey={formData.iconKey}
-            previewUrl={previewUrls.iconUrl}
-            disabled={!isEditable('iconKey') || isSaving}
-            error={fieldErrors.iconKey}
-            onUploadingChange={handleUploadingChange}
-            onChange={(objectName, localUrl) => {
-              handleFieldChange('iconKey', objectName);
-              setPreviewUrls((prev) => ({ ...prev, iconUrl: localUrl }));
-            }}
-          />
-        </div>
+            <AssetUploadField
+              label="Icon vật phẩm"
+              helperText="Hiển thị trên card trong Cửa hàng và Kho đồ."
+              type="icon"
+              valueKey={formData.iconKey}
+              previewUrl={previewUrls.iconUrl}
+              disabled={!isEditable('iconKey') || isSaving}
+              error={fieldErrors.iconKey}
+              onUploadingChange={handleUploadingChange}
+              onChange={(objectName, localUrl) => {
+                handleFieldChange('iconKey', objectName);
+                setPreviewUrls((prev) => ({ ...prev, iconUrl: localUrl }));
+              }}
+            />
+          </div>
+        )}
 
         {/* BÁN TRONG CỬA HÀNG: purchasable, price (with guardrail), sort order, sale window */}
         <div className="px-5 pt-3 pb-5 space-y-4">
@@ -1171,48 +1184,13 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             </div>
           </div>
 
-          {/* Thời gian bán */}
-          <div className="space-y-3 pt-2 border-t border-border/70">
-            <div className="flex items-center justify-between">
-              <label className="text-body font-semibold text-text">
-                Thời gian bán
-              </label>
-            </div>
-
-            {/* Radio mode selection */}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-xs text-text cursor-pointer">
-                <input
-                  type="radio"
-                  name="availabilityMode"
-                  checked={availabilityMode === 'UNLIMITED'}
-                  onChange={() => handleSelectAvailabilityMode('UNLIMITED')}
-                  disabled={(!isEditable('availableFrom') && !isEditable('availableUntil')) || isSaving}
-                  className="w-3.5 h-3.5 accent-primary-solid cursor-pointer"
-                />
-                <span>Không giới hạn</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs text-text cursor-pointer">
-                <input
-                  type="radio"
-                  name="availabilityMode"
-                  checked={availabilityMode === 'SCHEDULED'}
-                  onChange={() => handleSelectAvailabilityMode('SCHEDULED')}
-                  disabled={(!isEditable('availableFrom') && !isEditable('availableUntil')) || isSaving}
-                  className="w-3.5 h-3.5 accent-primary-solid cursor-pointer"
-                />
-                <span>Theo thời gian</span>
-              </label>
-            </div>
-
-            {/* Scheduled date range inputs */}
-            {availabilityMode === 'SCHEDULED' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 animate-in fade-in-50 duration-150">
+          {/* Mở bán từ: optional start. No end date for new sales (PD-SHX-05); a legacy one stays visible so it can be cleared. */}
+          <div className="pt-2 border-t border-border/70">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label htmlFor="shop-availableFrom" className="text-body font-semibold text-text flex items-center gap-1.5">
                     <Calendar size={12} className="text-text-muted" />
-                    Bắt đầu bán từ ({SHOP_TZ_LABEL})
+                    Mở bán từ ({SHOP_TZ_LABEL})
                   </label>
                   <input
                     {...a11y('availableFrom')}
@@ -1228,11 +1206,14 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                         : 'border-border focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   />
-                  {fieldErrors.availableFrom && (
+                  {fieldErrors.availableFrom ? (
                     <p id="shop-availableFrom-error" className="text-xs text-danger-dark">{fieldErrors.availableFrom}</p>
+                  ) : (
+                    <p className="text-xs text-text-muted">Để trống: hiện trong Cửa hàng ngay khi phát hành.</p>
                   )}
                 </div>
 
+                {initialData.availableUntil && (
                 <div className="space-y-1">
                   <label htmlFor="shop-availableUntil" className="text-body font-semibold text-text flex items-center gap-1.5">
                     <Calendar size={12} className="text-text-muted" />
@@ -1256,8 +1237,15 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                     <p id="shop-availableUntil-error" className="text-xs text-danger-dark">{fieldErrors.availableUntil}</p>
                   )}
                 </div>
+                )}
+                {/* PD-SHX-05: no seasonal selling; the app shows no end date, so the item would just vanish. */}
+                {formData.availableUntil && (
+                  <p role="status" className="sm:col-span-2 flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2.5 py-1.5 text-xs font-medium text-warning-dark">
+                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                    <span>Không còn bán theo mùa: xóa hạn kết thúc. App người học không hiện hạn bán, tới giờ vật phẩm tự biến mất khỏi Cửa hàng mà không báo trước.</span>
+                  </p>
+                )}
               </div>
-            )}
           </div>
         </div>
       </div>
@@ -1283,10 +1271,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
                 <dt className="text-text-muted">ID</dt>
                 <dd className="tabular-nums text-text">{existingItem.id}</dd>
               </dl>
-              <p className="border-t border-border pt-2.5 text-xs text-text-muted">
-                Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
-                {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'SHOP_ITEM', id: String(existingItem.id) })}>Xem nhật ký mẫu</TextLink></>}
-              </p>
+              <TargetHistory target={{ type: 'SHOP_ITEM', id: String(existingItem.id) }} />
             </div>
           )}
         </div>
@@ -1310,7 +1295,7 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
             isArchiving={archiveMutation.isPending}
             errorMessage={modalError}
             onClose={() => { setIsArchiveModalOpen(false); setModalError(null); }}
-            onConfirm={handleConfirmArchive}
+            onConfirm={(reason) => void handleConfirmArchive(reason)}
           />
 
           <DeleteConfirmationModal
@@ -1323,6 +1308,8 @@ export const ShopItemEditorPage: React.FC<ShopItemEditorPageProps> = ({
           />
         </>
       )}
+
+      {reasonPrompt.dialog}
 
       {pendingTypeChange && (
         <TypeChangeConfirmationModal

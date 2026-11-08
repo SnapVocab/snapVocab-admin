@@ -89,7 +89,7 @@ test('O4. overview fixture agrees with the Learners fixture and drives the MOCK 
   assert.equal(o.scan.daily.at(-1)!.done + o.scan.daily.at(-1)!.failed, o.scan.today.total);
   assert.equal(o.scan.errors7d.reduce((s, e) => s + e.count, 0), o.scan.daily.slice(-7).reduce((s, d) => s + d.failed, 0));
 
-  const checks = runChecks({ missions: seed, shop, overview: o, now: NOW });
+  const checks = runChecks({ missions: seed, shop, overview: o, overviewSample: true, now: NOW });
   const open = openIssues(checks);
   assert.deepEqual(open.map((c) => c.id).sort(), ['mission-completion', 'scan-errors', 'scan-queue', 'scan-unmapped']);
   assert.ok(open.every((c) => c.scope === 'MOCK'));
@@ -98,6 +98,8 @@ test('O4. overview fixture agrees with the Learners fixture and drives the MOCK 
   assert.match(low.detail, /Quiz Ngắn Hoàn Hảo: 18,8% \(22\/117\)/);
   assert.equal(low.path, '/missions/4');
   assert.match(issue(checks, 'scan-unmapped')!.title, /^3 nhãn/);
+  // AC-DASH-07: the same numbers from the real API are real alerts.
+  assert.ok(openIssues(runChecks({ missions: seed, shop, overview: o, now: NOW })).every((c) => c.scope === 'NOW'));
 });
 
 test('O5. open issues: most severe first, real before sample at the same severity', () => {
@@ -117,7 +119,7 @@ test('O6. recent changes: newest first; "edited" only when it is later than the 
   assert.equal(recentChanges(shop, seed, 3).length, 3);
 });
 
-test('O7. page renders every layer from cached data, marks sample-data alerts, shows no raw codes or out-of-scope concepts', async () => {
+test('O7. page renders every layer from cached data, no sample-data marks on the real API, no raw codes or out-of-scope concepts', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(missionKeys.list, seed);
   client.setQueryData(adminShopKeys.list(CATALOG_PARAMS), { data: shop, meta: { page: 0, size: 100, total: 3, pages: 1 } });
@@ -127,9 +129,8 @@ test('O7. page renders every layer from cached data, marks sample-data alerts, s
   for (const s of ['Cần xử lý', 'Quy tắc đã kiểm', 'Vận hành scan', 'Nhãn chưa có từ', 'Nhịp học', 'Nhiệm vụ hằng ngày', 'Kinh tế Coin', 'Cửa hàng', 'Thay đổi gần đây', '1 collection']) {
     assert.ok(html.includes(s), s);
   }
-  // Alerts computed from sample data say so on the row (an operator could act on them); rules list marks them too.
-  assert.ok(html.includes(' · dữ liệu mẫu'), 'sample-data alert marker');
-  assert.ok(html.includes('(mẫu)'), 'sample-data rule marker');
+  // AC-DASH-07: the overview API is real by default, so no notice, alert or rule says "mẫu" (O4 covers fixtures).
+  for (const s of ['Dữ liệu mẫu', ' · dữ liệu mẫu', '(mẫu)']) assert.ok(!html.includes(s), s);
   for (const s of ['CEFR', 'SLA', 'Gems', 'League', 'Streak Freeze', 'R2', 'Snapshot']) assert.ok(!html.includes(s), s);
   // design.md §3.7: enums and spec references never show as visible text.
   for (const s of ['>AI_QUEUE_FULL<', 'AI_QUEUE_FULL)', 'invariant', 'design.md', 'MISSION_REWARD', 'ADMIN_ADJUSTMENT']) assert.ok(!html.includes(s), s);
