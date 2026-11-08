@@ -1,3 +1,5 @@
+import { buildApiUrl } from './api-config';
+
 export interface ApiFieldError {
   field: string;
   code: string;
@@ -124,7 +126,7 @@ async function requestTokenRefresh(): Promise<string | null> {
 
   activeRefreshPromise = (async () => {
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch(buildApiUrl('/api/auth/refresh'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +185,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { params, body, headers = {}, _retry = false, ...rest } = options;
 
-  let url = endpoint;
+  let url = buildApiUrl(endpoint);
   if (params) {
     const searchParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
