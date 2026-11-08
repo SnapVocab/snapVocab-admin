@@ -26,7 +26,7 @@ pipeline {
                 sh '''
                     set -eu
                     test -r "$DEPLOY_DIR/.env.production"
-                    DOCKER_BUILDKIT=1 docker build --secret id=frontend_env,src="$DEPLOY_DIR/.env.production" -t "$ADMIN_IMAGE" .
+                    DOCKER_BUILDKIT=1 docker build --network host --secret id=frontend_env,src="$DEPLOY_DIR/.env.production" -t "$ADMIN_IMAGE" .
                 '''
             }
         }
