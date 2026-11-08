@@ -12,6 +12,13 @@ export interface AdminBadge {
   iconKey: string;
   sortOrder: number;
   isActive: boolean;
+  /** PD-BDG-14: paid once inside the sync that grants the badge; a change applies to later earners only. */
+  rewardCoin: number;
+  rewardXp: number;
+  /** Reward-only frame (PUBLISHED, not for sale), usually on a series' last tier. */
+  rewardItemCode: string | null;
+  /** Server-resolved summary of rewardItemCode; null when there is none or the code no longer resolves. */
+  rewardItem: BadgeRewardItem | null;
   /** Null until the P2 version migration; never display a made-up version. */
   version: number | null;
   /** Null when unsupported; an actual count of zero is distinct from missing data. */
@@ -20,15 +27,23 @@ export interface AdminBadge {
   updatedAt: string;
 }
 
+export interface BadgeRewardItem { name: string; type: string; status: string; purchasable: boolean; previewUrl: string | null }
+
 /** Strip filter: all, on, off, or the rows a client-side check flags (catalog.ts `reviewIssues`). */
 export type StatusFilter = 'ALL' | 'ON' | 'OFF' | 'ISSUES';
 
 /** P2 PATCH bodies (badges.md §8.4): content and on/off go separately; code, metric and threshold never. */
-export interface BadgeContentPatch { version: number; name?: string; description?: string; iconKey?: string; sortOrder?: number }
+export interface BadgeContentPatch {
+  version: number; name?: string; description?: string; iconKey?: string; sortOrder?: number;
+  rewardCoin?: number; rewardXp?: number; rewardItemCode?: string | null;
+}
 export interface BadgeActivePatch { version: number; isActive: boolean }
 
 /** PD-BDG-13d: activated accounts at or past the threshold that do not hold the badge yet, when it was counted. */
 export interface BadgeRefillEstimate { eligibleCount: number; calculatedAt: string; version: number }
 
-/** Editor draft; sortOrder stays text until it validates. */
-export interface BadgeForm { name: string; description: string; iconKey: string; sortOrder: string }
+/** Editor draft; numbers stay text until they validate. */
+export interface BadgeForm {
+  name: string; description: string; iconKey: string; sortOrder: string;
+  rewardCoin: string; rewardXp: string; rewardItemCode: string | null;
+}

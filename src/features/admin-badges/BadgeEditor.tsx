@@ -5,7 +5,7 @@ import { Badge, Button, ConfirmModal, Field, SectionLabel, fieldControl } from '
 import { getAdminBadge, patchAdminBadge } from '../../domains/admin-badges/api';
 import {
   EMBLEM_LABELS, applyForm, contentPatch, formatCount, groupCatalog, isKnownEmblem, metricInfo, previewShelf, reviewIssues,
-  ruleSentence, statusReason, toForm, validateBadgeForm,
+  REWARD_MAX, rewardLabel, ruleSentence, statusReason, toForm, validateBadgeForm,
 } from '../../domains/admin-badges/catalog';
 import { badgeKeys } from '../../domains/admin-badges/queries';
 import type { AdminBadge, BadgeForm } from '../../domains/admin-badges/types';
@@ -13,13 +13,17 @@ import { formatVnDateTime } from '../../domains/shop/mappers';
 import { ApiClientError } from '../../lib/api-client';
 import { cn } from '../../lib/utils';
 import { ErrorBanner } from '../admin-missions/components';
+import { RewardItemPicker } from '../admin-missions/RewardItemPicker';
 import { TargetHistory } from '../activity-log/TargetHistory';
 import { BadgeArtifact } from './BadgeArtifact';
 import { badgeArt } from './badgeArt';
 import { badgeErrorMessage } from './ui';
 
-const FIELD_LABEL: Record<keyof BadgeForm, string> = { name: 'Tên', description: 'Mô tả', iconKey: 'Biểu tượng', sortOrder: 'Thứ tự' };
-const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'iconKey' ? EMBLEM_LABELS[f.iconKey] ?? f.iconKey : f[k]);
+const FIELD_LABEL: Record<keyof BadgeForm, string> = {
+  name: 'Tên', description: 'Mô tả', iconKey: 'Biểu tượng', sortOrder: 'Thứ tự', rewardCoin: 'Xu thưởng', rewardXp: 'XP thưởng',
+  rewardItemCode: 'Vật phẩm thưởng',
+};
+const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'iconKey' ? EMBLEM_LABELS[f.iconKey] ?? f.iconKey : f[k] ?? 'Không có');
 
 /** Shelf position on the Thành tựu screen once this badge is on (series ordered by min(sortOrder), UI-BDG-07). */
 function shelfRank(all: AdminBadge[], b: AdminBadge) {
@@ -99,6 +103,8 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   const rankDraft = shelfRank(all, draft);
   const reason = statusReason(original);
   const thresholdMissing = reviewIssues(draft).some((t) => t.startsWith('Mô tả'));
+  // PD-BDG-14: the last milestone of a series pays a frame + XP; earlier ones pay Coin + XP.
+  const lastTier = shelf.length > 1 && shelf[shelf.length - 1].id === draft.id;
 
   const change = (key: keyof BadgeForm, value: string) => { setForm((f) => ({ ...f, [key]: value })); setErrors((e) => ({ ...e, [key]: undefined })); };
   const focusInvalid = () => requestAnimationFrame(() => root.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
@@ -250,6 +256,26 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             )}
           </section>
 
+          <section className="space-y-3 border-t border-border px-5 py-4">
+            <SectionLabel>Phần thưởng</SectionLabel>
+            <p className="text-xs text-text-muted">Cộng một lần khi người học nhận huy hiệu. Đổi phần thưởng chỉ áp dụng cho người nhận sau khi lưu; người đã nhận giữ phần thưởng cũ, không cộng bù. XP này không tính vào bảng xếp hạng.</p>
+            {editable ? <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Xu" error={errors.rewardCoin} hint={`0–${formatCount(REWARD_MAX)}`}>
+                  <input type="number" min={0} max={REWARD_MAX} step={1} className={fieldControl} value={form.rewardCoin} onChange={(e) => change('rewardCoin', e.target.value)} />
+                </Field>
+                <Field label="XP" error={errors.rewardXp} hint={`0–${formatCount(REWARD_MAX)}, không nhân Booster`}>
+                  <input type="number" min={0} max={REWARD_MAX} step={1} className={fieldControl} value={form.rewardXp} onChange={(e) => change('rewardXp', e.target.value)} />
+                </Field>
+              </div>
+              {lastTier && !form.rewardItemCode && <p role="status" className="text-xs text-warning-dark">Mốc cuối của chuỗi: theo quy ước thưởng 1 khung (avatar hoặc thẻ) cùng XP.</p>}
+              <RewardItemPicker value={form.rewardItemCode} savedCode={original.rewardItemCode} types={['AVATAR_FRAME', 'CARD_FRAME']} unsold
+                savedHint="khung đã lưu trữ vẫn được cấp cho người đạt huy hiệu; chọn khung khác thì cần khung đã phát hành."
+                onChange={(code) => { setForm((f) => ({ ...f, rewardItemCode: code })); setErrors((e) => ({ ...e, rewardItemCode: undefined })); }} />
+              {errors.rewardItemCode && <p role="alert" className="text-xs text-danger-dark">{errors.rewardItemCode}</p>}
+            </> : <p className="text-body">{rewardLabel(original)}</p>}
+          </section>
+
           <section className="space-y-2 border-t border-border px-5 pb-5 pt-4">
             <SectionLabel>Thứ tự</SectionLabel>
             {editable
@@ -393,6 +419,7 @@ function AppCard({ badge, tier, unit, earned = false }: { badge: AdminBadge; tie
       <div className="w-full"><TierPill tier={tier} /></div>
       <BadgeArtifact code={badge.code} metric={badge.metric} iconKey={badge.iconKey} state={earned ? 'earned' : 'locked'} size={64} />
       <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-text">{badge.name}</p>
+      <p className="text-2xs font-semibold text-text-muted">{rewardLabel(badge)}</p>
       {earned
         ? <p className="w-full rounded-md border border-primary/40 bg-primary-light py-0.5 text-2xs font-bold uppercase text-primary-dark">Đã mở khóa</p>
         : (

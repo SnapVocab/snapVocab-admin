@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { RefreshCw, Search, X } from 'lucide-react';
 import { Badge, Bar, Button, PageHeader, Panel, SampleDataNotice, StripCell, StripNote, SummaryStrip, toolbarControl } from '../../components/ui';
-import { appShelves, conditionLabel, filterGroups, formatCount, groupCatalog, matchesStatus, reviewIssues, statusReason } from '../../domains/admin-badges/catalog';
+import { appShelves, conditionLabel, filterGroups, formatCount, groupCatalog, matchesStatus, reviewIssues, rewardLabel, statusReason } from '../../domains/admin-badges/catalog';
 import { badgesEditable, badgesUseFixtures } from '../../domains/admin-badges/config';
 import type { AdminBadge, StatusFilter } from '../../domains/admin-badges/types';
 import { BadgeArtifact } from './BadgeArtifact';
@@ -29,7 +29,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
 
   const visible = filterGroups(groups, query, status);
   const showEarners = all.some((b) => b.earnerCount !== null);
-  const columns = showEarners ? 7 : 6;
+  const columns = showEarners ? 8 : 7;
   const filtered = query.trim() !== '' || status !== 'ALL';
   const count = (s: StatusFilter) => all.filter((b) => matchesStatus(b, s)).length;
   const pick = (s: StatusFilter) => setStatus(status === s ? 'ALL' : s);
@@ -113,6 +113,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                 <th scope="col" className="px-4 py-2 font-medium">Huy hiệu</th>
                 <th scope="col" className="px-3 py-2 font-medium">Điều kiện</th>
                 <th scope="col" className="hidden px-3 py-2 font-medium xl:table-cell">Mô tả người học đọc</th>
+                <th scope="col" className="px-3 py-2 font-medium" title="Cộng một lần khi người học nhận huy hiệu">Phần thưởng</th>
                 {showEarners && <th scope="col" className="px-3 py-2 text-right font-medium" title="Số người đã nhận; vạch so với mốc nhiều người đạt nhất của chuỗi">Đã đạt</th>}
                 <th scope="col" className="hidden px-3 py-2 text-right font-medium xl:table-cell" title="Số nhỏ nhất của chuỗi quyết định vị trí kệ; còn là thứ tự phụ trên Hồ sơ">Thứ tự</th>
                 <th scope="col" className="px-3 py-2 font-medium">Trạng thái</th>
@@ -150,6 +151,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums">{conditionLabel(b)}</td>
                         <td className="hidden max-w-xs px-3 py-2 text-text-muted xl:table-cell"><p className="line-clamp-2" title={b.description}>{b.description}</p></td>
+                        <td className="px-3 py-2 tabular-nums">{rewardLabel(b)}</td>
                         {showEarners && (
                           <td className="w-32 px-3 py-2">
                             {b.earnerCount === null ? <span className="block text-right text-text-light">—</span> : <>

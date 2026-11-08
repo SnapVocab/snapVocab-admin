@@ -117,8 +117,14 @@ const mentions = (text: string, n: number) =>
  * What an operator should look at before learners do (the "Cần rà" strip cell). The description check only catches a
  * missing threshold number, never a wrong meaning (badges.md §10).
  */
-export function reviewIssues(b: Pick<AdminBadge, 'metric' | 'iconKey' | 'description' | 'threshold'>): string[] {
+export function reviewIssues(b: Pick<AdminBadge, 'metric' | 'iconKey' | 'description' | 'threshold' | 'rewardCoin' | 'rewardXp' | 'rewardItemCode' | 'rewardItem'>): string[] {
   const issues: string[] = [];
+  if (!b.rewardCoin && !b.rewardXp && !b.rewardItemCode) issues.push('Chưa có phần thưởng: người học đạt huy hiệu mà không nhận Xu, XP hay vật phẩm.');
+  const item = b.rewardItem;
+  if (b.rewardItemCode && !item) issues.push(`Không tìm thấy vật phẩm thưởng ${b.rewardItemCode} trong Cửa hàng.`);
+  // ARCHIVED still grants (ShopRewardService); only a draft is never granted.
+  else if (item?.status === 'DRAFT') issues.push(`Vật phẩm thưởng “${item.name}” chưa phát hành: người đạt huy hiệu sẽ không nhận được khung.`);
+  else if (item?.purchasable) issues.push(`Vật phẩm thưởng “${item.name}” đang bán ở Cửa hàng: người đã mua sẽ không nhận gì thêm.`);
   if (!metricInfo(b.metric)) issues.push(`Admin chưa hỗ trợ chỉ số ${b.metric}: chưa có tên chuỗi, đơn vị và cách đếm.`);
   if (!isKnownEmblem(b.iconKey)) issues.push(`Ứng dụng không có biểu tượng “${b.iconKey}”, người học thấy huy chương mặc định.`);
   if (b.description.trim() && !mentions(b.description, b.threshold)) issues.push(`Mô tả không nêu ngưỡng ${formatCount(b.threshold)}, người học có thể hiểu sai điều kiện.`);
@@ -128,7 +134,20 @@ export function reviewIssues(b: Pick<AdminBadge, 'metric' | 'iconKey' | 'descrip
 /** Shelves a learner who has earned nothing sees: active badges only, in app order (UI-BDG-07). */
 export const appShelves = (all: AdminBadge[]) => groupCatalog(all.filter(b => b.isActive));
 
-export const toForm = (b: AdminBadge): BadgeForm => ({ name: b.name, description: b.description, iconKey: b.iconKey, sortOrder: String(b.sortOrder) });
+export const toForm = (b: AdminBadge): BadgeForm => ({
+  name: b.name, description: b.description, iconKey: b.iconKey, sortOrder: String(b.sortOrder),
+  rewardCoin: String(b.rewardCoin), rewardXp: String(b.rewardXp), rewardItemCode: b.rewardItemCode,
+});
+
+export const REWARD_MAX = 1000;
+const reward = (s: string) => (/^\d+$/.test(s.trim()) && Number(s) <= REWARD_MAX ? Number(s) : null);
+
+/** "+20 Xu · +50 XP · Khung Lửa"; "Không có" when the badge pays nothing. */
+export function rewardLabel(b: Pick<AdminBadge, 'rewardCoin' | 'rewardXp' | 'rewardItemCode' | 'rewardItem'>): string {
+  const parts = [b.rewardCoin > 0 && `+${formatCount(b.rewardCoin)} Xu`, b.rewardXp > 0 && `+${formatCount(b.rewardXp)} XP`,
+    b.rewardItemCode && (b.rewardItem?.name ?? b.rewardItemCode)].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'Không có';
+}
 
 /** Mirrors the planned server checks (badges.md §8.4) so a draft fails here before it fails there. */
 export function validateBadgeForm(f: BadgeForm): Partial<Record<keyof BadgeForm, string>> {
@@ -138,6 +157,8 @@ export function validateBadgeForm(f: BadgeForm): Partial<Record<keyof BadgeForm,
   if (!description) errors.description = 'Nhập mô tả.'; else if (description.length > 255) errors.description = 'Tối đa 255 ký tự.';
   if (!isKnownEmblem(f.iconKey)) errors.iconKey = 'Chọn một biểu tượng ứng dụng có.';
   if (!/^-?\d+$/.test(f.sortOrder.trim()) || !Number.isSafeInteger(Number(f.sortOrder))) errors.sortOrder = 'Nhập số nguyên.';
+  if (reward(f.rewardCoin) === null) errors.rewardCoin = `Nhập số nguyên 0–${formatCount(REWARD_MAX)}.`;
+  if (reward(f.rewardXp) === null) errors.rewardXp = `Nhập số nguyên 0–${formatCount(REWARD_MAX)}.`;
   return errors;
 }
 
@@ -145,6 +166,8 @@ export function validateBadgeForm(f: BadgeForm): Partial<Record<keyof BadgeForm,
 export const applyForm = (b: AdminBadge, f: BadgeForm): AdminBadge => ({
   ...b, name: f.name.trim() || b.name, description: f.description.trim() || b.description, iconKey: f.iconKey,
   sortOrder: /^-?\d+$/.test(f.sortOrder.trim()) ? Number(f.sortOrder) : b.sortOrder,
+  rewardCoin: reward(f.rewardCoin) ?? b.rewardCoin, rewardXp: reward(f.rewardXp) ?? b.rewardXp,
+  rewardItemCode: f.rewardItemCode, rewardItem: f.rewardItemCode === b.rewardItemCode ? b.rewardItem : null,
 });
 
 /** Only the fields that changed, with the version they were read at; null when nothing changed. */
@@ -155,6 +178,9 @@ export function contentPatch(b: AdminBadge, f: BadgeForm): BadgeContentPatch | n
   if (next.description !== b.description) patch.description = next.description;
   if (next.iconKey !== b.iconKey) patch.iconKey = next.iconKey;
   if (next.sortOrder !== b.sortOrder) patch.sortOrder = next.sortOrder;
+  if (next.rewardCoin !== b.rewardCoin) patch.rewardCoin = next.rewardCoin;
+  if (next.rewardXp !== b.rewardXp) patch.rewardXp = next.rewardXp;
+  if (next.rewardItemCode !== b.rewardItemCode) patch.rewardItemCode = next.rewardItemCode;
   return Object.keys(patch).length > 1 ? patch : null;
 }
 

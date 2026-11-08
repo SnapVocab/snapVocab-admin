@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   appShelves, conditionLabel, contentPatch, filterGroups, groupCatalog, isKnownEmblem, previewShelf, reviewIssues, ruleSentence,
-  statusReason, toForm, validateBadgeForm,
+  rewardLabel, statusReason, toForm, validateBadgeForm,
 } from '../src/domains/admin-badges/catalog';
 import { DATASETS, fixtureBadges, fixturePatchBadge, fixtureRefillEstimate } from '../src/domains/admin-badges/fixtures';
 import { fixtureBadgeHolders } from '../src/domains/admin-learners/fixtures';
@@ -89,9 +89,28 @@ test('P2 form: server rules checked first; the patch carries only changed fields
   assert.equal(contentPatch(b, toForm(b)), null);
   assert.equal(contentPatch(b, { ...toForm(b), name: `  ${b.name}  ` }), null, 'whitespace alone is not a change');
   assert.deepEqual(contentPatch(b, { ...toForm(b), name: ' Mười Bài Quiz ', sortOrder: '25' }), { version: 3, name: 'Mười Bài Quiz', sortOrder: 25 });
-  assert.deepEqual(Object.keys(validateBadgeForm({ name: ' ', description: 'x'.repeat(256), iconKey: 'rocket', sortOrder: '2.5' })).sort(),
+  assert.deepEqual(Object.keys(validateBadgeForm({ ...toForm(b), name: ' ', description: 'x'.repeat(256), iconKey: 'rocket', sortOrder: '2.5' })).sort(),
     ['description', 'iconKey', 'name', 'sortOrder']);
   assert.deepEqual(validateBadgeForm(toForm(b)), {});
+});
+
+test('PD-BDG-14 rewards: validated 0–1000, patched only when changed, labelled and reviewed', () => {
+  const b = { ...byCode('QUIZ_10'), version: 3 };
+  assert.deepEqual([b.rewardCoin, b.rewardXp, b.rewardItemCode], [60, 150, null], 'fixtures mirror the seeder tiers');
+  assert.deepEqual(Object.keys(validateBadgeForm({ ...toForm(b), rewardCoin: '-1', rewardXp: '1001' })).sort(), ['rewardCoin', 'rewardXp']);
+  assert.deepEqual(validateBadgeForm({ ...toForm(b), rewardCoin: '0', rewardXp: '1000' }), {});
+  assert.deepEqual(contentPatch(b, { ...toForm(b), rewardCoin: '0', rewardItemCode: 'FRAME_QUIZ' }), { version: 3, rewardCoin: 0, rewardItemCode: 'FRAME_QUIZ' });
+  const last = { ...byCode('QUIZ_50'), rewardItemCode: 'FRAME_QUIZ', rewardItem: { name: 'Khung Chiến Binh', type: 'AVATAR_FRAME', status: 'PUBLISHED', purchasable: false, previewUrl: null } };
+  assert.deepEqual(contentPatch(last, { ...toForm(last), rewardItemCode: null }), { version: 0, rewardItemCode: null });
+  assert.equal(rewardLabel(b), '+60 Xu · +150 XP');
+  assert.equal(rewardLabel(last), '+300 XP · Khung Chiến Binh');
+  assert.equal(rewardLabel({ ...b, rewardCoin: 0, rewardXp: 0 }), 'Không có');
+  assert.deepEqual(reviewIssues(last), []);
+  assert.match(reviewIssues({ ...b, rewardCoin: 0, rewardXp: 0 }).join(), /Chưa có phần thưởng/);
+  assert.match(reviewIssues({ ...last, rewardItem: null }).join(), /Không tìm thấy vật phẩm thưởng FRAME_QUIZ/);
+  assert.match(reviewIssues({ ...last, rewardItem: { ...last.rewardItem, purchasable: true } }).join(), /đang bán ở Cửa hàng/);
+  assert.match(reviewIssues({ ...last, rewardItem: { ...last.rewardItem, status: 'DRAFT' } }).join(), /chưa phát hành/);
+  assert.deepEqual(reviewIssues({ ...last, rewardItem: { ...last.rewardItem, status: 'ARCHIVED' } }), [], 'an archived frame is still granted');
 });
 
 test('AC-CAT-4: a catalog without earner counts has no "Đã đạt" column and no grant total', () => {

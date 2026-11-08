@@ -7,9 +7,13 @@ import type { AdminBadge, BadgeActivePatch, BadgeContentPatch, BadgeRefillEstima
 // seed lacks. The MOCK catalog at the bottom (config.ts) is what dev/demo builds show while P2 is not built.
 
 const AT = '2026-10-07T00:00:00Z';
+/** BadgeCatalogSeeder TIER_REWARD by sort order's last digit; last-tier frames are attached by Admin later. */
+const TIER_REWARD = [[20, 50], [60, 150], [0, 300]];
 const badge = (id: number, sortOrder: number, code: string, metric: string, threshold: number, name: string,
   description: string, iconKey: string, extra: Partial<AdminBadge> = {}): AdminBadge => ({
   id, code, name, description, metric, threshold, iconKey, sortOrder,
+  rewardCoin: (TIER_REWARD[sortOrder % 10] ?? TIER_REWARD[0])[0], rewardXp: (TIER_REWARD[sortOrder % 10] ?? TIER_REWARD[0])[1],
+  rewardItemCode: null, rewardItem: null,
   isActive: true, version: 0, earnerCount: null, createdAt: AT, updatedAt: AT, ...extra,
 });
 
@@ -102,8 +106,15 @@ export function fixturePatchBadge(id: number, body: BadgeContentPatch | BadgeAct
     if (name !== undefined && (name.length < 1 || name.length > 100)) errors.push({ field: 'name', code: 'SIZE', message: 'Tên dài 1–100 ký tự.' });
     if (description !== undefined && (description.length < 1 || description.length > 255)) errors.push({ field: 'description', code: 'SIZE', message: 'Mô tả dài 1–255 ký tự.' });
     if (body.iconKey !== undefined && !(body.iconKey in EMBLEM_LABELS)) errors.push({ field: 'iconKey', code: 'INVALID', message: 'Biểu tượng không có trong ứng dụng.' });
+    for (const field of ['rewardCoin', 'rewardXp'] as const) {
+      const v = body[field];
+      if (v !== undefined && !(Number.isInteger(v) && v >= 0 && v <= 1000)) errors.push({ field, code: 'VALIDATION_ERROR', message: 'Số nguyên 0–1.000.' });
+    }
     if (errors.length) return fail('VALIDATION_ERROR', 400, { errors });
-    Object.assign(next, Object.fromEntries(Object.entries({ name, description, iconKey: body.iconKey, sortOrder: body.sortOrder }).filter(([, v]) => v !== undefined)));
+    // ponytail: the fixture cannot check the Shop, so any frame code is accepted and rewardItem stays unresolved.
+    if (body.rewardItemCode !== undefined) Object.assign(next, { rewardItemCode: body.rewardItemCode, rewardItem: null });
+    Object.assign(next, Object.fromEntries(Object.entries({ name, description, iconKey: body.iconKey, sortOrder: body.sortOrder,
+      rewardCoin: body.rewardCoin, rewardXp: body.rewardXp }).filter(([, v]) => v !== undefined)));
   }
   list[i] = next;
   return wait(next);
