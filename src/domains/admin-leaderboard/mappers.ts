@@ -124,14 +124,20 @@ export function reachedLabel(iso: string, asOf: string): string {
 }
 
 const SOURCE_WORD: Record<XpSourceType, string> = {
-  FLASHCARD_REVIEW: 'ôn thẻ', QUIZ: 'quiz', MISSION_REWARD: 'nhiệm vụ', SAVE_WORD: 'lưu từ', ADMIN_ADJUSTMENT: 'điều chỉnh của admin',
+  FLASHCARD_REVIEW: 'ôn thẻ', QUIZ: 'quiz', MISSION_REWARD: 'nhiệm vụ', BADGE_REWARD: 'huy hiệu', SAVE_WORD: 'lưu từ', ADMIN_ADJUSTMENT: 'điều chỉnh của admin',
 };
 
 /** The scoring rule in operator words, from the sources the backend actually counts (LB-01, OQ-LB-01). */
 export function scoringRule(counted: XpSourceType[]): string {
   const words = counted.map((s) => SOURCE_WORD[s]);
   const list = words.length > 1 ? `${words.slice(0, -1).join(', ')} và ${words[words.length - 1]}` : words[0] ?? '';
-  return `XP tuần là XP ${list}, gồm cả phần Booster${counted.includes('MISSION_REWARD') ? '' : '; không tính XP nhiệm vụ'}. Tuần tính từ 00:00 Thứ Hai, giờ Việt Nam.`;
+  const skipped = rewardSourcesSkipped(counted);
+  return `XP tuần là XP ${list}, gồm cả phần Booster${skipped ? `; không tính XP ${skipped}` : ''}. Tuần tính từ 00:00 Thứ Hai, giờ Việt Nam.`;
+}
+
+/** "nhiệm vụ và huy hiệu": one-off reward XP the board leaves out (badge XP never counts, PD-BDG-14). */
+export function rewardSourcesSkipped(counted: XpSourceType[]): string {
+  return (['MISSION_REWARD', 'BADGE_REWARD'] as const).filter((s) => !counted.includes(s)).map((s) => SOURCE_WORD[s]).join(' và ');
 }
 
 export type LearnerViewLine = { row: AdminLeaderboardRow; me: boolean } | 'gap';

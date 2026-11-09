@@ -1,31 +1,36 @@
 import { fixtureBadgeHolders } from '../admin-learners/fixtures';
 import { ApiClientError } from '../../lib/api-client';
-import { EMBLEM_LABELS } from './catalog';
 import type { AdminBadge, BadgeActivePatch, BadgeContentPatch, BadgeRefillEstimate } from './types';
 
 // SEED mirrors BadgeCatalogSeeder (badges.md §4.1) and is the reference set for tests; EDGE adds the boundary cases the
 // seed lacks. The MOCK catalog at the bottom (config.ts) is what dev/demo builds show while P2 is not built.
 
 const AT = '2026-10-07T00:00:00Z';
+/** BadgeCatalogSeeder TIER_REWARD by sort order's last digit; last-tier frames are attached by Admin later. */
+const TIER_REWARD = [[20, 50], [60, 150], [0, 300]];
 const badge = (id: number, sortOrder: number, code: string, metric: string, threshold: number, name: string,
-  description: string, iconKey: string, extra: Partial<AdminBadge> = {}): AdminBadge => ({
-  id, code, name, description, metric, threshold, iconKey, sortOrder,
+  description: string, extra: Partial<AdminBadge> = {}): AdminBadge => ({
+  id, code, name, description, metric, threshold, sortOrder,
+  // Fixtures have no MinIO behind them: the key is real-shaped, the URL is absent.
+  imageKey: `public/badges/${code.toLowerCase()}.png`, imageUrl: null,
+  rewardCoin: (TIER_REWARD[sortOrder % 10] ?? TIER_REWARD[0])[0], rewardXp: (TIER_REWARD[sortOrder % 10] ?? TIER_REWARD[0])[1],
+  rewardItemCode: null, rewardItem: null,
   isActive: true, version: 0, earnerCount: null, createdAt: AT, updatedAt: AT, ...extra,
 });
 
 const SEED: AdminBadge[] = [
-  badge(1, 10, 'STREAK_7', 'LONGEST_STREAK_DAYS', 7, 'Một Tuần Bền Bỉ', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 7 ngày trong một chuỗi không đứt', 'flame'),
-  badge(2, 11, 'STREAK_30', 'LONGEST_STREAK_DAYS', 30, 'Tháng Không Nghỉ', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 30 ngày trong một chuỗi không đứt', 'flame'),
-  badge(3, 12, 'STREAK_100', 'LONGEST_STREAK_DAYS', 100, 'Trăm Ngày Kiên Trì', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 100 ngày trong một chuỗi không đứt', 'flame'),
-  badge(4, 20, 'QUIZ_1', 'QUIZ_COMPLETED', 1, 'Bài Quiz Đầu Tiên', 'Hoàn thành 1 quiz', 'clipboard-check'),
-  badge(5, 21, 'QUIZ_10', 'QUIZ_COMPLETED', 10, 'Quen Tay Quiz', 'Hoàn thành 10 quiz', 'clipboard-check'),
-  badge(6, 22, 'QUIZ_50', 'QUIZ_COMPLETED', 50, 'Chiến Binh Quiz', 'Hoàn thành 50 quiz', 'clipboard-check'),
-  badge(7, 30, 'PERFECT_1', 'PERFECT_QUIZ', 1, 'Điểm Tuyệt Đối', 'Đúng tất cả câu (hoặc tất cả cặp) trong 1 quiz', 'target'),
-  badge(8, 31, 'PERFECT_10', 'PERFECT_QUIZ', 10, 'Mười Lần Tuyệt Đối', 'Đạt điểm tuyệt đối 10 lần (mỗi quiz đúng tất cả câu hoặc cặp)', 'target'),
-  badge(9, 32, 'PERFECT_50', 'PERFECT_QUIZ', 50, 'Năm Mươi Lần Tuyệt Đối', 'Đạt điểm tuyệt đối 50 lần (mỗi quiz đúng tất cả câu hoặc cặp)', 'target'),
-  badge(10, 40, 'WORDS_10', 'DISTINCT_WORDS_ADDED', 10, 'Mười Từ Đầu Tiên', 'Tự thêm 10 từ khác nhau vào bộ sưu tập của bạn', 'book-open'),
-  badge(11, 41, 'WORDS_100', 'DISTINCT_WORDS_ADDED', 100, 'Kho Từ Trăm Chữ', 'Tự thêm 100 từ khác nhau vào bộ sưu tập của bạn', 'book-open'),
-  badge(12, 42, 'WORDS_500', 'DISTINCT_WORDS_ADDED', 500, 'Thư Viện Sống', 'Tự thêm 500 từ khác nhau vào bộ sưu tập của bạn', 'book-open'),
+  badge(1, 10, 'STREAK_7', 'LONGEST_STREAK_DAYS', 7, 'Một Tuần Bền Bỉ', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 7 ngày trong một chuỗi không đứt'),
+  badge(2, 11, 'STREAK_30', 'LONGEST_STREAK_DAYS', 30, 'Tháng Không Nghỉ', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 30 ngày trong một chuỗi không đứt'),
+  badge(3, 12, 'STREAK_100', 'LONGEST_STREAK_DAYS', 100, 'Trăm Ngày Kiên Trì', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 100 ngày trong một chuỗi không đứt'),
+  badge(4, 20, 'QUIZ_1', 'QUIZ_COMPLETED', 1, 'Bài Quiz Đầu Tiên', 'Hoàn thành 1 quiz'),
+  badge(5, 21, 'QUIZ_10', 'QUIZ_COMPLETED', 10, 'Quen Tay Quiz', 'Hoàn thành 10 quiz'),
+  badge(6, 22, 'QUIZ_50', 'QUIZ_COMPLETED', 50, 'Chiến Binh Quiz', 'Hoàn thành 50 quiz'),
+  badge(7, 30, 'PERFECT_1', 'PERFECT_QUIZ', 1, 'Điểm Tuyệt Đối', 'Đúng tất cả câu (hoặc tất cả cặp) trong 1 quiz'),
+  badge(8, 31, 'PERFECT_10', 'PERFECT_QUIZ', 10, 'Mười Lần Tuyệt Đối', 'Đạt điểm tuyệt đối 10 lần (mỗi quiz đúng tất cả câu hoặc cặp)'),
+  badge(9, 32, 'PERFECT_50', 'PERFECT_QUIZ', 50, 'Năm Mươi Lần Tuyệt Đối', 'Đạt điểm tuyệt đối 50 lần (mỗi quiz đúng tất cả câu hoặc cặp)'),
+  badge(10, 40, 'WORDS_10', 'DISTINCT_WORDS_ADDED', 10, 'Mười Từ Đầu Tiên', 'Tự thêm 10 từ khác nhau vào bộ sưu tập của bạn'),
+  badge(11, 41, 'WORDS_100', 'DISTINCT_WORDS_ADDED', 100, 'Kho Từ Trăm Chữ', 'Tự thêm 100 từ khác nhau vào bộ sưu tập của bạn'),
+  badge(12, 42, 'WORDS_500', 'DISTINCT_WORDS_ADDED', 500, 'Thư Viện Sống', 'Tự thêm 500 từ khác nhau vào bộ sưu tập của bạn'),
 ];
 
 // Illustrative earner counts (G6 does not exist): only there to exercise the "Đã đạt" column and status reasons.
@@ -35,16 +40,16 @@ const SEED_G6 = SEED.map((b, i) => ({ ...b, earnerCount: EARNERS[i] }));
 const EDGE: AdminBadge[] = [
   ...SEED_G6,
   // Inactive, nobody earned it; also makes "Vốn từ tự xây" a four-milestone series.
-  badge(13, 43, 'WORDS_250', 'DISTINCT_WORDS_ADDED', 250, 'Hai Trăm Rưỡi Từ', 'Tự thêm 250 từ khác nhau vào bộ sưu tập của bạn', 'book-open', { isActive: false, earnerCount: 0 }),
+  badge(13, 43, 'WORDS_250', 'DISTINCT_WORDS_ADDED', 250, 'Hai Trăm Rưỡi Từ', 'Tự thêm 250 từ khác nhau vào bộ sưu tập của bạn', { isActive: false, earnerCount: 0 }),
   // Inactive with earners: they keep seeing it, nobody else does.
-  badge(14, 13, 'STREAK_14', 'LONGEST_STREAK_DAYS', 14, 'Hai Tuần Liền', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 14 ngày trong một chuỗi không đứt', 'flame', { isActive: false, earnerCount: 340, version: 2 }),
+  badge(14, 13, 'STREAK_14', 'LONGEST_STREAK_DAYS', 14, 'Hai Tuần Liền', 'Học (quiz, ôn thẻ hoặc lưu từ đã quét) 14 ngày trong một chuỗi không đứt', { isActive: false, earnerCount: 340, version: 2 }),
   // Inactive with the smallest sortOrder of the whole catalog: the admin lists "Quiz hoàn thành" first, while a learner
   // who never earned it sees that shelf after "Chuỗi ngày học" (rev 2 §2.4).
-  badge(15, 5, 'QUIZ_5', 'QUIZ_COMPLETED', 5, 'Năm Bài Quiz', 'Hoàn thành 5 quiz', 'clipboard-check', { isActive: false, earnerCount: 75, version: 1 }),
-  // iconKey the app cannot draw; also makes "Điểm tuyệt đối" a four-milestone series.
-  badge(16, 33, 'PERFECT_25', 'PERFECT_QUIZ', 25, 'Hai Lăm Lần Tuyệt Đối', 'Đạt điểm tuyệt đối 25 lần (mỗi quiz đúng tất cả câu hoặc cặp)', 'rocket', { earnerCount: 210 }),
-  // Metric the admin does not map (a deferred scan badge, badges.md §4.2), with an unknown icon too.
-  badge(17, 50, 'SCAN_10', 'SCAN_SAVED', 10, 'Mười Lần Quét', 'Quét ảnh và lưu từ 10 lần', 'camera', { isActive: false, earnerCount: 0 }),
+  badge(15, 5, 'QUIZ_5', 'QUIZ_COMPLETED', 5, 'Năm Bài Quiz', 'Hoàn thành 5 quiz', { isActive: false, earnerCount: 75, version: 1 }),
+  // No image uploaded yet; also makes "Điểm tuyệt đối" a four-milestone series.
+  badge(16, 33, 'PERFECT_25', 'PERFECT_QUIZ', 25, 'Hai Lăm Lần Tuyệt Đối', 'Đạt điểm tuyệt đối 25 lần (mỗi quiz đúng tất cả câu hoặc cặp)', { earnerCount: 210, imageKey: null }),
+  // Metric the admin does not map (a deferred scan badge, badges.md §4.2), without an image too.
+  badge(17, 50, 'SCAN_10', 'SCAN_SAVED', 10, 'Mười Lần Quét', 'Quét ảnh và lưu từ 10 lần', { isActive: false, earnerCount: 0, imageKey: null }),
 ];
 
 export type DatasetKey = 'seed' | 'seed-g6' | 'edge';
@@ -70,7 +75,7 @@ function catalog(): AdminBadge[] {
     const earners = (code: string) => all.filter((h) => h.codes.includes(code)).length;
     store = [
       ...SEED.map((b) => ({ ...b, earnerCount: earners(b.code) })),
-      badge(13, 23, 'QUIZ_25', 'QUIZ_COMPLETED', 25, 'Hai Mươi Lăm Bài Quiz', 'Hoàn thành 25 quiz', 'clipboard-check',
+      badge(13, 23, 'QUIZ_25', 'QUIZ_COMPLETED', 25, 'Hai Mươi Lăm Bài Quiz', 'Hoàn thành 25 quiz',
         { isActive: false, earnerCount: 0, createdAt: '2026-10-20T03:12:00Z', updatedAt: '2026-10-20T03:12:00Z' }),
     ];
   }
@@ -88,7 +93,7 @@ export function fixtureBadge(id: number) {
   return b ? wait(b) : fail('BADGE_NOT_FOUND', 404);
 }
 
-/** Same rules as the planned PATCH (badges.md §8.4): version check, trim, lengths, icon whitelist. */
+/** Same rules as the PATCH (badges.md §8.4): version check, trim, lengths, image key shape. */
 export function fixturePatchBadge(id: number, body: BadgeContentPatch | BadgeActivePatch) {
   const list = catalog();
   const i = list.findIndex((x) => x.id === id);
@@ -101,9 +106,16 @@ export function fixturePatchBadge(id: number, body: BadgeContentPatch | BadgeAct
     const name = body.name?.trim(), description = body.description?.trim();
     if (name !== undefined && (name.length < 1 || name.length > 100)) errors.push({ field: 'name', code: 'SIZE', message: 'Tên dài 1–100 ký tự.' });
     if (description !== undefined && (description.length < 1 || description.length > 255)) errors.push({ field: 'description', code: 'SIZE', message: 'Mô tả dài 1–255 ký tự.' });
-    if (body.iconKey !== undefined && !(body.iconKey in EMBLEM_LABELS)) errors.push({ field: 'iconKey', code: 'INVALID', message: 'Biểu tượng không có trong ứng dụng.' });
+    if (body.imageKey !== undefined && !/^public\/badges\/[\w-]+\.(png|webp)$/.test(body.imageKey)) errors.push({ field: 'imageKey', code: 'VALIDATION_ERROR', message: 'Ảnh phải được tải lên qua Admin.' });
+    for (const field of ['rewardCoin', 'rewardXp'] as const) {
+      const v = body[field];
+      if (v !== undefined && !(Number.isInteger(v) && v >= 0 && v <= 1000)) errors.push({ field, code: 'VALIDATION_ERROR', message: 'Số nguyên 0–1.000.' });
+    }
     if (errors.length) return fail('VALIDATION_ERROR', 400, { errors });
-    Object.assign(next, Object.fromEntries(Object.entries({ name, description, iconKey: body.iconKey, sortOrder: body.sortOrder }).filter(([, v]) => v !== undefined)));
+    // ponytail: the fixture cannot check the Shop, so any frame code is accepted and rewardItem stays unresolved.
+    if (body.rewardItemCode !== undefined) Object.assign(next, { rewardItemCode: body.rewardItemCode, rewardItem: null });
+    Object.assign(next, Object.fromEntries(Object.entries({ name, description, imageKey: body.imageKey, sortOrder: body.sortOrder,
+      rewardCoin: body.rewardCoin, rewardXp: body.rewardXp }).filter(([, v]) => v !== undefined)));
   }
   list[i] = next;
   return wait(next);

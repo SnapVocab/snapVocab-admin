@@ -7,7 +7,7 @@
  * Read-only (LB-12): the whole board of ONE snapshot, the same one learners see. Search and filters run here (KT-07).
  */
 export type LeaderboardWeek = 'CURRENT' | 'PREVIOUS';
-export type XpSourceType = 'FLASHCARD_REVIEW' | 'QUIZ' | 'SAVE_WORD' | 'MISSION_REWARD' | 'ADMIN_ADJUSTMENT';
+export type XpSourceType = 'FLASHCARD_REVIEW' | 'QUIZ' | 'SAVE_WORD' | 'MISSION_REWARD' | 'BADGE_REWARD' | 'ADMIN_ADJUSTMENT';
 
 export interface AdminLeaderboard {
   /** 'yyyy-MM-dd', Monday and Sunday of the week shown. */

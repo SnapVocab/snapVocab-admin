@@ -92,8 +92,8 @@ test('LB6: what one learner sees on the app: the top three, then the row above t
 });
 
 test('LB7: words and times an operator reads', () => {
-  assert.equal(scoringRule(['FLASHCARD_REVIEW', 'QUIZ']), 'XP tuần là XP ôn thẻ và quiz, gồm cả phần Booster; không tính XP nhiệm vụ. Tuần tính từ 00:00 Thứ Hai, giờ Việt Nam.');
-  assert.match(scoringRule(['FLASHCARD_REVIEW', 'QUIZ', 'MISSION_REWARD']), /XP ôn thẻ, quiz và nhiệm vụ, gồm cả phần Booster\. /);
+  assert.equal(scoringRule(['FLASHCARD_REVIEW', 'QUIZ']), 'XP tuần là XP ôn thẻ và quiz, gồm cả phần Booster; không tính XP nhiệm vụ và huy hiệu. Tuần tính từ 00:00 Thứ Hai, giờ Việt Nam.');
+  assert.match(scoringRule(['FLASHCARD_REVIEW', 'QUIZ', 'MISSION_REWARD']), /XP ôn thẻ, quiz và nhiệm vụ, gồm cả phần Booster; không tính XP huy hiệu\. /);
   const b = fixtureBoard('CURRENT');
   assert.equal(weekRange(b), '19/10 – 25/10');
   assert.equal(timeLeft(b.endsAt, LB_FIXTURE_NOW.getTime()), 'Còn 4 ngày 9 giờ');

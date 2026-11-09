@@ -31,7 +31,7 @@ export interface AdminLearnerRow {
   exp: number;
 }
 
-export type CoinSource = 'MISSION_REWARD' | 'SHOP_PURCHASE' | 'ADMIN_ADJUSTMENT';
+export type CoinSource = 'MISSION_REWARD' | 'BADGE_REWARD' | 'SHOP_PURCHASE' | 'ADMIN_ADJUSTMENT';
 /** Mirrors backend ScanErrorCode. */
 export type ScanErrorCode = 'INVALID_IMAGE' | 'QUOTA_EXCEEDED' | 'AI_QUEUE_FULL' | 'AI_UNAVAILABLE' | 'AI_TIMEOUT' | 'AI_ERROR' | 'INTERRUPTED';
 export type TimelineKind = 'STUDY' | 'QUIZ' | 'SCAN' | 'MISSION' | 'PURCHASE' | 'BADGE' | 'ACCOUNT';

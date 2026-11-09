@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { RefreshCw, Search, X } from 'lucide-react';
 import { Badge, Bar, Button, PageHeader, Panel, SampleDataNotice, StripCell, StripNote, SummaryStrip, toolbarControl } from '../../components/ui';
-import { appShelves, conditionLabel, filterGroups, formatCount, groupCatalog, matchesStatus, reviewIssues, statusReason } from '../../domains/admin-badges/catalog';
+import { appShelves, conditionLabel, filterGroups, formatCount, groupCatalog, matchesStatus, reviewIssues, rewardLabel, statusReason } from '../../domains/admin-badges/catalog';
 import { badgesEditable, badgesUseFixtures } from '../../domains/admin-badges/config';
 import type { AdminBadge, StatusFilter } from '../../domains/admin-badges/types';
 import { BadgeArtifact } from './BadgeArtifact';
-import { badgeArt } from './badgeArt';
 
 const time = (ms: number) => new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
@@ -29,7 +28,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
 
   const visible = filterGroups(groups, query, status);
   const showEarners = all.some((b) => b.earnerCount !== null);
-  const columns = showEarners ? 7 : 6;
+  const columns = showEarners ? 8 : 7;
   const filtered = query.trim() !== '' || status !== 'ALL';
   const count = (s: StatusFilter) => all.filter((b) => matchesStatus(b, s)).length;
   const pick = (s: StatusFilter) => setStatus(status === s ? 'ALL' : s);
@@ -39,7 +38,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
   return (
     <div className="space-y-4">
       <PageHeader title="Huy hiệu"
-        description="Người học nhận huy hiệu khi đạt mốc, ghi nhận lúc ứng dụng đồng bộ; mỗi người nhận một lần, không bị thu hồi và không kèm Coin hay XP."
+        description="Người học nhận huy hiệu khi đạt mốc, ghi nhận lúc ứng dụng đồng bộ; mỗi người nhận một lần, không bị thu hồi. Phần thưởng (Coin, XP, khung ở mốc cuối) cộng ngay lúc nhận."
         actions={<>
           {updatedAt ? <span className="hidden text-xs tabular-nums text-text-muted sm:inline">Cập nhật {time(updatedAt)}</span> : null}
           <Button icon={<RefreshCw />} label="Làm mới" loading={refreshing} onClick={onRefresh} />
@@ -80,7 +79,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                   {g.items.map((b) => (
                     <button key={b.id} type="button" onClick={(e) => onOpen(b.id, e.currentTarget)} title={`${b.name}: ${conditionLabel(b)}`}
                       className="grid w-[76px] shrink-0 justify-items-center gap-1 rounded-md pb-0.5 text-center hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info">
-                      <BadgeArtifact code={b.code} metric={b.metric} iconKey={b.iconKey} state="locked" size={52} />
+                      <BadgeArtifact imageUrl={b.imageUrl} state="locked" size={52} />
                       <span className="line-clamp-2 text-2xs text-text">{b.name}</span>
                       <span className="text-2xs tabular-nums text-text-muted">{conditionLabel(b)}</span>
                     </button>
@@ -113,6 +112,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                 <th scope="col" className="px-4 py-2 font-medium">Huy hiệu</th>
                 <th scope="col" className="px-3 py-2 font-medium">Điều kiện</th>
                 <th scope="col" className="hidden px-3 py-2 font-medium xl:table-cell">Mô tả người học đọc</th>
+                <th scope="col" className="px-3 py-2 font-medium" title="Cộng một lần khi người học nhận huy hiệu">Phần thưởng</th>
                 {showEarners && <th scope="col" className="px-3 py-2 text-right font-medium" title="Số người đã nhận; vạch so với mốc nhiều người đạt nhất của chuỗi">Đã đạt</th>}
                 <th scope="col" className="hidden px-3 py-2 text-right font-medium xl:table-cell" title="Số nhỏ nhất của chuỗi quyết định vị trí kệ; còn là thứ tự phụ trên Hồ sơ">Thứ tự</th>
                 <th scope="col" className="px-3 py-2 font-medium">Trạng thái</th>
@@ -134,13 +134,12 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                   </tr>
                   {g.items.map((b) => {
                     const reason = statusReason(b);
-                    // An unknown icon does not matter once the code has illustrated art.
-                    const issues = reviewIssues(b).filter((t) => !badgeArt(b.code) || !t.includes('biểu tượng'));
+                    const issues = reviewIssues(b);
                     return (
                       <tr key={b.id} className="hover:bg-surface-subtle/60">
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-3">
-                            <BadgeArtifact code={b.code} metric={b.metric} iconKey={b.iconKey} size={36} />
+                            <BadgeArtifact imageUrl={b.imageUrl} size={36} />
                             <div className="min-w-0">
                               <button type="button" className="text-left text-body font-medium text-text hover:underline" onClick={(e) => onOpen(b.id, e.currentTarget)}>{b.name}</button>
                               <p className="font-mono text-2xs text-text-light">{b.code}</p>
@@ -150,6 +149,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums">{conditionLabel(b)}</td>
                         <td className="hidden max-w-xs px-3 py-2 text-text-muted xl:table-cell"><p className="line-clamp-2" title={b.description}>{b.description}</p></td>
+                        <td className="px-3 py-2 tabular-nums">{rewardLabel(b)}</td>
                         {showEarners && (
                           <td className="w-32 px-3 py-2">
                             {b.earnerCount === null ? <span className="block text-right text-text-light">—</span> : <>
