@@ -6,7 +6,6 @@ import { foldVi } from '../../lib/utils';
 import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatVnDateTime } from '../shop/mappers';
 import { categoryLabels, eligibilityLabels } from '../admin-missions/mappers';
 import { banReasonError, STATUS_META } from '../admin-learners/mappers';
-import { EMBLEM_LABELS } from '../admin-badges/catalog';
 import type { LearnerStatus } from '../admin-learners/types';
 import type { AuditAction, AuditArea, AuditEntry, AuditKind, AuditTarget, AuditTargetType } from './types';
 
@@ -118,8 +117,9 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   type: { label: 'Loại', format: (v) => formatShopItemTypeLabel(String(v)) },
   name: { label: 'Tên' },
   description: { label: 'Mô tả' },
-  // Shop stores an upload key; a badge stores the emblem name the app draws.
-  iconKey: { label: 'Ảnh biểu tượng', format: (v) => EMBLEM_LABELS[String(v)] ?? asset(v) },
+  // Shop upload key; older badge rows hold the emblem name the app used to draw.
+  iconKey: { label: 'Ảnh biểu tượng', format: asset },
+  imageKey: { label: 'Ảnh huy hiệu', format: asset },
   purchasable: { label: 'Bán trong Cửa hàng' },
   price: { label: 'Giá', format: unit('Coin') },
   availableFrom: { label: 'Mở bán từ', format: (v) => formatVnDateTime(String(v)) },
@@ -175,7 +175,7 @@ export function formatValue(field: string, v: unknown): string {
 
 export interface ChangeLine { field: string; label: string; before: string | null; after: string }
 
-const ASSET_FIELDS = new Set(['iconKey', 'frameAssetKey']);
+const ASSET_FIELDS = new Set(['iconKey', 'frameAssetKey', 'imageKey']);
 const empty = (v: unknown) => v === null || v === undefined;
 
 /**

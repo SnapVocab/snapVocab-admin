@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
-  appShelves, conditionLabel, contentPatch, filterGroups, groupCatalog, isKnownEmblem, previewShelf, reviewIssues, ruleSentence,
+  appShelves, conditionLabel, contentPatch, filterGroups, groupCatalog, previewShelf, reviewIssues, ruleSentence,
   rewardLabel, statusReason, toForm, validateBadgeForm,
 } from '../src/domains/admin-badges/catalog';
 import { DATASETS, fixtureBadges, fixturePatchBadge, fixtureRefillEstimate } from '../src/domains/admin-badges/fixtures';
@@ -58,13 +58,11 @@ test('Status reason depends on earners; unknown metric and icon degrade instead 
   assert.equal(conditionLabel(byCode('SCAN_10')), '≥ 10');
   assert.equal(ruleSentence(byCode('SCAN_10')), 'SCAN_SAVED ≥ 10');
   assert.equal(ruleSentence(byCode('QUIZ_10')), 'Hoàn thành 10 quiz');
-  assert.equal(isKnownEmblem('rocket'), false);
-  assert.equal(isKnownEmblem('book-open'), true);
 });
 
-test('Cần rà: unknown icon, unmapped metric, and a description that does not state its threshold', () => {
+test('Cần rà: missing image, unmapped metric, and a description that does not state its threshold', () => {
   assert.deepEqual(seed.flatMap(reviewIssues), [], 'the approved seed copy states every threshold');
-  assert.match(reviewIssues(byCode('PERFECT_25')).join(), /“rocket”/);
+  assert.match(reviewIssues(byCode('PERFECT_25')).join(), /Chưa có ảnh huy hiệu/);
   assert.match(reviewIssues(byCode('SCAN_10')).join(), /SCAN_SAVED/);
   const quiz10 = byCode('QUIZ_10');
   assert.match(reviewIssues({ ...quiz10, description: 'Hoàn thành mười quiz' }).join(), /không nêu ngưỡng 10/);
@@ -89,8 +87,9 @@ test('P2 form: server rules checked first; the patch carries only changed fields
   assert.equal(contentPatch(b, toForm(b)), null);
   assert.equal(contentPatch(b, { ...toForm(b), name: `  ${b.name}  ` }), null, 'whitespace alone is not a change');
   assert.deepEqual(contentPatch(b, { ...toForm(b), name: ' Mười Bài Quiz ', sortOrder: '25' }), { version: 3, name: 'Mười Bài Quiz', sortOrder: 25 });
-  assert.deepEqual(Object.keys(validateBadgeForm({ ...toForm(b), name: ' ', description: 'x'.repeat(256), iconKey: 'rocket', sortOrder: '2.5' })).sort(),
-    ['description', 'iconKey', 'name', 'sortOrder']);
+  assert.deepEqual(Object.keys(validateBadgeForm({ ...toForm(b), name: ' ', description: 'x'.repeat(256), imageKey: null, sortOrder: '2.5' })).sort(),
+    ['description', 'imageKey', 'name', 'sortOrder']);
+  assert.deepEqual(contentPatch(b, { ...toForm(b), imageKey: 'public/badges/new.png' }), { version: 3, imageKey: 'public/badges/new.png' });
   assert.deepEqual(validateBadgeForm(toForm(b)), {});
 });
 
@@ -131,8 +130,8 @@ test('P1 editor view hides absent version and displays a real zero version when 
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /Lưu thay đổi|Bật huy hiệu|Tắt huy hiệu/);
 });
 
-test('AC-PRV-2/3: the editor warns about an unknown icon, previews the app card and sheet, an inactive badge, an unmapped metric', () => {
-  assert.match(editor(byCode('PERFECT_25')), /ứng dụng không có biểu tượng “rocket”/);
+test('AC-PRV-2/3: the editor warns about a missing image, previews the app card and sheet, an inactive badge, an unmapped metric', () => {
+  assert.match(editor(byCode('PERFECT_25')), /Chưa có ảnh: người học thấy ô trống/);
   assert.match(editor(byCode('PERFECT_25')), /Thẻ trên lưới Thành tựu[\s\S]*Đã mở khóa[\s\S]*Tiến độ chinh phục/);
   // PD-BDG-14: the app shows rewards, never a rarity.
   assert.doesNotMatch(editor(byCode('PERFECT_1')), /Phổ biến|Hiếm|Huyền thoại/);
@@ -173,9 +172,9 @@ test('MOCK catalog agrees with the Learners samples; PATCH follows the planned s
 
   const stale = await fixturePatchBadge(quiz25.id, { version: 99, isActive: true }).catch(e => e);
   assert.ok(stale instanceof ApiClientError && stale.code === 'VERSION_CONFLICT' && stale.details?.currentVersion === 0);
-  const invalid = await fixturePatchBadge(quiz25.id, { version: 0, iconKey: 'rocket', name: '  ' }).catch(e => e);
+  const invalid = await fixturePatchBadge(quiz25.id, { version: 0, imageKey: 'public/shop/x.png', name: '  ' }).catch(e => e);
   assert.ok(invalid instanceof ApiClientError && invalid.code === 'VALIDATION_ERROR');
-  assert.deepEqual(Object.keys(invalid.fieldErrors).sort(), ['iconKey', 'name']);
+  assert.deepEqual(Object.keys(invalid.fieldErrors).sort(), ['imageKey', 'name']);
   const on = await fixturePatchBadge(quiz25.id, { version: 0, isActive: true });
   assert.deepEqual([on.isActive, on.version, on.earnerCount], [true, 1, 0], 'switching on grants nobody by itself');
   const renamed = await fixturePatchBadge(quiz25.id, { version: 1, name: '  Hai Lăm Quiz ' });

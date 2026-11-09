@@ -5,7 +5,6 @@ import { appShelves, conditionLabel, filterGroups, formatCount, groupCatalog, ma
 import { badgesEditable, badgesUseFixtures } from '../../domains/admin-badges/config';
 import type { AdminBadge, StatusFilter } from '../../domains/admin-badges/types';
 import { BadgeArtifact } from './BadgeArtifact';
-import { badgeArt } from './badgeArt';
 
 const time = (ms: number) => new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
@@ -80,7 +79,7 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                   {g.items.map((b) => (
                     <button key={b.id} type="button" onClick={(e) => onOpen(b.id, e.currentTarget)} title={`${b.name}: ${conditionLabel(b)}`}
                       className="grid w-[76px] shrink-0 justify-items-center gap-1 rounded-md pb-0.5 text-center hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info">
-                      <BadgeArtifact code={b.code} metric={b.metric} iconKey={b.iconKey} state="locked" size={52} />
+                      <BadgeArtifact imageUrl={b.imageUrl} state="locked" size={52} />
                       <span className="line-clamp-2 text-2xs text-text">{b.name}</span>
                       <span className="text-2xs tabular-nums text-text-muted">{conditionLabel(b)}</span>
                     </button>
@@ -135,13 +134,12 @@ export function BadgeCatalog({ all, updatedAt, onOpen, onToggle, onRefresh, refr
                   </tr>
                   {g.items.map((b) => {
                     const reason = statusReason(b);
-                    // An unknown icon does not matter once the code has illustrated art.
-                    const issues = reviewIssues(b).filter((t) => !badgeArt(b.code) || !t.includes('biểu tượng'));
+                    const issues = reviewIssues(b);
                     return (
                       <tr key={b.id} className="hover:bg-surface-subtle/60">
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-3">
-                            <BadgeArtifact code={b.code} metric={b.metric} iconKey={b.iconKey} size={36} />
+                            <BadgeArtifact imageUrl={b.imageUrl} size={36} />
                             <div className="min-w-0">
                               <button type="button" className="text-left text-body font-medium text-text hover:underline" onClick={(e) => onOpen(b.id, e.currentTarget)}>{b.name}</button>
                               <p className="font-mono text-2xs text-text-light">{b.code}</p>

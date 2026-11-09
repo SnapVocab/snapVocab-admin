@@ -1,10 +1,10 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, Copy, Lock, RefreshCw, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, ConfirmModal, Field, SectionLabel, fieldControl } from '../../components/ui';
-import { getAdminBadge, patchAdminBadge } from '../../domains/admin-badges/api';
+import { getAdminBadge, patchAdminBadge, uploadBadgeImage } from '../../domains/admin-badges/api';
 import {
-  EMBLEM_LABELS, applyForm, contentPatch, formatCount, groupCatalog, isKnownEmblem, metricInfo, previewShelf, reviewIssues,
+  applyForm, contentPatch, formatCount, groupCatalog, metricInfo, previewShelf, reviewIssues,
   REWARD_MAX, rewardLabel, ruleSentence, statusReason, toForm, validateBadgeForm,
 } from '../../domains/admin-badges/catalog';
 import { badgeKeys } from '../../domains/admin-badges/queries';
@@ -15,15 +15,15 @@ import { cn } from '../../lib/utils';
 import { ErrorBanner } from '../admin-missions/components';
 import { RewardItemPicker } from '../admin-missions/RewardItemPicker';
 import { TargetHistory } from '../activity-log/TargetHistory';
+import { AssetUploadField } from '../shop/components/AssetUploadField';
 import { BadgeArtifact } from './BadgeArtifact';
-import { badgeArt } from './badgeArt';
 import { badgeErrorMessage } from './ui';
 
 const FIELD_LABEL: Record<keyof BadgeForm, string> = {
-  name: 'Tên', description: 'Mô tả', iconKey: 'Biểu tượng', sortOrder: 'Thứ tự', rewardCoin: 'Coin thưởng', rewardXp: 'XP thưởng',
+  name: 'Tên', description: 'Mô tả', imageKey: 'Ảnh huy hiệu', sortOrder: 'Thứ tự', rewardCoin: 'Coin thưởng', rewardXp: 'XP thưởng',
   rewardItemCode: 'Vật phẩm thưởng',
 };
-const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'iconKey' ? EMBLEM_LABELS[f.iconKey] ?? f.iconKey : f[k] ?? 'Không có');
+const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'imageKey' ? f.imageKey?.split('/').pop() ?? 'Không có' : f[k] ?? 'Không có');
 
 /** Shelf position on the Thành tựu screen once this badge is on (series ordered by min(sortOrder), UI-BDG-07). */
 function shelfRank(all: AdminBadge[], b: AdminBadge) {
@@ -69,6 +69,9 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   const [confirm, setConfirm] = useState<'leave' | 'reload' | null>(null);
   const [server, setServer] = useState<AdminBadge | null>(null);
   const [copied, setCopied] = useState(false);
+  /** Blob URL of a just-uploaded image, shown until the save returns the stored one. */
+  const [uploaded, setUploaded] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const flight = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -93,11 +96,9 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
     return () => window.removeEventListener('beforeunload', listener);
   }, [dirty, busy]);
 
-  const draft = editable ? applyForm(original, form) : original;
+  const draft = editable ? applyForm(original, form, uploaded) : original;
   const info = metricInfo(original.metric);
   const shelf = previewShelf(all.map((x) => (x.id === draft.id ? draft : x)), draft);
-  // Illustrated art replaces the drawn emblem, so its icon is neither shown nor validated.
-  const hasArt = !!badgeArt(original.code);
   const rankNow = shelfRank(all, original);
   const rankDraft = shelfRank(all, draft);
   const reason = statusReason(original);
@@ -118,9 +119,8 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   };
 
   async function save() {
-    if (flight.current || conflict || uncertain) return;
+    if (flight.current || conflict || uncertain || uploading) return;
     const invalid = validateBadgeForm(form);
-    if (hasArt) delete invalid.iconKey;
     setErrors(invalid);
     if (Object.keys(invalid).length) { setError('Kiểm tra các trường được đánh dấu trước khi lưu.'); focusInvalid(); return; }
     const patch = contentPatch(original, form);
@@ -172,7 +172,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
       <div className="sticky -top-4 z-20 -mx-4 -mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Button disabled={busy} icon={<ArrowLeft />} label="Quay lại danh sách" onClick={() => (dirty ? setConfirm('leave') : onBack())} />
-          <BadgeArtifact code={draft.code} metric={draft.metric} iconKey={draft.iconKey} size={40} />
+          <BadgeArtifact imageUrl={draft.imageUrl} size={40} />
           <div className="min-w-0">
             <h1 ref={heading} tabIndex={-1} className="flex items-center gap-2.5 text-xl font-semibold tracking-tight focus:outline-none">
               <span className="truncate">{draft.name}</span>
@@ -192,7 +192,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             <Button disabled={busy || dirty || conflict || uncertain} title={dirty ? 'Lưu hoặc bỏ thay đổi trước khi bật/tắt' : undefined} onClick={() => onToggle(original)}>
               {original.isActive ? 'Tắt huy hiệu' : 'Bật huy hiệu'}
             </Button>
-            <Button variant="primary" icon={<Save />} loading={busy} disabled={!dirty || conflict || uncertain} onClick={() => void save()}>Lưu thay đổi</Button>
+            <Button variant="primary" icon={<Save />} loading={busy} disabled={!dirty || conflict || uncertain || uploading} onClick={() => void save()}>Lưu thay đổi</Button>
           </>}
         </div>
       </div>
@@ -241,16 +241,17 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
                   <span>Mô tả không nêu ngưỡng {formatCount(original.threshold)}, người học có thể hiểu sai điều kiện. Gợi ý để rà lại, không chặn lưu.</span>
                 </p>
               )}
-              {!hasArt && <IconPicker value={form.iconKey} metric={original.metric} error={errors.iconKey} onChange={(key) => change('iconKey', key)} />}
+              <AssetUploadField label="Ảnh huy hiệu" type="badge" upload={uploadBadgeImage} valueKey={form.imageKey} previewUrl={draft.imageUrl}
+                error={errors.imageKey} onUploadingChange={setUploading}
+                helperText="Ảnh vuông có nền trong suốt, lưu trên MinIO. Người học thấy ảnh mới khi ứng dụng tải lại."
+                onChange={(key, url) => { if (key) { setUploaded(url); change('imageKey', key); } }} />
             </> : (
               <dl className="m-0 space-y-3">
                 <Row label="Tên">{original.name}</Row>
                 <Row label="Mô tả">{original.description}</Row>
-                {!hasArt && <Row label="Biểu tượng">
-                  {isKnownEmblem(original.iconKey) ? EMBLEM_LABELS[original.iconKey] : 'Không có trong ứng dụng'}
-                  <span className="ml-2 font-mono text-2xs text-text-light">{original.iconKey}</span>
-                  {!isKnownEmblem(original.iconKey) && <span className="mt-1 block text-xs text-warning-dark">Người học thấy huy chương mặc định vì ứng dụng không có biểu tượng “{original.iconKey}”.</span>}
-                </Row>}
+                <Row label="Ảnh huy hiệu">
+                  {original.imageUrl ? <BadgeArtifact imageUrl={original.imageUrl} size={48} /> : <span className="text-warning-dark">Chưa có ảnh: người học thấy ô trống.</span>}
+                </Row>
               </dl>
             )}
           </section>
@@ -296,7 +297,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             </div>
             <p className="text-xs text-text-muted">Màn chi tiết khi chạm vào thẻ (người chưa đạt)</p>
             <div className="grid justify-items-center gap-2 rounded-lg border border-border p-3 text-center">
-              <BadgeArtifact code={draft.code} metric={draft.metric} iconKey={draft.iconKey} state="locked" size={88} />
+              <BadgeArtifact imageUrl={draft.imageUrl} state="locked" size={88} />
               <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-2xs font-bold uppercase text-neutral-600">Đang khóa</span>
               <p className="text-base font-bold">{draft.name}</p>
               <p className="text-xs text-text-muted">{draft.description}</p>
@@ -321,7 +322,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             <div className="flex items-end justify-center gap-4 overflow-x-auto rounded-lg bg-surface-subtle px-2 pb-1.5 pt-3">
               {shelf.map((b) => (
                 <div key={b.id} className={cn('grid justify-items-center gap-1 text-xs tabular-nums', b.id === draft.id ? 'font-semibold text-text' : 'text-text-muted')}>
-                  <BadgeArtifact code={b.code} metric={b.metric} iconKey={b.iconKey} size={40} focused={b.id === draft.id} />
+                  <BadgeArtifact imageUrl={b.imageUrl} size={40} focused={b.id === draft.id} />
                   {formatCount(b.threshold)}
                 </div>
               ))}
@@ -378,28 +379,6 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   );
 }
 
-/** The five emblems the app can draw (achievements_ui.md §3), shown on this series' medal shape. */
-function IconPicker({ value, metric, error, onChange }: { value: string; metric: string; error?: string; onChange: (key: string) => void }) {
-  const name = useId();
-  return (
-    <fieldset className="space-y-1.5">
-      <legend className="text-xs font-semibold text-text">Biểu tượng<span aria-hidden className="text-danger-dark"> *</span></legend>
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(EMBLEM_LABELS).map(([key, label]) => (
-          <label key={key} className={cn('flex cursor-pointer flex-col items-center gap-1 rounded-lg border px-3 pb-1.5 pt-2 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-info',
-            value === key ? 'border-text bg-surface-subtle font-medium text-text' : 'border-border text-text-muted hover:bg-surface-subtle')}>
-            <input type="radio" name={name} value={key} checked={value === key} onChange={() => onChange(key)} className="sr-only" />
-            <BadgeArtifact metric={metric} iconKey={key} size={36} />
-            {label}
-          </label>
-        ))}
-      </div>
-      {!isKnownEmblem(value) && <p className="text-xs text-warning-dark">Đang dùng “{value}”: ứng dụng không có biểu tượng này nên người học thấy huy chương mặc định. Chọn một biểu tượng ở trên.</p>}
-      {error && <p className="text-xs text-danger-dark">{error}</p>}
-    </fieldset>
-  );
-}
-
 const APP_CHIP = 'rounded border px-1 text-2xs font-bold';
 const FRAME_CHIP: Record<string, string> = { AVATAR_FRAME: 'Khung avatar', CARD_FRAME: 'Khung thẻ' };
 
@@ -418,7 +397,7 @@ function AppRewardChips({ badge }: { badge: AdminBadge }) {
 function AppCard({ badge, unit, earned = false }: { badge: AdminBadge; unit?: string; earned?: boolean }) {
   return (
     <figure className="m-0 grid justify-items-center gap-1.5 rounded-xl border-2 border-b-4 border-neutral-200 bg-white p-2 text-center">
-      <BadgeArtifact code={badge.code} metric={badge.metric} iconKey={badge.iconKey} state={earned ? 'earned' : 'locked'} size={64} />
+      <BadgeArtifact imageUrl={badge.imageUrl} state={earned ? 'earned' : 'locked'} size={64} />
       <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-text">{badge.name}</p>
       <AppRewardChips badge={badge} />
       {earned

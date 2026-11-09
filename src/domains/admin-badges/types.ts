@@ -9,7 +9,10 @@ export interface AdminBadge {
   /** A metric the admin does not map yet must still render, so this is not narrowed to BadgeMetric. */
   metric: string;
   threshold: number;
-  iconKey: string;
+  /** MinIO object key (public/badges/…); null until art is uploaded. */
+  imageKey: string | null;
+  /** Presigned download URL of imageKey. */
+  imageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
   /** PD-BDG-14: paid once inside the sync that grants the badge; a change applies to later earners only. */
@@ -34,7 +37,7 @@ export type StatusFilter = 'ALL' | 'ON' | 'OFF' | 'ISSUES';
 
 /** P2 PATCH bodies (badges.md §8.4): content and on/off go separately; code, metric and threshold never. */
 export interface BadgeContentPatch {
-  version: number; name?: string; description?: string; iconKey?: string; sortOrder?: number;
+  version: number; name?: string; description?: string; imageKey?: string; sortOrder?: number;
   rewardCoin?: number; rewardXp?: number; rewardItemCode?: string | null;
 }
 export interface BadgeActivePatch { version: number; isActive: boolean }
@@ -44,6 +47,6 @@ export interface BadgeRefillEstimate { eligibleCount: number; calculatedAt: stri
 
 /** Editor draft; numbers stay text until they validate. */
 export interface BadgeForm {
-  name: string; description: string; iconKey: string; sortOrder: string;
+  name: string; description: string; imageKey: string | null; sortOrder: string;
   rewardCoin: string; rewardXp: string; rewardItemCode: string | null;
 }

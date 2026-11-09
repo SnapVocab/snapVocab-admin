@@ -15,6 +15,8 @@ interface AssetUploadFieldProps {
   onChange: (objectName: string | null, previewUrl: string | null) => void;
   /** Lets the editor hold Save/Publish until the upload has finished. */
   onUploadingChange?: (uploading: boolean) => void;
+  /** Presigned upload to use; defaults to the Shop asset endpoint. */
+  upload?: (file: File) => Promise<{ objectName: string; previewUrl: string }>;
 }
 
 export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
@@ -27,6 +29,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   error,
   onChange,
   onUploadingChange,
+  upload = uploadShopAsset,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
 
       // 2. Upload flow: Presigned URL -> PUT binary; the parent owns key + preview from here on.
       // ponytail: blob preview URLs are never revoked; a few hundred KB per upload until the tab closes.
-      const { objectName, previewUrl } = await uploadShopAsset(file);
+      const { objectName, previewUrl } = await upload(file);
       onChange(objectName, previewUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Tải lên asset thất bại.';
@@ -129,7 +132,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
             {!disabled && !isUploading && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <Button size="sm" icon={<RefreshCw />} onClick={pickFile}>Thay ảnh</Button>
-                <Button variant="ghost" size="sm" icon={<X />} label="Xóa ảnh này" onClick={handleRemove} />
+                {type !== 'badge' && <Button variant="ghost" size="sm" icon={<X />} label="Xóa ảnh này" onClick={handleRemove} />}
               </div>
             )}
           </div>

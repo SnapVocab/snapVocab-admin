@@ -320,9 +320,9 @@ export function formatShopItemStatusLabel(status?: string | null): string {
   return ({ DRAFT: 'Bản nháp', PUBLISHED: 'Đã phát hành', ARCHIVED: 'Đã lưu trữ' } as Record<string, string>)[status ?? ''] ?? (status || '—');
 }
 
-/** Upload kinds of the Shop editor; limits mirror AdminShopService (ICON/FRAME/CARD_FRAME_MAX_BYTES). */
-export type AssetKind = 'icon' | 'frame' | 'cardFrame';
-export const ASSET_MAX_KB: Record<AssetKind, number> = { icon: 200, frame: 300, cardFrame: 500 };
+/** Upload kinds; limits mirror AdminShopService (ICON/FRAME/CARD_FRAME_MAX_BYTES) and AdminBadgeService.IMAGE_MAX_BYTES. */
+export type AssetKind = 'icon' | 'frame' | 'cardFrame' | 'badge';
+export const ASSET_MAX_KB: Record<AssetKind, number> = { icon: 200, frame: 300, cardFrame: 500, badge: 500 };
 
 /**
  * Client-side validation for file uploads (MIME and size).
@@ -396,6 +396,10 @@ export function checkAssetHeader(h: ImageHeader | null, mime: string, type: Asse
   if (type === 'icon' && (h.width !== h.height || h.width < 256)) {
     return `Icon phải là ảnh vuông, tối thiểu 256×256 (ảnh đang chọn ${h.width}×${h.height}).`;
   }
+  if (type === 'badge' && (h.width !== h.height || h.width < 256)) {
+    return `Ảnh huy hiệu phải là ảnh vuông, tối thiểu 256×256 (ảnh đang chọn ${h.width}×${h.height}).`;
+  }
+  if (type === 'badge' && !h.alpha) return 'Ảnh huy hiệu phải có nền trong suốt (kênh alpha).';
   if (type === 'frame' && (h.width !== 512 || h.height !== 512)) {
     return `Khung phải đúng 512×512 (ảnh đang chọn ${h.width}×${h.height}).`;
   }
