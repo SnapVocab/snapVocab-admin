@@ -1,0 +1,18 @@
+services:
+  admin:
+    image: ${ADMIN_IMAGE:?ADMIN_IMAGE must identify a built image}
+    container_name: snapvocab-admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-8086}:8080"
+    mem_limit: 128m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

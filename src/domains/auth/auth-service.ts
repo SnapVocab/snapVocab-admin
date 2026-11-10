@@ -7,6 +7,7 @@ import {
   UserDTO,
 } from './types';
 import { ApiClientError } from '../../lib/api-client';
+import { buildApiUrl } from '../../lib/api-config';
 
 export const ACCESS_TOKEN_KEY = 'token';
 export const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -159,7 +160,7 @@ export function clearAuthSession(): void {
  * Calls backend POST /api/auth/login.
  */
 export async function loginApi(credentials: LoginRequest): Promise<LoginResponseData> {
-  const response = await fetch('/api/auth/login', {
+  const response = await fetch(buildApiUrl('/api/auth/login'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -223,7 +224,7 @@ export async function loginApi(credentials: LoginRequest): Promise<LoginResponse
  */
 export async function refreshApi(refreshToken: string): Promise<LoginResponseData> {
   const body: RefreshTokenRequest = { refreshToken };
-  const response = await fetch('/api/auth/refresh', {
+  const response = await fetch(buildApiUrl('/api/auth/refresh'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

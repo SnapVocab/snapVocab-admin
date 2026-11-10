@@ -1,5 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { buildApiUrl } from '../src/lib/api-config';
+
+test('API URLs support same-origin requests and configured backend prefixes', () => {
+  assert.equal(buildApiUrl('/api/auth/login', ''), '/api/auth/login');
+  assert.equal(buildApiUrl('/api/admin/shop/items?page=0', ' https://api.example.com/ '), 'https://api.example.com/api/admin/shop/items?page=0');
+  assert.equal(buildApiUrl('/api/auth/refresh', 'https://example.com/backend///'), 'https://example.com/backend/api/auth/refresh');
+});
 import {
   parseJwtPayload,
   extractAuthorities,
