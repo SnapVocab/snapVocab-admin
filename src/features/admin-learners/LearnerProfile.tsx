@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, ArrowLeft, Award, BookOpen, Camera, KeyRound, ListChecks, Lock, LockOpen, ShoppingBag, Target, UserRound } from 'lucide-react';
-import { Badge, Button, ConfirmModal, Mini, MiniStrip, Panel, SampleDataNotice, StatCell, SummaryStrip, TextLink } from '../../components/ui';
-import { auditUsesFixtures } from '../../domains/admin-audit/config';
-import { historyPath } from '../../domains/admin-audit/mappers';
+import { Badge, Button, ConfirmModal, Mini, MiniStrip, Panel, SampleDataNotice, StatCell, SummaryStrip } from '../../components/ui';
+import { TargetHistory } from '../activity-log/TargetHistory';
 import { learnersUseFixtures } from '../../domains/admin-learners/api';
 import { FIXTURE_NOW } from '../../domains/admin-learners/fixtures';
 import { banReasonError, formatAgo, formatDate, STATUS_META } from '../../domains/admin-learners/mappers';
@@ -82,7 +81,7 @@ export function LearnerProfile({ id }: { id: number }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button icon={<KeyRound />} disabled={l.status === 'PENDING'} title={l.status === 'PENDING' ? 'Tài khoản chưa kích hoạt email' : undefined} onClick={() => setDialog('reset')}>
-            Gửi link đặt lại mật khẩu
+            Gửi mã đặt lại mật khẩu
           </Button>
           {l.status === 'BANNED'
             ? <Button icon={<LockOpen />} onClick={() => setDialog('unban')}>Mở khóa</Button>
@@ -213,17 +212,14 @@ export function LearnerProfile({ id }: { id: number }) {
               <dt className="text-text-muted">Tham gia</dt><dd className="tabular-nums">{formatDate(l.createdAt)}</dd>
               <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{l.id}</dd>
             </dl>
-            <p className="border-t border-border pt-2 text-xs text-text-muted">
-              Khóa, mở khóa và đặt lại mật khẩu chưa ghi vào nhật ký hoạt động: chờ API admin người học.
-              {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'LEARNER', id: String(l.id) })}>Xem nhật ký mẫu</TextLink></>}
-            </p>
+            <TargetHistory target={{ type: 'LEARNER', id: String(l.id) }} />
           </Panel>
         </aside>
       </div>
 
       {dialog === 'ban' && <BanDialog learner={l} onClose={() => setDialog(null)} onDone={() => { setDialog(null); flash('Đã khóa tài khoản.'); }} />}
       {dialog === 'unban' && <UnbanDialog learner={l} onClose={() => setDialog(null)} onDone={() => { setDialog(null); flash('Đã mở khóa tài khoản.'); }} />}
-      {dialog === 'reset' && <ResetDialog learner={l} onClose={() => setDialog(null)} onDone={() => { setDialog(null); flash(learnersUseFixtures ? 'Đã ghi nhận gửi link (dữ liệu mẫu, không gửi email thật).' : 'Đã gửi link đặt lại mật khẩu.'); }} />}
+      {dialog === 'reset' && <ResetDialog learner={l} onClose={() => setDialog(null)} onDone={() => { setDialog(null); flash(learnersUseFixtures ? 'Đã ghi nhận gửi mã (dữ liệu mẫu, không gửi email thật).' : 'Đã gửi mã đặt lại mật khẩu.'); }} />}
     </div>
   );
 }
@@ -283,9 +279,9 @@ function UnbanDialog({ learner, onClose, onDone }: DialogProps) {
 function ResetDialog({ learner, onClose, onDone }: DialogProps) {
   const reset = usePasswordReset(learner.id);
   return (
-    <ConfirmModal title="Gửi link đặt lại mật khẩu?" tone="info" confirmLabel="Gửi link" busy={reset.isPending} onClose={onClose}
+    <ConfirmModal title="Gửi mã đặt lại mật khẩu?" tone="info" confirmLabel="Gửi mã" busy={reset.isPending} onClose={onClose}
       onConfirm={() => reset.mutate(undefined, { onSuccess: onDone })} description={`Tới ${learner.email}`}>
-      <p className="text-text-muted">Người học tự đặt mật khẩu mới qua link, theo luồng quên mật khẩu của ứng dụng; mọi phiên cũ bị thu hồi sau khi đổi. Admin không xem hay đặt mật khẩu thay người học.</p>
+      <p className="text-text-muted">Email chứa mã 6 số, hiệu lực 5 phút: người học nhập mã ở màn Quên mật khẩu của ứng dụng rồi tự đặt mật khẩu mới; mọi phiên cũ bị thu hồi sau khi đổi. Admin không xem hay đặt mật khẩu thay người học.</p>
       {reset.isError && <p role="alert" className="text-danger-dark">Gửi thất bại: {reset.error.message}</p>}
     </ConfirmModal>
   );

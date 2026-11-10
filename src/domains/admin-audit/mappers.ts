@@ -26,7 +26,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   COLLECTION_CREATED: 'Tạo collection', COLLECTION_UPDATED: 'Sửa collection', COLLECTION_DELETED: 'Xóa collection',
   TOPIC_CREATED: 'Tạo chủ đề', TOPIC_ITEM_ADDED: 'Thêm mục từ', TOPIC_TEMPLATE_CHANGED: 'Đổi mẫu thẻ', TOPIC_SCHEMA_CHANGED: 'Đổi schema',
   SCAN_LABEL_MAPPED: 'Gán từ cho nhãn',
-  LEARNER_BANNED: 'Khóa tài khoản', LEARNER_UNBANNED: 'Mở khóa tài khoản', LEARNER_PASSWORD_RESET_SENT: 'Gửi link đặt lại mật khẩu',
+  LEARNER_BANNED: 'Khóa tài khoản', LEARNER_UNBANNED: 'Mở khóa tài khoản', LEARNER_PASSWORD_RESET_SENT: 'Gửi mã đặt lại mật khẩu',
   SYSTEM_NOTIFICATION_SENT: 'Gửi thông báo hệ thống',
 };
 
