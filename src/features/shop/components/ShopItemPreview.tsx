@@ -47,7 +47,7 @@ export const FramedAvatar: React.FC<{ frameUrl?: string | null; size: number }> 
       className="rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white font-black flex items-center justify-center shadow-inner select-none"
       style={{ width: size * (frameUrl ? 0.58 : 0.88), height: size * (frameUrl ? 0.58 : 0.88), fontSize: size * 0.18 }}
     >
-      <img src="/brand/snapy.png" alt="?nh ??i di?n m?u" className="h-full w-full rounded-full object-cover" />
+      <img src="/brand/snapy.png" alt="Ảnh đại diện mẫu" className="h-full w-full rounded-full object-cover" />
     </div>
     {frameUrl && (
       <img
@@ -106,7 +106,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
 
   const [flipped, setFlipped] = useState(false);
   const sold = Boolean(form.purchasable);
-  const screenTitle = { shop: 'C?a h?ng', inventory: 'Kho ??', profile: 'H? s?', study: '?n t?p t? v?ng' }[activeTab];
+  const screenTitle = { shop: 'Cửa hàng', inventory: 'Kho đồ', profile: 'Hồ sơ', study: 'Ôn tập từ vựng' }[activeTab];
   const effectiveFrameUrl = frameUrl;
 
   return (
@@ -120,7 +120,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
           </div>
         </div>
 
-        <p className="text-xs leading-relaxed text-text-muted">Th? v?t ph?m trong giao di?n ng??i h?c.</p>
+        <p className="text-xs leading-relaxed text-text-muted">Thử vật phẩm trong giao diện người học.</p>
 
         {/* View Switcher: Shop / Inventory / Profile */}
         <div className="flex items-center justify-between gap-1.5">
@@ -247,9 +247,10 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
               {/* TAB 1: CỬA HÀNG (SHOP STOREFRONT) */}
               {activeTab === 'shop' && (
                 <div className="space-y-3 animate-in fade-in-50 duration-150">
-                  <div className="rounded-2xl bg-[#eaf5de] p-3 flex items-center gap-3">
-                    <img src="/brand/snapy-full.png" alt="" className="h-16 w-14 object-contain" />
-                    <div><p className="text-[15px] font-black text-[#24451b]">G?c nh?, ch?t ri?ng</p><p className="mt-1 text-[11px] leading-relaxed text-[#4b6942]">??i Coin l?y v?t ph?m y?u th?ch<br />v? ti?p th?m ??ng l?c h?c!</p></div>
+                  {/* Same header as the app (shop-screen.tsx: shopUi.rewardHeading/rewardSubtitle, Snapy pose "proud"). */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1"><p className="text-[15px] font-black" style={{ color: INK.text }}>Chọn phần thưởng tiếp theo</p><p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: INK.muted }}>Tiếp sức học tập, thêm chất riêng.</p></div>
+                    <img src="/brand/snapy-proud.png" alt="" className="h-14 w-14 shrink-0 object-contain" />
                   </div>
                   {/* Category Pills */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold">
@@ -311,7 +312,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
                           <div className="text-[13px] leading-tight font-extrabold line-clamp-2 min-h-[34px]" style={{ color: INK.text }}>
                             {form.name || 'Tên vật phẩm'}
                           </div>
-                          {type === 'XP_BOOSTER' && <p className="mt-1 text-[11px] font-semibold text-[#565879]">?2 XP ? {form.boostDurationMinutes ?? 30} ph?t</p>}
+                          {type === 'XP_BOOSTER' && <p className="mt-1 text-[11px] font-semibold text-[#565879]">×2 XP trong {form.boostDurationMinutes ?? 30} phút</p>}
 
                         </div>
 
@@ -379,7 +380,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
 
                     <button
                       type="button"
-                      disabled aria-label="Thao t?c minh h?a"
+                      disabled aria-label="Thao tác minh họa"
                       className="w-full h-8 rounded-lg bg-[#58CC02] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-98 transition-transform"
                     >
                       <Check size={13} />
@@ -459,8 +460,8 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
               )}
             </div>
 
-            <nav aria-label="?i?u h??ng b?n xem tr??c" className="grid grid-cols-3 shrink-0 border-t border-[#e5e7eb] bg-white px-2 pt-2 pb-1">
-              {([{ tab: 'study', label: 'H?c t?p', icon: BookOpen }, { tab: 'shop', label: 'C?a h?ng', icon: ShoppingBag }, { tab: 'inventory', label: 'Kho ??', icon: Package }] as const).map(({ tab, label, icon: Icon }) => (
+            <nav aria-label="Điều hướng bản xem trước" className="grid grid-cols-3 shrink-0 border-t border-[#e5e7eb] bg-white px-2 pt-2 pb-1">
+              {([{ tab: 'study', label: 'Học tập', icon: BookOpen }, { tab: 'shop', label: 'Cửa hàng', icon: ShoppingBag }, { tab: 'inventory', label: 'Kho đồ', icon: Package }] as const).map(({ tab, label, icon: Icon }) => (
                 <button key={tab} type="button" disabled={tab === 'study' && type !== 'CARD_FRAME'} aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)} className={cn('flex flex-col items-center gap-1 rounded-xl py-1.5 text-[9px] font-bold disabled:opacity-40', activeTab === tab ? 'bg-[#f0f9e8] text-[#3c8c00]' : 'text-[#7b8191]')}>
                   <Icon size={18} strokeWidth={activeTab === tab ? 2.5 : 1.8} />{label}
                 </button>
@@ -474,7 +475,7 @@ export const ShopMobileSimulator: React.FC<ShopItemPreviewProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-text-muted"><span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Xem tr??c tr?c ti?p</span><button type="button" onClick={() => { setSelectedTab(null); setFlipped(false); }} className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-surface-subtle"><RotateCcw size={11} />??t l?i</button></div>
+      <div className="flex items-center justify-between text-[10px] text-text-muted"><span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Xem trước trực tiếp</span><button type="button" onClick={() => { setSelectedTab(null); setFlipped(false); }} className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-surface-subtle"><RotateCcw size={11} />Đặt lại</button></div>
       {/* design.md §6: the sample context around the item says it is sample. */}
       <p className="w-full border-t border-border/70 pt-2 text-center text-xs text-text-muted">
         Cập nhật theo nội dung đang nhập. Người học, ví Coin và streak trong khung là số mẫu.
