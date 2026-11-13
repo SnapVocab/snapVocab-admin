@@ -24,8 +24,8 @@ export interface NavItem {
 export const showMockScreens = import.meta.env.DEV || import.meta.env.VITE_ADMIN_DEMO === 'true';
 
 const ALL: (NavItem & { enabled?: boolean })[] = [
-  { id: 'dashboard', path: '/', label: 'Dashboard', section: 'Tổng quan', Icon: LayoutDashboard, scope: 'MOCK' },
-  { id: 'analytics', path: '/analytics', label: 'Phân tích', section: 'Tổng quan', Icon: BarChart3, scope: 'MOCK' },
+  { id: 'dashboard', path: '/', label: 'Dashboard', section: 'Tổng quan', Icon: LayoutDashboard, scope: 'NOW' },
+  { id: 'analytics', path: '/analytics', label: 'Phân tích', section: 'Tổng quan', Icon: BarChart3, scope: 'NOW' },
   { id: 'dictionary', path: '/dictionary', label: 'Từ điển', section: 'Nội dung', Icon: BookOpen, scope: 'NOW' },
   { id: 'topics', path: '/topics', label: 'Chủ đề', section: 'Nội dung', Icon: FolderTree, scope: 'NOW' },
   { id: 'templates', path: '/templates', label: 'Mẫu thẻ', section: 'Nội dung', Icon: Layers, scope: 'NOW' },
