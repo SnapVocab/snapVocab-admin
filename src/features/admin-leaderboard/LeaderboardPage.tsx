@@ -317,7 +317,7 @@ function LearnerWeek({ b, r, covered, current, onClose }: { b: AdminLeaderboard;
         <SectionLabel>Người học thấy trên ứng dụng</SectionLabel>
         <PhoneBoard b={b} me={r} />
         <p className="text-xs text-text-muted">
-          Mô phỏng theo thiết kế mobile, dùng chữ cái đầu thay ảnh đại diện; ứng dụng chưa có màn bảng xếp hạng. Người học khác chỉ thấy tên, ảnh
+          Mô phỏng theo thiết kế mobile, dùng chữ cái đầu thay ảnh đại diện. Người học khác chỉ thấy tên, ảnh
           đại diện, khung, XP tuần và xu hướng, không thấy email hay các số phía trên.
         </p>
       </section>

@@ -49,7 +49,7 @@ function LegacyScreen({ children }: { children: React.ReactNode }) {
     <div className="flex h-full flex-col">
       <p role="note" className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning-light px-3 py-2 text-xs text-warning-dark sm:mx-6">
         <History size={14} className="shrink-0" />
-        Bản mock cũ, chưa thiết kế lại theo đặc tả rev 3: số liệu là dữ liệu mẫu và còn khái niệm ngoài scope (docs/reviews/admin_product_review_2026-10-19.md).
+        Bản mock cũ, chưa thiết kế lại theo đặc tả rev 3: số liệu là dữ liệu mẫu và còn khái niệm ngoài scope.
       </p>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
