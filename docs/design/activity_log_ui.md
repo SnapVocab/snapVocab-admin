@@ -36,7 +36,7 @@ Mật độ giữ nguyên ([design.md](./design.md) §3.7). Phần đổi là ng
 
 ## 2. Contract đề xuất
 
-Định nghĩa ở `src/domains/admin-audit/types.ts`. Cờ: `VITE_ADMIN_AUDIT_FIXTURES` (mặc định bật ở dev; đặt `false` để gọi API thật).
+Định nghĩa ở `src/domains/admin-audit/types.ts`. Cờ: `VITE_ADMIN_AUDIT_FIXTURES` (từ 2026-10-22 mặc định gọi API thật ở mọi bản build; đặt `true` để chạy trên dữ liệu mẫu khi demo không có backend).
 
 **Đặc tả triển khai backend: [docs/sa/admin_audit_log_backend.md](../../../docs/sa/admin_audit_log_backend.md)** (bảng, ghi audit trong từng service, guardrail, API, test, nghiệm thu). Mục này chỉ tóm tắt phần màn hình dùng.
 

@@ -1,3 +1,5 @@
+import { buildApiUrl } from './api-config';
+
 export interface ApiFieldError {
   field: string;
   code: string;
@@ -124,7 +126,7 @@ async function requestTokenRefresh(): Promise<string | null> {
 
   activeRefreshPromise = (async () => {
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch(buildApiUrl('/api/auth/refresh'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +185,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { params, body, headers = {}, _retry = false, ...rest } = options;
 
-  let url = endpoint;
+  let url = buildApiUrl(endpoint);
   if (params) {
     const searchParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -314,8 +316,6 @@ function getFriendlyErrorMessage(code: string, details?: any): string {
   switch (code) {
     case 'SHOP_ITEM_CODE_EXISTS':
       return 'Mã định danh (code) này đã tồn tại trong hệ thống.';
-    case 'INVALID_THEME_KEY':
-      return 'Chủ đề này không nằm trong danh mục cho phép hoặc đã được gán.';
     case 'INVALID_PRICE':
       return 'Giá niêm yết không hợp lệ (1..100,000 Coin).';
     case 'INVALID_AVAILABILITY_WINDOW':
@@ -332,6 +332,15 @@ function getFriendlyErrorMessage(code: string, details?: any): string {
       return 'Chỉ có thể xóa vật phẩm ở trạng thái DRAFT (Bản nháp).';
     case 'VALIDATION_ERROR':
       return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường được đánh dấu.';
+    // admin_audit_log_backend.md §7: the write was not saved.
+    case 'AUDIT_REASON_REQUIRED':
+      return details?.guardrail
+        ? `Cần ghi lý do để lưu: ${details.guardrail}`
+        : 'Thao tác này cần ghi lý do vào nhật ký hoạt động.';
+    case 'AUDIT_REASON_INVALID':
+      return `Lý do phải từ ${details?.min ?? 10} đến ${details?.max ?? 500} ký tự.`;
+    case 'AUDIT_FILTER_INVALID':
+      return 'Bộ lọc nhật ký không hợp lệ.';
     case 'UNAUTHORIZED':
       return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     case 'FORBIDDEN':

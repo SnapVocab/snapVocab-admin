@@ -1,0 +1,872 @@
+[
+  {
+    "name": "seed as shipped, current and older apps",
+    "clients": [
+      "current",
+      "legacy"
+    ],
+    "templates": [
+      {
+        "code": "ADD_5_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 25,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "QUIZ_SCORE_80",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 20,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "FINISH_2_SHORT_QUIZZES",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "PERFECT_MINI_QUIZ",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 25,
+        "rewardXp": 45,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "KEEP_DAILY_STREAK",
+        "category": "RETENTION",
+        "triggerEvent": "LEARNING_ACTIVITY_RECORDED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "USE_XP_BOOSTER",
+        "category": "SHOP",
+        "triggerEvent": "BOOSTER_USED",
+        "eligibilityRule": "HAS_IDLE_XP_BOOSTER",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "BUY_SHOP_ITEM",
+        "category": "SHOP",
+        "triggerEvent": "SHOP_ITEM_PURCHASED",
+        "eligibilityRule": "HAS_PURCHASABLE_ITEM",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_5_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "SCAN_SAVE_3_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "ADD_3_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 15,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "SCAN_SAVE_5_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_10_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "HAS_STUDY_CARDS_FOR_TARGET",
+        "rewardCoin": 15,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      }
+    ],
+    "expect": {
+      "coin": [
+        60,
+        85
+      ],
+      "xp": [
+        115,
+        160
+      ],
+      "insufficient": false,
+      "reachable": [
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80",
+          "SCAN_SAVE_3_WORDS",
+          "SCAN_SAVE_5_WORDS"
+        ],
+        [
+          "ADD_5_WORDS"
+        ],
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80",
+          "STUDY_10_CARDS",
+          "STUDY_5_CARDS"
+        ],
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80"
+        ],
+        [
+          "BUY_SHOP_ITEM",
+          "KEEP_DAILY_STREAK",
+          "USE_XP_BOOSTER"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "every template on, current app",
+    "clients": [
+      "current"
+    ],
+    "templates": [
+      {
+        "code": "ADD_5_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 25,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "QUIZ_SCORE_80",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 20,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "FINISH_2_SHORT_QUIZZES",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "PERFECT_MINI_QUIZ",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 25,
+        "rewardXp": 45,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "KEEP_DAILY_STREAK",
+        "category": "RETENTION",
+        "triggerEvent": "LEARNING_ACTIVITY_RECORDED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "USE_XP_BOOSTER",
+        "category": "SHOP",
+        "triggerEvent": "BOOSTER_USED",
+        "eligibilityRule": "HAS_IDLE_XP_BOOSTER",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "BUY_SHOP_ITEM",
+        "category": "SHOP",
+        "triggerEvent": "SHOP_ITEM_PURCHASED",
+        "eligibilityRule": "HAS_PURCHASABLE_ITEM",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_5_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "SCAN_SAVE_3_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "ADD_3_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 15,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "SCAN_SAVE_5_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_10_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "HAS_STUDY_CARDS_FOR_TARGET",
+        "rewardCoin": 15,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      }
+    ],
+    "expect": {
+      "coin": [
+        55,
+        75
+      ],
+      "xp": [
+        105,
+        160
+      ],
+      "insufficient": false,
+      "reachable": [
+        [
+          "SCAN_SAVE_3_WORDS",
+          "SCAN_SAVE_5_WORDS"
+        ],
+        [
+          "ADD_3_WORDS",
+          "ADD_5_WORDS"
+        ],
+        [
+          "STUDY_10_CARDS",
+          "STUDY_5_CARDS"
+        ],
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80"
+        ],
+        [
+          "BUY_SHOP_ITEM",
+          "KEEP_DAILY_STREAK",
+          "USE_XP_BOOSTER"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "every template on, older app (ADD_3_WORDS can land beside ADD_5_WORDS)",
+    "clients": [
+      "legacy"
+    ],
+    "templates": [
+      {
+        "code": "ADD_5_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 25,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "QUIZ_SCORE_80",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 20,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "FINISH_2_SHORT_QUIZZES",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "PERFECT_MINI_QUIZ",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 25,
+        "rewardXp": 45,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "KEEP_DAILY_STREAK",
+        "category": "RETENTION",
+        "triggerEvent": "LEARNING_ACTIVITY_RECORDED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "USE_XP_BOOSTER",
+        "category": "SHOP",
+        "triggerEvent": "BOOSTER_USED",
+        "eligibilityRule": "HAS_IDLE_XP_BOOSTER",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "BUY_SHOP_ITEM",
+        "category": "SHOP",
+        "triggerEvent": "SHOP_ITEM_PURCHASED",
+        "eligibilityRule": "HAS_PURCHASABLE_ITEM",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_5_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "SCAN_SAVE_3_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "ADD_3_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 15,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "SCAN_SAVE_5_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_10_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "HAS_STUDY_CARDS_FOR_TARGET",
+        "rewardCoin": 15,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      }
+    ],
+    "expect": {
+      "coin": [
+        65,
+        85
+      ],
+      "xp": [
+        120,
+        160
+      ],
+      "insufficient": false,
+      "reachable": [
+        [
+          "ADD_3_WORDS",
+          "ADD_5_WORDS",
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80"
+        ],
+        [
+          "ADD_3_WORDS",
+          "ADD_5_WORDS"
+        ],
+        [
+          "ADD_3_WORDS",
+          "ADD_5_WORDS",
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80"
+        ],
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80"
+        ],
+        [
+          "BUY_SHOP_ITEM",
+          "KEEP_DAILY_STREAK",
+          "USE_XP_BOOSTER"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "booster trial PD-SHX-04: item replaces Coin, max counts the fallback",
+    "clients": [
+      "current",
+      "legacy"
+    ],
+    "templates": [
+      {
+        "code": "ADD_5_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 25,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "QUIZ_SCORE_80",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 20,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "FINISH_2_SHORT_QUIZZES",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "PERFECT_MINI_QUIZ",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 25,
+        "rewardXp": 45,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "KEEP_DAILY_STREAK",
+        "category": "RETENTION",
+        "triggerEvent": "LEARNING_ACTIVITY_RECORDED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 0,
+        "rewardXp": 20,
+        "rewardItemCode": "XP_BOOSTER_X2_15M",
+        "rewardItemFallbackCoin": 10,
+        "isActive": true
+      },
+      {
+        "code": "USE_XP_BOOSTER",
+        "category": "SHOP",
+        "triggerEvent": "BOOSTER_USED",
+        "eligibilityRule": "HAS_IDLE_XP_BOOSTER",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "BUY_SHOP_ITEM",
+        "category": "SHOP",
+        "triggerEvent": "SHOP_ITEM_PURCHASED",
+        "eligibilityRule": "HAS_PURCHASABLE_ITEM",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_5_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "SCAN_SAVE_3_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "ADD_3_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 15,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "SCAN_SAVE_5_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "STUDY_10_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "HAS_STUDY_CARDS_FOR_TARGET",
+        "rewardCoin": 15,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      }
+    ],
+    "expect": {
+      "coin": [
+        55,
+        85
+      ],
+      "xp": [
+        115,
+        160
+      ],
+      "insufficient": false,
+      "reachable": [
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80",
+          "SCAN_SAVE_3_WORDS",
+          "SCAN_SAVE_5_WORDS"
+        ],
+        [
+          "ADD_5_WORDS"
+        ],
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80",
+          "STUDY_10_CARDS",
+          "STUDY_5_CARDS"
+        ],
+        [
+          "FINISH_2_SHORT_QUIZZES",
+          "PERFECT_MINI_QUIZ",
+          "QUIZ_SCORE_80"
+        ],
+        [
+          "BUY_SHOP_ITEM",
+          "KEEP_DAILY_STREAK",
+          "USE_XP_BOOSTER"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "three core templates cannot fill slots 1-4",
+    "clients": [
+      "legacy"
+    ],
+    "templates": [
+      {
+        "code": "ADD_5_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 25,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "QUIZ_SCORE_80",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 20,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "FINISH_2_SHORT_QUIZZES",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "PERFECT_MINI_QUIZ",
+        "category": "QUIZ",
+        "triggerEvent": "QUIZ_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 25,
+        "rewardXp": 45,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "KEEP_DAILY_STREAK",
+        "category": "RETENTION",
+        "triggerEvent": "LEARNING_ACTIVITY_RECORDED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": true
+      },
+      {
+        "code": "USE_XP_BOOSTER",
+        "category": "SHOP",
+        "triggerEvent": "BOOSTER_USED",
+        "eligibilityRule": "HAS_IDLE_XP_BOOSTER",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "BUY_SHOP_ITEM",
+        "category": "SHOP",
+        "triggerEvent": "SHOP_ITEM_PURCHASED",
+        "eligibilityRule": "HAS_PURCHASABLE_ITEM",
+        "rewardCoin": 5,
+        "rewardXp": 10,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "STUDY_5_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 15,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "SCAN_SAVE_3_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 20,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "ADD_3_WORDS",
+        "category": "VOCABULARY",
+        "triggerEvent": "TOPIC_ITEM_CREATED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 15,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "SCAN_SAVE_5_WORDS",
+        "category": "SCAN",
+        "triggerEvent": "SCAN_WORD_SAVED",
+        "eligibilityRule": "NONE",
+        "rewardCoin": 10,
+        "rewardXp": 30,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      },
+      {
+        "code": "STUDY_10_CARDS",
+        "category": "SRS",
+        "triggerEvent": "SRS_REVIEW_COMPLETED",
+        "eligibilityRule": "HAS_STUDY_CARDS_FOR_TARGET",
+        "rewardCoin": 15,
+        "rewardXp": 40,
+        "rewardItemCode": null,
+        "rewardItemFallbackCoin": null,
+        "isActive": false
+      }
+    ],
+    "expect": {
+      "coin": null,
+      "xp": null,
+      "insufficient": true,
+      "reachable": [
+        [],
+        [],
+        [],
+        [],
+        []
+      ]
+    }
+  }
+]

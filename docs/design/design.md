@@ -154,7 +154,7 @@ Tách màu **hành động** khỏi màu **trạng thái**: nút "Phát hành" v
 | Loại | Nguồn | Danh sách |
 | :--- | :--- | :--- |
 | **Chức năng** | `lucide-react` | Search, Filter, Chevron, Arrow, Edit, Delete, Settings, Download, Upload, Calendar, Sort, More, Refresh, Lock, Copy, LayoutGrid/List |
-| **Brand / ngữ nghĩa** | `src/components/brand/BrandIcons.tsx` | `CoinIcon` (coin 3D), `XpIcon` (orb XP 3D), `BoosterIcon`, `ThemeIcon`, `FrameIcon`, `StreakFlameIcon`, `SnapyIcon`, `RewardGiftIcon`, `BadgeMedalIcon`, `ScanLensIcon` |
+| **Brand / ngữ nghĩa** | `src/components/brand/BrandIcons.tsx` | `CoinIcon` (coin 3D), `XpIcon` (orb XP 3D), `BoosterIcon`, `FrameIcon`, `StreakFlameIcon`, `SnapyIcon`, `RewardGiftIcon`, `BadgeMedalIcon`, `ScanLensIcon` |
 
 Quy tắc:
 
@@ -214,10 +214,10 @@ Mục tiêu: admin trông như công cụ một đội vận hành dùng hằng 
 | | Cửa hàng & Vật phẩm (`/shop`, `/shop/:id`) | **NOW** | Đã làm lại (rev 2). Thêm panel Hiệu quả: MOCK |
 | | Huy hiệu (`/badges`, `/badges/:id`) | **NOW** P1 (xem) · MOCK P2 (sửa nội dung, Bật/Tắt, ước tính cấp bù) | **Đã làm lại 2026-10-21** ([admin_badges_ui.md](../../../docs/ui/admin_badges_ui.md) rev 3). Sau cờ `VITE_ADMIN_BADGES_ENABLED`; P2 chạy trên dữ liệu mẫu (`VITE_ADMIN_BADGES_FIXTURES`) tới khi có `PATCH` |
 | | Thông báo | **NOW** (composer, A8) · MOCK (lịch sử) | Chưa có màn |
-| | Bảng xếp hạng (`/leaderboard`) | MOCK (chỉ xem) | **Đã dựng 2026-10-21** ([leaderboard_ui.md](./leaderboard_ui.md)). Chờ `GET /api/admin/leaderboards` ([leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) rev 1.1); phát hành sau màn người học |
+| | Bảng xếp hạng (`/leaderboard`) | NOW (chỉ xem) | **Đã dựng 2026-10-21** ([leaderboard_ui.md](./leaderboard_ui.md)); gọi `GET /api/admin/leaderboards` thật từ 2026-11-10 ([leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) rev 1.3, backend trên nhánh `feat/leaderboard`, chưa deploy); phát hành sau màn người học |
 | PEOPLE | Người học (`/learners`, `/learners/:id`) | **MOCK** | **Đã dựng 2026-10-19** ([learners_ui.md](./learners_ui.md)) |
 | | Phản hồi (bản gọn) | FUTURE | Chờ OQ-ADS-02. Tab "Thiếu từ" nằm trong AI Scan |
-| SYSTEM | Nhật ký hoạt động (`/activity-log`, `/activity-log/:loại/:id`) | MOCK | **Đã làm lại 2026-10-20** ([activity_log_ui.md](./activity_log_ui.md)): dải câu hỏi kiêm bộ lọc, dải phân bố ngày · khu vực · người làm, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng. Chờ `admin_audit_logs` |
+| SYSTEM | Nhật ký hoạt động (`/activity-log`, `/activity-log/:loại/:id`) | NOW | **Đã làm lại 2026-10-20** ([activity_log_ui.md](./activity_log_ui.md)): dải câu hỏi kiêm bộ lọc, dải phân bố ngày · khu vực · người làm, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng. Chờ `admin_audit_logs` |
 | — | Seasons/Leagues, Decks, Settings, Admins & Roles, Báo cáo kiểu SLA | **REMOVE** | Đã gỡ khỏi route và sidebar (file prototype còn trên đĩa, chờ xóa) |
 
 ### 4.2. Quy tắc hiển thị theo bản build
@@ -350,7 +350,7 @@ Dùng cho Từ vựng. Chia ba cột: danh sách (280px) · editor · preview mo
 
 | Bề mặt | Nguồn mobile được phản chiếu | Thành phần admin | Mức trung thực |
 | :--- | :--- | :--- | :--- |
-| Card vật phẩm Shop, theme | `SnapVocab/src/features/shop/theme/theme-context.tsx` (bề mặt sáng/tối), card Cửa hàng/Kho đồ | `ShopItemPreview` (`ShopMobileSimulator`), `artwork.ts` | Bề mặt theme mirror tay (TD-ADS-08); khung avatar theo tỉ lệ 58% |
+| Card vật phẩm Shop | card Cửa hàng/Kho đồ | `ShopItemPreview` (`ShopMobileSimulator`), `artwork.ts` | Khung avatar theo tỉ lệ 58% |
 | Thẻ nhiệm vụ | `SnapVocab/src/features/missions/missions-screen.tsx` (màu ô, copy CTA, "Vật phẩm: CODE") | `MissionCard`, `MissionTile` | Copy và màu giống app; tiến độ luôn 0/N (ngày mới) |
 | Bộ 5 nhiệm vụ | Backend `MissionTracker.SLOTS` / `choose` | `dailyOutlook()` | Mô phỏng cùng thuật toán (TD-ADS-09) |
 | Thẻ học | `SnapVocab/src/features/card-renderer` (`data-resolver.ts`, `card-field-renderer.tsx`, `card-face.tsx`) và `template-builder/mappers` | `CardFace` (`features/admin-templates/CardPreview.tsx`), `domains/admin-templates/render.ts` | Port hành vi (phần, ngắt cột, dò nhóm, nút nghe, phiên âm, cỡ chữ). Khác: chữ Inter, mặt thẻ không cuộn (TD-TPL-06). Mirror tay (TD-TPL-01) |
@@ -478,13 +478,12 @@ Quy tắc:
 | TD-ADS-02 | ~~Sidebar theo IA cũ~~ | **Xong** 2026-10-19 (`layout/nav.ts`). File prototype của mục REMOVE còn trên đĩa, chờ xóa |
 | TD-ADS-03 | ~~Eyebrow lệch nhau~~ | **Xong**: Shop, Missions dùng "LiveOps"; Người học dùng "People" |
 | TD-ADS-04 | ~~`StripCell` trùng~~ | **Xong**: `components/ui/SummaryStrip` (StripCell, StripNote, StatCell) |
-| TD-ADS-05 | Toast và hộp xác nhận bị trùng. Người học dùng `components/ui/ConfirmModal`; Shop (`ShopModals`) và Missions (`ConfirmModal` riêng) chưa chuyển | P0 còn lại |
+| TD-ADS-05 | ~~Hộp xác nhận bị trùng~~ | **Xong** 2026-10-22: Người học, Missions và Shop (`ShopModals`: phát hành, ngừng bán, xóa nháp, đổi loại) đều dùng `components/ui/ConfirmModal`; bản chung thêm `busyLabel` và cuộn nội dung dài. Toast: 7 màn (Huy hiệu, Mẫu thẻ, Người học, Chủ đề, Nhiệm vụ, Cửa hàng, AI Scan) dùng `useToast` chung (`components/ui/Toast`); sửa lỗi toast thứ hai bị hẹn giờ của toast đầu tắt sớm, AI Scan có `role="status"` |
 | TD-ADS-06 | Simulator Shop có ngữ cảnh mẫu ngoài scope: "Bảo hiểm Streak" (Streak Freeze), "Diamond League · Top 1" (League); số mẫu ví/streak/từ đã học không gắn nhãn mẫu | Trước nghiệm thu |
 | TD-ADS-07 | `resolveFrameAsset` đoán ảnh khung theo mã khi item chưa upload, nên preview hiện ảnh không thuộc item | Trước nghiệm thu |
-| TD-ADS-08 | `THEME_SURFACES` mirror tay từ mobile | Khi registry > vài theme |
-| TD-ADS-09 | `SLOTS` và `dailyOutlook` mirror `MissionTracker` ở frontend nên có rủi ro lệch | P1: dùng chung test vector hoặc thêm endpoint outlook |
+| TD-ADS-09 | ~~`SLOTS` và `dailyOutlook` mirror `MissionTracker` ở frontend nên có rủi ro lệch~~ | **Xong** 2026-10-22: bộ vector dùng chung `snap-vocab-backend/src/test/resources/mission/outlook-vectors.json`, backend kiểm bằng `MissionTracker.outcomes` (cùng hàm duyệt với `choose`) |
 | TD-ADS-10 | Catalog Shop tải một trang 100 item; có cảnh báo khi vượt | Khi > 100 item |
-| TD-ADS-11 | `MAX_COIN_PER_DAY = 85` là hằng số ở frontend | Khi PD-DM-02 đổi, hoặc lấy từ API |
+| TD-ADS-11 | `MAX_COIN_PER_DAY` là hằng số ở frontend | 2026-10-22: đổi thành **75** theo PD-DM-02 và so với bộ nhiệm vụ của app hiện tại. Vẫn là hằng số; lấy từ API khi có endpoint cấu hình kinh tế |
 | TD-ADS-12 | Shell chưa responsive (sidebar cố định 240px) | P0 |
 | TD-ADS-13 | Tài liệu lệch: `docs/sa/techstack.md` (ghi Next.js), `docs/spec/phan_ra_man_hinh.md`, phần hình thức ở [admin_missions_api_design.md](./admin_missions_api_design.md) §7 | Sau khi chốt rev 2 |
 | TD-ADS-14 | `ShopItemCard` có nhãn loại 10px, dưới sàn 11px (§3.3) | Nhỏ |
@@ -568,9 +567,9 @@ Theo đề xuất trong đánh giá 2026-10-19:
 | AI Scan | Vận hành · Nhãn chưa có từ · Lịch sử | Sau |
 | Dashboard C | 11 quy tắc "Cần xử lý" (6 NOW, 5 MOCK) + vận hành scan, nhịp học, nhiệm vụ, kinh tế, cửa hàng, thay đổi gần đây | **Xong** 2026-10-19. Chờ `GET /api/admin/overview`, OQ-DASH-01/02 |
 | Phân tích | 4 tab Học tập · Giữ chân · Kinh tế · Scan; kết luận + hành động mỗi biểu đồ; giữ chân theo % chỉ hiện khi ≥ 200 người học | **Xong** 2026-10-19. Chờ `GET /api/admin/analytics`, OQ-ANL-01…03 |
-| Nhật ký hoạt động | Dải câu hỏi, dải phân bố, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng, xuất CSV | **Xong** 2026-10-20 (MOCK). Chờ `admin_audit_logs`, OQ-LOG-01…03 |
+| Nhật ký hoạt động | Dải câu hỏi, dải phân bố, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng, xuất CSV | **Xong** 2026-10-20; **API thật** 2026-10-22 (FE-AUD-02, nav NOW). Panel "Vòng đời" của Cửa hàng/Nhiệm vụ đọc nhật ký thật (FE-AUD-03). Còn OQ-LOG-01…03; thao tác người học chờ M3 |
 | Huy hiệu (rev 3) | Danh mục theo chuỗi + kệ trên ứng dụng; editor `/badges/:id`; P2 MOCK | **Xong** 2026-10-21. P1 dùng API thật; P2 chờ `PATCH`, cột `version`, API ước tính (OQ-BDGA-01/02) |
-| Bảng xếp hạng | Dải số liệu, phân bố, bảng, "Cần xem", drawer + mô phỏng app | **Xong** 2026-10-21 (MOCK). Chờ backend (leaderboard_backend.md rev 1.1), OQ-LBA-01…03 |
+| Bảng xếp hạng | Dải số liệu, phân bố, bảng, "Cần xem", drawer + mô phỏng app | **Xong** 2026-10-21; nối API thật 2026-11-10, kiểm trên backend local (leaderboard_backend.md rev 1.3). OQ-LBA-01…03 PO chốt 2026-11-10 |
 | Mẫu thẻ | Thư viện vẽ bằng renderer của app, bảng thuộc tính × mẫu, editor với kiểm tra Quiz/hiển thị/dữ liệu | **Xong** 2026-10-21 (đọc NOW, ghi MOCK). Chờ API ghi (templates_ui.md §8), OQ-TPL-01…04 |
 | Backend (theo thứ tự) | Admin users → dictionary → đọc scan + thống kê → bảng ánh xạ nhãn → `admin_audit_logs` → overview → thống kê LiveOps | Theo đánh giá §10F |
 

@@ -2,12 +2,12 @@ import { Button } from '../../../components/ui';
 import React, { useId, useState, useRef } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { uploadShopAsset } from '../../../domains/shop/api';
-import { checkAssetHeader, readImageHeader, validateAssetFile } from '../../../domains/shop/mappers';
+import { ASSET_MAX_KB, type AssetKind, checkAssetHeader, readImageHeader, validateAssetFile } from '../../../domains/shop/mappers';
 
 interface AssetUploadFieldProps {
   label: string;
   helperText?: string;
-  type: 'icon' | 'frame';
+  type: AssetKind;
   valueKey?: string | null;
   previewUrl?: string | null;
   disabled?: boolean;
@@ -15,6 +15,8 @@ interface AssetUploadFieldProps {
   onChange: (objectName: string | null, previewUrl: string | null) => void;
   /** Lets the editor hold Save/Publish until the upload has finished. */
   onUploadingChange?: (uploading: boolean) => void;
+  /** Presigned upload to use; defaults to the Shop asset endpoint. */
+  upload?: (file: File) => Promise<{ objectName: string; previewUrl: string }>;
 }
 
 export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
@@ -27,13 +29,14 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
   error,
   onChange,
   onUploadingChange,
+  upload = uploadShopAsset,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const errorId = useId();
 
-  const maxKb = type === 'icon' ? 200 : 300;
+  const maxKb = ASSET_MAX_KB[type];
   const pickFile = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,7 +61,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
 
       // 2. Upload flow: Presigned URL -> PUT binary; the parent owns key + preview from here on.
       // ponytail: blob preview URLs are never revoked; a few hundred KB per upload until the tab closes.
-      const { objectName, previewUrl } = await uploadShopAsset(file);
+      const { objectName, previewUrl } = await upload(file);
       onChange(objectName, previewUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Tải lên asset thất bại.';
@@ -118,7 +121,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-text">
-                  {type === 'icon' ? 'Ảnh biểu tượng' : 'Khung avatar'}
+                  {label}
                 </div>
                 <div className="text-xs text-text-muted truncate max-w-[200px] sm:max-w-xs" title={valueKey ?? undefined}>
                   {valueKey ? 'Đã tải lên' : 'Đã chọn ảnh'}
@@ -129,7 +132,7 @@ export const AssetUploadField: React.FC<AssetUploadFieldProps> = ({
             {!disabled && !isUploading && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <Button size="sm" icon={<RefreshCw />} onClick={pickFile}>Thay ảnh</Button>
-                <Button variant="ghost" size="sm" icon={<X />} label="Xóa ảnh này" onClick={handleRemove} />
+                {type !== 'badge' && <Button variant="ghost" size="sm" icon={<X />} label="Xóa ảnh này" onClick={handleRemove} />}
               </div>
             )}
           </div>

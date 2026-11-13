@@ -20,13 +20,14 @@ import {
 import { SaleStateBadge } from '../components/ShopItemStatusBadge';
 import { ShopItemCard } from '../components/ShopItemCard';
 import { Button, StripCell, SummaryStrip, toolbarControl } from '../../../components/ui';
-import { BoosterIcon, FrameIcon, ThemeIcon } from '../../../components/brand/BrandIcons';
+import { BoosterIcon, CardFrameIcon, FrameIcon, FreezeIcon } from '../../../components/brand/BrandIcons';
 import { cn } from '../../../lib/utils';
 import {
   PublishConfirmationModal,
   ArchiveConfirmationModal,
   DeleteConfirmationModal,
 } from '../components/ShopModals';
+import { ReasonCancelled, useReasonPrompt } from '../../activity-log/reason';
 import { Search, Plus, RotateCw, PackageX, AlertCircle, LayoutGrid, List } from 'lucide-react';
 
 interface ShopItemListPageProps {
@@ -37,11 +38,12 @@ interface ShopItemListPageProps {
 
 type Row = { item: AdminShopItemDTO; sale: DerivedSaleState };
 
-/** Order matching the LiveOps Shop shelf: Frames -> Boosters -> Themes. */
+/** Order matching the LiveOps Shop shelf: Frames -> Card frames -> Boosters -> Streak Freeze. */
 const TYPES: { type: ShopItemType; label: string; Icon: React.FC<{ size?: number }> }[] = [
   { type: 'AVATAR_FRAME', label: 'Khung avatar', Icon: FrameIcon },
+  { type: 'CARD_FRAME', label: 'Khung thẻ', Icon: CardFrameIcon },
   { type: 'XP_BOOSTER', label: 'XP Booster', Icon: BoosterIcon },
-  { type: 'THEME', label: 'Giao diện', Icon: ThemeIcon },
+  { type: 'STREAK_FREEZE', label: 'Đóng băng chuỗi', Icon: FreezeIcon },
 ];
 
 /** Sale conclusions in scan order: what learners can buy, what is about to change, then inactive. */
@@ -109,14 +111,18 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({ onCreateItem
       onToast?.(success);
       closeModals();
     } catch (err) {
+      if (err instanceof ReasonCancelled) return; // nothing changed; the dialog stays open
       setActionError(mapBackendErrorsToFields(err).generalError || fallback);
     }
   };
+  // Publishing past the price guardrail: the server asks for a reason, this re-sends with it (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
 
   const handleConfirmPublish = () => publishingItem
-    && run(() => publishMutation.mutateAsync(publishingItem.id), `Đã phát hành "${publishingItem.name}".`, 'Phát hành thất bại.');
-  const handleConfirmArchive = () => archivingItem
-    && run(() => archiveMutation.mutateAsync(archivingItem.id), `Đã lưu trữ "${archivingItem.name}".`, 'Lưu trữ thất bại.');
+    && run(() => reasonPrompt.run((reason) => publishMutation.mutateAsync({ id: publishingItem.id, reason })),
+      `Đã phát hành "${publishingItem.name}".`, 'Phát hành thất bại.');
+  const handleConfirmArchive = (reason: string) => archivingItem
+    && run(() => archiveMutation.mutateAsync({ id: archivingItem.id, reason }), `Đã lưu trữ "${archivingItem.name}".`, 'Lưu trữ thất bại.');
   const handleConfirmDelete = () => deletingItem
     && run(() => deleteMutation.mutateAsync(deletingItem.id), `Đã xóa bản nháp "${deletingItem.name}".`, 'Xóa thất bại.');
 
@@ -308,9 +314,10 @@ export const ShopItemListPage: React.FC<ShopItemListPageProps> = ({ onCreateItem
           isArchiving={archiveMutation.isPending}
           errorMessage={actionError}
           onClose={closeModals}
-          onConfirm={handleConfirmArchive}
+          onConfirm={(reason) => void handleConfirmArchive(reason)}
         />
       )}
+      {reasonPrompt.dialog}
 
       {deletingItem && (
         <DeleteConfirmationModal

@@ -33,9 +33,9 @@ const ALL: (NavItem & { enabled?: boolean })[] = [
   { id: 'missions', path: '/missions', label: 'Nhiệm vụ hằng ngày', section: 'LiveOps', Icon: Target, scope: 'NOW', enabled: adminMissionsEnabled },
   { id: 'shop', path: '/shop', label: 'Cửa hàng & Vật phẩm', section: 'LiveOps', Icon: ShoppingBag, scope: 'NOW' },
   { id: 'badges', path: '/badges', label: 'Huy hiệu', section: 'LiveOps', Icon: Award, scope: 'NOW', enabled: adminBadgesEnabled },
-  { id: 'leaderboard', path: '/leaderboard', label: 'Bảng xếp hạng', section: 'LiveOps', Icon: Trophy, scope: 'MOCK' },
-  { id: 'learners', path: '/learners', label: 'Người học', section: 'Người dùng', Icon: Users, scope: 'MOCK' },
-  { id: 'activity-log', path: '/activity-log', label: 'Nhật ký hoạt động', section: 'Hệ thống', Icon: History, scope: 'MOCK' },
+  { id: 'leaderboard', path: '/leaderboard', label: 'Bảng xếp hạng', section: 'LiveOps', Icon: Trophy, scope: 'NOW' },
+  { id: 'learners', path: '/learners', label: 'Người học', section: 'Người dùng', Icon: Users, scope: 'NOW' },
+  { id: 'activity-log', path: '/activity-log', label: 'Nhật ký hoạt động', section: 'Hệ thống', Icon: History, scope: 'NOW' },
   { id: 'ui-kit', path: '/ui-kit', label: 'UI Kit (dev)', section: 'Hệ thống', Icon: Palette, scope: 'NOW', enabled: import.meta.env.DEV },
 ];
 

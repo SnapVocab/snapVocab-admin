@@ -1,23 +1,29 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, Copy, Lock, RefreshCw, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, ConfirmModal, Field, SectionLabel, fieldControl } from '../../components/ui';
-import { getAdminBadge, patchAdminBadge } from '../../domains/admin-badges/api';
+import { getAdminBadge, patchAdminBadge, uploadBadgeImage } from '../../domains/admin-badges/api';
 import {
-  EMBLEM_LABELS, applyForm, contentPatch, formatCount, groupCatalog, isKnownEmblem, metricInfo, previewShelf, reviewIssues,
-  ruleSentence, statusReason, toForm, validateBadgeForm,
+  applyForm, contentPatch, formatCount, groupCatalog, metricInfo, previewShelf, reviewIssues,
+  REWARD_MAX, rewardLabel, ruleSentence, statusReason, toForm, validateBadgeForm,
 } from '../../domains/admin-badges/catalog';
 import { badgeKeys } from '../../domains/admin-badges/queries';
 import type { AdminBadge, BadgeForm } from '../../domains/admin-badges/types';
-import { formatVnDateTime } from '../../domains/shop/mappers';
+import { formatShopItemTypeLabel, formatVnDateTime } from '../../domains/shop/mappers';
 import { ApiClientError } from '../../lib/api-client';
 import { cn } from '../../lib/utils';
 import { ErrorBanner } from '../admin-missions/components';
+import { RewardItemPicker } from '../admin-missions/RewardItemPicker';
+import { TargetHistory } from '../activity-log/TargetHistory';
+import { AssetUploadField } from '../shop/components/AssetUploadField';
 import { BadgeArtifact } from './BadgeArtifact';
 import { badgeErrorMessage } from './ui';
 
-const FIELD_LABEL: Record<keyof BadgeForm, string> = { name: 'Tên', description: 'Mô tả', iconKey: 'Biểu tượng', sortOrder: 'Thứ tự' };
-const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'iconKey' ? EMBLEM_LABELS[f.iconKey] ?? f.iconKey : f[k]);
+const FIELD_LABEL: Record<keyof BadgeForm, string> = {
+  name: 'Tên', description: 'Mô tả', imageKey: 'Ảnh huy hiệu', sortOrder: 'Thứ tự', rewardCoin: 'Coin thưởng', rewardXp: 'XP thưởng',
+  rewardItemCode: 'Vật phẩm thưởng',
+};
+const shown = (f: BadgeForm, k: keyof BadgeForm) => (k === 'imageKey' ? f.imageKey?.split('/').pop() ?? 'Không có' : f[k] ?? 'Không có');
 
 /** Shelf position on the Thành tựu screen once this badge is on (series ordered by min(sortOrder), UI-BDG-07). */
 function shelfRank(all: AdminBadge[], b: AdminBadge) {
@@ -63,6 +69,9 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   const [confirm, setConfirm] = useState<'leave' | 'reload' | null>(null);
   const [server, setServer] = useState<AdminBadge | null>(null);
   const [copied, setCopied] = useState(false);
+  /** Blob URL of a just-uploaded image, shown until the save returns the stored one. */
+  const [uploaded, setUploaded] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const flight = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -87,13 +96,15 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
     return () => window.removeEventListener('beforeunload', listener);
   }, [dirty, busy]);
 
-  const draft = editable ? applyForm(original, form) : original;
+  const draft = editable ? applyForm(original, form, uploaded) : original;
   const info = metricInfo(original.metric);
   const shelf = previewShelf(all.map((x) => (x.id === draft.id ? draft : x)), draft);
   const rankNow = shelfRank(all, original);
   const rankDraft = shelfRank(all, draft);
   const reason = statusReason(original);
   const thresholdMissing = reviewIssues(draft).some((t) => t.startsWith('Mô tả'));
+  // PD-BDG-14: the last milestone of a series pays a frame + XP; earlier ones pay Coin + XP.
+  const lastTier = shelf.length > 1 && shelf[shelf.length - 1].id === draft.id;
 
   const change = (key: keyof BadgeForm, value: string) => { setForm((f) => ({ ...f, [key]: value })); setErrors((e) => ({ ...e, [key]: undefined })); };
   const focusInvalid = () => requestAnimationFrame(() => root.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
@@ -108,7 +119,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   };
 
   async function save() {
-    if (flight.current || conflict || uncertain) return;
+    if (flight.current || conflict || uncertain || uploading) return;
     const invalid = validateBadgeForm(form);
     setErrors(invalid);
     if (Object.keys(invalid).length) { setError('Kiểm tra các trường được đánh dấu trước khi lưu.'); focusInvalid(); return; }
@@ -161,7 +172,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
       <div className="sticky -top-4 z-20 -mx-4 -mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Button disabled={busy} icon={<ArrowLeft />} label="Quay lại danh sách" onClick={() => (dirty ? setConfirm('leave') : onBack())} />
-          <BadgeArtifact metric={draft.metric} iconKey={draft.iconKey} size={40} />
+          <BadgeArtifact imageUrl={draft.imageUrl} size={40} />
           <div className="min-w-0">
             <h1 ref={heading} tabIndex={-1} className="flex items-center gap-2.5 text-xl font-semibold tracking-tight focus:outline-none">
               <span className="truncate">{draft.name}</span>
@@ -181,7 +192,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
             <Button disabled={busy || dirty || conflict || uncertain} title={dirty ? 'Lưu hoặc bỏ thay đổi trước khi bật/tắt' : undefined} onClick={() => onToggle(original)}>
               {original.isActive ? 'Tắt huy hiệu' : 'Bật huy hiệu'}
             </Button>
-            <Button variant="primary" icon={<Save />} loading={busy} disabled={!dirty || conflict || uncertain} onClick={() => void save()}>Lưu thay đổi</Button>
+            <Button variant="primary" icon={<Save />} loading={busy} disabled={!dirty || conflict || uncertain || uploading} onClick={() => void save()}>Lưu thay đổi</Button>
           </>}
         </div>
       </div>
@@ -230,18 +241,39 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
                   <span>Mô tả không nêu ngưỡng {formatCount(original.threshold)}, người học có thể hiểu sai điều kiện. Gợi ý để rà lại, không chặn lưu.</span>
                 </p>
               )}
-              <IconPicker value={form.iconKey} metric={original.metric} error={errors.iconKey} onChange={(key) => change('iconKey', key)} />
+              <AssetUploadField label="Ảnh huy hiệu" type="badge" upload={uploadBadgeImage} valueKey={form.imageKey} previewUrl={draft.imageUrl}
+                error={errors.imageKey} onUploadingChange={setUploading}
+                helperText="Ảnh vuông có nền trong suốt, lưu trên MinIO. Người học thấy ảnh mới khi ứng dụng tải lại."
+                onChange={(key, url) => { if (key) { setUploaded(url); change('imageKey', key); } }} />
             </> : (
               <dl className="m-0 space-y-3">
                 <Row label="Tên">{original.name}</Row>
                 <Row label="Mô tả">{original.description}</Row>
-                <Row label="Biểu tượng">
-                  {isKnownEmblem(original.iconKey) ? EMBLEM_LABELS[original.iconKey] : 'Không có trong ứng dụng'}
-                  <span className="ml-2 font-mono text-2xs text-text-light">{original.iconKey}</span>
-                  {!isKnownEmblem(original.iconKey) && <span className="mt-1 block text-xs text-warning-dark">Người học thấy huy chương mặc định vì ứng dụng không có biểu tượng “{original.iconKey}”.</span>}
+                <Row label="Ảnh huy hiệu">
+                  {original.imageUrl ? <BadgeArtifact imageUrl={original.imageUrl} size={48} /> : <span className="text-warning-dark">Chưa có ảnh: người học thấy ô trống.</span>}
                 </Row>
               </dl>
             )}
+          </section>
+
+          <section className="space-y-3 border-t border-border px-5 py-4">
+            <SectionLabel>Phần thưởng</SectionLabel>
+            <p className="text-xs text-text-muted">Cộng một lần khi người học nhận huy hiệu. Đổi phần thưởng chỉ áp dụng cho người nhận sau khi lưu; người đã nhận giữ phần thưởng cũ, không cộng bù. XP này không tính vào bảng xếp hạng.</p>
+            {editable ? <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Coin" error={errors.rewardCoin} hint={`0–${formatCount(REWARD_MAX)}`}>
+                  <input type="number" min={0} max={REWARD_MAX} step={1} className={fieldControl} value={form.rewardCoin} onChange={(e) => change('rewardCoin', e.target.value)} />
+                </Field>
+                <Field label="XP" error={errors.rewardXp} hint={`0–${formatCount(REWARD_MAX)}, không nhân Booster`}>
+                  <input type="number" min={0} max={REWARD_MAX} step={1} className={fieldControl} value={form.rewardXp} onChange={(e) => change('rewardXp', e.target.value)} />
+                </Field>
+              </div>
+              {lastTier && !form.rewardItemCode && <p role="status" className="text-xs text-warning-dark">Mốc cuối của chuỗi: theo quy ước thưởng 1 khung (avatar hoặc thẻ) cùng XP.</p>}
+              <RewardItemPicker value={form.rewardItemCode} savedCode={original.rewardItemCode} types={['AVATAR_FRAME', 'CARD_FRAME']} unsold
+                savedHint="khung đã lưu trữ vẫn được cấp cho người đạt huy hiệu; chọn khung khác thì cần khung đã phát hành."
+                onChange={(code) => { setForm((f) => ({ ...f, rewardItemCode: code })); setErrors((e) => ({ ...e, rewardItemCode: undefined })); }} />
+              {errors.rewardItemCode && <p role="alert" className="text-xs text-danger-dark">{errors.rewardItemCode}</p>}
+            </> : <p className="text-body">{rewardLabel(original)}</p>}
           </section>
 
           <section className="space-y-2 border-t border-border px-5 pb-5 pt-4">
@@ -258,26 +290,44 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
         <aside className="min-w-0 space-y-4 xl:sticky xl:top-20" aria-label="Xem trước trên ứng dụng">
           <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
             <SectionLabel>Xem trước trên ứng dụng</SectionLabel>
-            <div className="flex justify-around">
-              <figure className="m-0 grid justify-items-center gap-1"><BadgeArtifact metric={draft.metric} iconKey={draft.iconKey} size={64} threshold={draft.threshold} /><figcaption className="text-xs text-text-muted">Đã đạt</figcaption></figure>
-              <figure className="m-0 grid justify-items-center gap-1"><BadgeArtifact metric={draft.metric} iconKey={draft.iconKey} state="locked" size={64} threshold={draft.threshold} /><figcaption className="text-xs text-text-muted">Chưa đạt</figcaption></figure>
+            <p className="text-xs text-text-muted">Thẻ trên lưới Thành tựu</p>
+            <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#F7F8FA] p-2">
+              <AppCard badge={draft} unit={info?.unit} earned />
+              <AppCard badge={draft} unit={info?.unit} />
             </div>
-            <p className="text-xs font-medium">Kệ “{info?.title ?? draft.metric}” của người học chưa đạt mốc nào</p>
+            <p className="text-xs text-text-muted">Màn chi tiết khi chạm vào thẻ (người chưa đạt)</p>
+            <div className="grid justify-items-center gap-2 rounded-lg border border-border p-3 text-center">
+              <BadgeArtifact imageUrl={draft.imageUrl} state="locked" size={88} />
+              <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-2xs font-bold uppercase text-neutral-600">Đang khóa</span>
+              <p className="text-base font-bold">{draft.name}</p>
+              <p className="text-xs text-text-muted">{draft.description}</p>
+              {rewardLabel(draft) !== 'Không có' && (
+                <div className="w-full rounded-lg border border-border bg-neutral-50 p-2 text-left">
+                  <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-text-muted">Phần thưởng khi đạt</span><AppRewardChips badge={draft} /></div>
+                  {draft.rewardItemCode && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {draft.rewardItem?.previewUrl && <img alt="" src={draft.rewardItem.previewUrl} className="h-12 w-12 shrink-0 rounded-md object-contain" />}
+                      <p className="text-xs"><span className="font-semibold">{draft.rewardItem?.name ?? draft.rewardItemCode}</span>{draft.rewardItem && <span className="text-text-muted"> · {formatShopItemTypeLabel(draft.rewardItem.type)}</span>}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="w-full rounded-lg border border-border p-2 text-left">
+                <p className="flex justify-between text-xs"><span className="text-text-muted">Tiến độ chinh phục</span><span className="font-semibold tabular-nums">0 / {formatCount(draft.threshold)}{info?.unit ? ` ${info.unit}` : ''}</span></p>
+                <div className="mt-1.5 h-2 rounded-full bg-neutral-100" />
+              </div>
+              {info?.sheetNote && <p className="w-full rounded-md bg-surface-subtle p-2 text-left text-xs text-text-muted">{info.sheetNote}</p>}
+            </div>
+            <p className="text-xs text-text-muted">Chuỗi “{info?.title ?? draft.metric}” trên lưới, theo thứ tự ngưỡng</p>
             <div className="flex items-end justify-center gap-4 overflow-x-auto rounded-lg bg-surface-subtle px-2 pb-1.5 pt-3">
               {shelf.map((b) => (
                 <div key={b.id} className={cn('grid justify-items-center gap-1 text-xs tabular-nums', b.id === draft.id ? 'font-semibold text-text' : 'text-text-muted')}>
-                  <BadgeArtifact metric={b.metric} iconKey={b.iconKey} state="locked" size={40} focused={b.id === draft.id} />
+                  <BadgeArtifact imageUrl={b.imageUrl} size={40} focused={b.id === draft.id} />
                   {formatCount(b.threshold)}
                 </div>
               ))}
             </div>
-            {!original.isActive && <p className="text-xs text-text-muted">Người học chưa đạt hiện không thấy huy hiệu này; kệ trên là khi huy hiệu được bật.</p>}
-            {shelf.length >= 4 && <p className="text-xs text-text-muted">Chuỗi có {shelf.length} mốc nên ứng dụng chuyển kệ sang dạng cuộn ngang.</p>}
-            <div className="space-y-1 rounded-lg border border-border p-3">
-              <p className="text-sm font-semibold">{draft.name}</p>
-              <p className="text-xs text-text-muted">{draft.description}</p>
-              {info?.sheetNote && <p className="rounded-md bg-surface-subtle p-2 text-xs text-text-muted">{info.sheetNote}</p>}
-            </div>
+            {!original.isActive && <p className="text-xs text-text-muted">Người học chưa đạt hiện không thấy huy hiệu này; xem trước là khi huy hiệu được bật.</p>}
           </div>
 
           <div className="space-y-2.5 rounded-lg border border-border bg-surface p-4 text-xs">
@@ -287,7 +337,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
               <dd>{original.earnerCount === null ? 'Chưa có số liệu' : <span className="tabular-nums">{formatCount(original.earnerCount)} người</span>}<span className="block text-text-muted">Thấy nội dung mới nhất khi ứng dụng tải lại; vẫn giữ huy hiệu nếu nó bị tắt.</span></dd>
               <dt className="text-text-muted">Người chưa đạt</dt>
               <dd>{original.isActive ? 'Thấy huy hiệu kèm tiến độ; nhận khi đủ ngưỡng và ứng dụng đồng bộ.' : 'Không thấy huy hiệu đang tắt.'}</dd>
-              <dt className="text-text-muted">Vị trí kệ</dt>
+              <dt className="text-text-muted">Vị trí</dt>
               <dd>
                 {rankDraft.at > 0 ? <>Thứ <span className="tabular-nums">{rankDraft.at}/{rankDraft.of}</span> trên màn Thành tựu{!original.isActive && ' khi bật'}</> : '—'}
                 {editable && rankDraft.at !== rankNow.at && <span className="block font-medium text-warning-dark">Đổi từ thứ {rankNow.at} sau khi lưu.</span>}
@@ -302,7 +352,7 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
               <dt className="text-text-muted">Sửa gần nhất</dt><dd className="tabular-nums">{formatVnDateTime(original.updatedAt)}{original.version !== null && `, phiên bản ${original.version}`}</dd>
               <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{original.id}</dd>
             </dl>
-            <p className="border-t border-border pt-2 text-text-muted">Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.</p>
+            <TargetHistory target={{ type: 'BADGE', id: String(original.id) }} />
           </div>
         </aside>
       </div>
@@ -329,24 +379,36 @@ export function BadgeEditor({ badge, all, editable, refreshing, onRefresh, onBac
   );
 }
 
-/** The five emblems the app can draw (achievements_ui.md §3), shown on this series' medal shape. */
-function IconPicker({ value, metric, error, onChange }: { value: string; metric: string; error?: string; onChange: (key: string) => void }) {
-  const name = useId();
+const APP_CHIP = 'rounded border px-1 text-2xs font-bold';
+const FRAME_CHIP: Record<string, string> = { AVATAR_FRAME: 'Khung avatar', CARD_FRAME: 'Khung thẻ' };
+
+/** The app's reward chips (SnapVocab reward-chips.tsx): Coin, XP, frame type. */
+function AppRewardChips({ badge }: { badge: AdminBadge }) {
   return (
-    <fieldset className="space-y-1.5">
-      <legend className="text-xs font-semibold text-text">Biểu tượng<span aria-hidden className="text-danger-dark"> *</span></legend>
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(EMBLEM_LABELS).map(([key, label]) => (
-          <label key={key} className={cn('flex cursor-pointer flex-col items-center gap-1 rounded-lg border px-3 pb-1.5 pt-2 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-info',
-            value === key ? 'border-text bg-surface-subtle font-medium text-text' : 'border-border text-text-muted hover:bg-surface-subtle')}>
-            <input type="radio" name={name} value={key} checked={value === key} onChange={() => onChange(key)} className="sr-only" />
-            <BadgeArtifact metric={metric} iconKey={key} size={36} />
-            {label}
-          </label>
-        ))}
-      </div>
-      {!isKnownEmblem(value) && <p className="text-xs text-warning-dark">Đang dùng “{value}”: ứng dụng không có biểu tượng này nên người học thấy huy chương mặc định. Chọn một biểu tượng ở trên.</p>}
-      {error && <p className="text-xs text-danger-dark">{error}</p>}
-    </fieldset>
+    <span className="inline-flex flex-wrap justify-center gap-1">
+      {badge.rewardCoin > 0 && <span className={cn(APP_CHIP, 'border-amber-200 bg-amber-50 text-amber-700')}>+{badge.rewardCoin} Coin</span>}
+      {badge.rewardXp > 0 && <span className={cn(APP_CHIP, 'border-sky-200 bg-sky-50 text-sky-700')}>+{badge.rewardXp} XP</span>}
+      {badge.rewardItemCode && <span className={cn(APP_CHIP, 'border-purple-200 bg-purple-50 text-purple-700')}>{FRAME_CHIP[badge.rewardItem?.type ?? ''] ?? 'Vật phẩm'}</span>}
+    </span>
+  );
+}
+
+/** One card of the app's 2-column achievements grid (SnapVocab achievements-screen.tsx BadgeCard); no rarity (PD-BDG-14). */
+function AppCard({ badge, unit, earned = false }: { badge: AdminBadge; unit?: string; earned?: boolean }) {
+  return (
+    <figure className="m-0 grid justify-items-center gap-1.5 rounded-xl border-2 border-b-4 border-neutral-200 bg-white p-2 text-center">
+      <BadgeArtifact imageUrl={badge.imageUrl} state={earned ? 'earned' : 'locked'} size={64} />
+      <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-text">{badge.name}</p>
+      <AppRewardChips badge={badge} />
+      {earned
+        ? <p className="w-full rounded-md border border-primary/40 bg-primary-light py-0.5 text-2xs font-bold uppercase text-primary-dark">Đã mở khóa</p>
+        : (
+          <div className="w-full text-left">
+            <p className="flex justify-between text-2xs"><span className="text-text-muted">Tiến độ</span><span className="font-semibold tabular-nums">0 / {formatCount(badge.threshold)}</span></p>
+            <div className="mt-1 h-1.5 rounded-full bg-neutral-100" />
+          </div>
+        )}
+      <figcaption className="sr-only">{earned ? 'Đã đạt' : `Chưa đạt${unit ? `, ngưỡng ${formatCount(badge.threshold)} ${unit}` : ''}`}</figcaption>
+    </figure>
   );
 }

@@ -8,9 +8,10 @@ import { formatAgo } from '../../domains/admin-learners/mappers';
 import { deriveSaleState, formatVnDateTime, MAX_COIN_PER_DAY, type SaleState } from '../../domains/shop/mappers';
 import type { AdminShopItemDTO } from '../../domains/shop/types';
 import type { MissionTemplate } from '../../domains/admin-missions/types';
-import { catalogSummary, categoryLabels, dailyOutlook } from '../../domains/admin-missions/mappers';
+import { catalogSummary, categoryLabels, CLIENTS, dailyOutlook } from '../../domains/admin-missions/mappers';
 import { openIssues, pct, seconds, THRESHOLDS, type ChangeEvent, type Check as Rule, type CheckArea, type Severity } from '../../domains/admin-overview/mappers';
 import type { AdminOverview } from '../../domains/admin-overview/types';
+import { overviewUsesFixtures } from '../../domains/admin-overview/api';
 import { COIN_BAND, coinVerdict } from '../../domains/admin-analytics/mappers';
 import { RELIABILITY_LABEL, scanErrorLabel } from '../../domains/scan/labels';
 
@@ -216,7 +217,8 @@ export const LearningBand: React.FC<{ o?: AdminOverview; missions?: MissionTempl
 
 const MissionsColumn: React.FC<{ missions: MissionTemplate[]; o?: AdminOverview }> = ({ missions, o }) => {
   const s = catalogSummary(missions);
-  const outlook = dailyOutlook(missions);
+  // What a learner on the current app gets: the approved ceiling applies to it (PD-DM-02).
+  const outlook = dailyOutlook(missions, [CLIENTS.current]);
   const active = missions.filter((m) => m.isActive);
   const stat = (code: string) => o?.missions.find((m) => m.code === code);
   const catalog = s.inactive ? { text: 'Chưa kích hoạt', tone: 'text-text-muted' } : s.valid ? { text: 'Đủ cấp 5 nhiệm vụ/ngày', tone: 'text-primary-dark' } : { text: 'Không đủ cấp 5 nhiệm vụ/ngày', tone: 'text-danger-dark' };
@@ -229,7 +231,7 @@ const MissionsColumn: React.FC<{ missions: MissionTemplate[]; o?: AdminOverview 
         <Mini value={outlook.xp ? range(outlook.xp) : '—'} label="XP mỗi người/ngày" />
       </MiniStrip>
       <div>
-        <p className="text-xs font-medium text-text-muted">Tỉ lệ hoàn thành 7 ngày{o && <span className="font-normal text-text-light"> · dữ liệu mẫu</span>}</p>
+        <p className="text-xs font-medium text-text-muted">Tỉ lệ hoàn thành 7 ngày{o && overviewUsesFixtures && <span className="font-normal text-text-light"> · dữ liệu mẫu</span>}</p>
         <table className="mt-1 w-full text-left text-xs">
           <tbody className="divide-y divide-border">
             {active.map((m) => {
@@ -328,7 +330,7 @@ const ShopColumn: React.FC<{ shop: AdminShopItemDTO[]; o?: AdminOverview; now: D
       </div>
       {o && (
         <div>
-          <p className="text-xs font-medium text-text-muted">Bán chạy 30 ngày <span className="font-normal text-text-light">· dữ liệu mẫu</span></p>
+          <p className="text-xs font-medium text-text-muted">Bán chạy 30 ngày{overviewUsesFixtures && <span className="font-normal text-text-light"> · dữ liệu mẫu</span>}</p>
           <ul className="mt-1.5 space-y-1">
             {sold.map((x) => (
               <li key={x.code}>

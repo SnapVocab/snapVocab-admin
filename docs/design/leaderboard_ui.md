@@ -1,6 +1,6 @@
 # Admin · Bảng xếp hạng — Đặc tả màn hình
 
-> **Rev 1 · 2026-10-21 · Scope: MOCK. Đã dựng trên dữ liệu mẫu, chờ PO duyệt.** Backend đã có đặc tả nhưng chưa build: [leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) (rev 1.1 thêm `rankChange` cho API admin, §2 dưới đây).
+> **Rev 1 · 2026-10-21 · Scope: NOW (2026-11-10). Gọi `GET /api/admin/leaderboards` thật; dữ liệu mẫu chỉ khi `VITE_ADMIN_LEADERBOARD_FIXTURES=true`. Đã kiểm trên backend local (nhánh `feat/leaderboard`) với dữ liệu demo; backend chưa deploy. PO chốt OQ-LBA-01…03 và OQ-LB-01…07 (2026-11-10).** Backend đã có đặc tả nhưng chưa build: [leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) (rev 1.1 thêm `rankChange` cho API admin, §2 dưới đây).
 > Nền tảng: [design.md](./design.md) rev 4 (§3.7 ngôn ngữ giao diện, §5.2 dải số liệu). Nghiệp vụ: leaderboard_backend.md §1.3 (LB-01…LB-12), §3.5 (tín hiệu cho admin), §7 (API admin), OQ-LB-06 (ngưỡng "bất thường" do client admin quyết).
 > Thay bản mock cũ "Leaderboard Seasons" (`features/seasons`, `domains/seasons`; REMOVE theo PD-ADS-14, đã gỡ route nhưng còn trên đĩa) và bản P1 chỉ xem đã xóa ngày 2026-10-18.
 
@@ -14,7 +14,7 @@ Màn trả lời ba câu hỏi của người vận hành:
 
 **Ranh giới:**
 
-- Chỉ xem (LB-12). Không sửa điểm, không loại ai khỏi bảng, không trừ XP. Muốn chặn một tài khoản thì khóa trong hồ sơ người học; theo mặc định OQ-LB-07, người bị khóa rời bảng ở lần cập nhật kế tiếp.
+- Chỉ xem (LB-12). Không sửa điểm, không loại ai khỏi bảng, không trừ XP. Muốn chặn một tài khoản thì khóa trong hồ sơ người học; theo OQ-LB-07 (PO chốt 2026-11-10), người bị khóa rời bảng ở lần cập nhật kế tiếp.
 - Không league, mùa giải, phòng đấu, thưởng theo hạng (scope: không community; daily_mission.md: không thưởng tuần).
 - Không xem XP từng ngày của một người và không có lịch sử cũ hơn tuần trước (leaderboard_backend.md §1.2).
 
@@ -137,15 +137,15 @@ Không gắn cờ cho Booster: XP Booster mua bằng Coin kiếm từ học và 
 | AC-LBA-08 | Không mã spec, không khái niệm ngoài scope (league, mùa, phòng, Gems, trừ XP) trên màn; không "Dữ liệu mẫu" khi gọi API thật | D1 |
 | AC-LBA-09 | Khi backend xong: cùng `asOf`, hạng, điểm với app cho cùng một người (AC-LB-15 của đặc tả backend) | Staging |
 
-## 7. Câu hỏi mở cho PO
+## 7. Quyết định của PO (chốt 2026-11-10)
 
-| ID | Câu hỏi | Đề xuất |
+| ID | Câu hỏi | Đã chốt |
 | :--- | :--- | :--- |
 | OQ-LBA-01 | Ngưỡng "Cần xem" (OQ-LB-06) | Giữ 1.500 XP/giờ và 1.000 XP ôn thẻ/ngày học tới khi có 4 tuần số liệu thật, rồi đặt lại theo phân vị 99 |
-| OQ-LBA-02 | API admin thêm `rankChange` (§2) | Đồng ý; đã ghi vào đặc tả backend rev 1.1 |
+| OQ-LBA-02 | API admin thêm `rankChange` (§2) | Có; đã ghi vào đặc tả backend rev 1.1 |
 | OQ-LBA-03 | Màn admin phát hành trước hay sau màn người học? | Sau (thứ tự phát hành của đặc tả backend §13): giữ MOCK tới khi app có MH-GAME-01 |
 
-Các câu OQ-LB-01…07 của đặc tả backend vẫn mở; màn tự theo `countedSources` nên OQ-LB-01 đổi không cần sửa giao diện.
+OQ-LB-01…07 của đặc tả backend đã chốt (rev 1.2). Màn tự theo `countedSources`, nên nếu sau này đổi nguồn XP thì không cần sửa giao diện.
 
 ## 8. Nợ và giới hạn đã biết
 

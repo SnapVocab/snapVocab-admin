@@ -1,7 +1,7 @@
 /**
- * Proposed contract for the Analytics screen (admin_product_review_2026-10-19 §3.2, analytics_ui.md).
- * Backend implementation spec, with the source and formula of every field: docs/sa/admin_analytics_backend.md.
- * NOT implemented on the backend yet: dev/demo builds run on fixtures (api.ts).
+ * Contract for the Analytics screen (admin_product_review_2026-10-19 §3.2, analytics_ui.md).
+ * Backend spec, with the source and formula of every field: docs/sa/admin_analytics_backend.md.
+ * Implemented by the backend (module vn.ptit.snapvocab.adminstats); fixtures only with VITE_ADMIN_ANALYTICS_FIXTURES=true (api.ts).
  *
  *   GET /api/admin/analytics?days=7|30|90 → AdminAnalytics
  *

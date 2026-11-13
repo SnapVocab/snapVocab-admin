@@ -3,31 +3,35 @@
  * Enum codes never reach the screen (design.md §3.7 G5): every code goes through a label here.
  */
 import { foldVi } from '../../lib/utils';
-import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatThemeKeyLabel, formatVnDateTime } from '../shop/mappers';
+import { formatShopItemStatusLabel, formatShopItemTypeLabel, formatVnDateTime } from '../shop/mappers';
 import { categoryLabels, eligibilityLabels } from '../admin-missions/mappers';
-import { STATUS_META } from '../admin-learners/mappers';
+import { banReasonError, STATUS_META } from '../admin-learners/mappers';
 import type { LearnerStatus } from '../admin-learners/types';
 import type { AuditAction, AuditArea, AuditEntry, AuditKind, AuditTarget, AuditTargetType } from './types';
 
-export const AREAS: AuditArea[] = ['SHOP', 'MISSIONS', 'DICTIONARY', 'TOPICS', 'AI_SCAN', 'LEARNERS', 'NOTIFICATIONS'];
+/** Every reason the backend asks for (ban, permanent stop of sale, a save past a guardrail): 10–500 characters, trimmed. */
+export const auditReasonError = banReasonError;
+
+export const AREAS: AuditArea[] = ['SHOP', 'MISSIONS', 'BADGES', 'DICTIONARY', 'TOPICS', 'AI_SCAN', 'LEARNERS', 'NOTIFICATIONS'];
 export const AREA_LABEL: Record<AuditArea, string> = {
-  SHOP: 'Cửa hàng', MISSIONS: 'Nhiệm vụ', DICTIONARY: 'Từ điển', TOPICS: 'Chủ đề', AI_SCAN: 'AI Scan', LEARNERS: 'Người học', NOTIFICATIONS: 'Thông báo',
+  SHOP: 'Cửa hàng', MISSIONS: 'Nhiệm vụ', BADGES: 'Huy hiệu', DICTIONARY: 'Từ điển', TOPICS: 'Chủ đề', AI_SCAN: 'AI Scan', LEARNERS: 'Người học', NOTIFICATIONS: 'Thông báo',
 };
 
 /** The verb; the object has its own column. */
 export const ACTION_LABEL: Record<AuditAction, string> = {
   SHOP_ITEM_CREATED: 'Tạo bản nháp', SHOP_ITEM_UPDATED: 'Sửa', SHOP_ITEM_PUBLISHED: 'Phát hành', SHOP_ITEM_ARCHIVED: 'Ngừng bán vĩnh viễn', SHOP_ITEM_DELETED: 'Xóa bản nháp',
   MISSION_TEMPLATE_CREATED: 'Tạo mẫu', MISSION_TEMPLATE_UPDATED: 'Sửa', MISSION_TEMPLATE_ENABLED: 'Bật', MISSION_TEMPLATE_DISABLED: 'Tắt',
+  BADGE_UPDATED: 'Sửa', BADGE_ENABLED: 'Bật', BADGE_DISABLED: 'Tắt',
   WORD_UPDATED: 'Sửa',
   COLLECTION_CREATED: 'Tạo collection', COLLECTION_UPDATED: 'Sửa collection', COLLECTION_DELETED: 'Xóa collection',
   TOPIC_CREATED: 'Tạo chủ đề', TOPIC_ITEM_ADDED: 'Thêm mục từ', TOPIC_TEMPLATE_CHANGED: 'Đổi mẫu thẻ', TOPIC_SCHEMA_CHANGED: 'Đổi schema',
   SCAN_LABEL_MAPPED: 'Gán từ cho nhãn',
-  LEARNER_BANNED: 'Khóa tài khoản', LEARNER_UNBANNED: 'Mở khóa tài khoản', LEARNER_PASSWORD_RESET_SENT: 'Gửi link đặt lại mật khẩu',
+  LEARNER_BANNED: 'Khóa tài khoản', LEARNER_UNBANNED: 'Mở khóa tài khoản', LEARNER_PASSWORD_RESET_SENT: 'Gửi mã đặt lại mật khẩu',
   SYSTEM_NOTIFICATION_SENT: 'Gửi thông báo hệ thống',
 };
 
 export const TARGET_LABEL: Record<AuditTargetType, string> = {
-  SHOP_ITEM: 'Vật phẩm', MISSION_TEMPLATE: 'Mẫu nhiệm vụ', WORD: 'Từ', COLLECTION: 'Collection', TOPIC: 'Chủ đề',
+  SHOP_ITEM: 'Vật phẩm', MISSION_TEMPLATE: 'Mẫu nhiệm vụ', BADGE: 'Huy hiệu', WORD: 'Từ', COLLECTION: 'Collection', TOPIC: 'Chủ đề',
   SCAN_LABEL: 'Nhãn scan', LEARNER: 'Người học', NOTIFICATION: 'Thông báo',
 };
 
@@ -40,6 +44,7 @@ const ECONOMY_FIELDS = new Set(['price', 'purchasable', 'rewardCoin', 'rewardXp'
 const LIFECYCLE_ACTIONS = new Set<AuditAction>([
   'SHOP_ITEM_CREATED', 'SHOP_ITEM_PUBLISHED', 'SHOP_ITEM_ARCHIVED', 'SHOP_ITEM_DELETED',
   'MISSION_TEMPLATE_CREATED', 'MISSION_TEMPLATE_ENABLED', 'MISSION_TEMPLATE_DISABLED',
+  'BADGE_ENABLED', 'BADGE_DISABLED',
   'COLLECTION_CREATED', 'COLLECTION_DELETED', 'TOPIC_CREATED',
 ]);
 
@@ -68,6 +73,7 @@ export function targetPath(t: AuditTarget): string | null {
   switch (t.type) {
     case 'SHOP_ITEM': return `/shop/${t.id}`;
     case 'MISSION_TEMPLATE': return `/missions/${t.id}`;
+    case 'BADGE': return `/badges/${t.id}`;
     case 'WORD': return `/dictionary/${encodeURIComponent(t.id)}`;
     case 'COLLECTION': return `/topics/${t.id}`;
     case 'TOPIC': return `/topics/${[...(t.parents ?? []), t.id].join('/')}`;
@@ -78,7 +84,7 @@ export function targetPath(t: AuditTarget): string | null {
 }
 
 const SEGMENT: Record<AuditTargetType, string> = {
-  SHOP_ITEM: 'vat-pham', MISSION_TEMPLATE: 'nhiem-vu', WORD: 'tu', COLLECTION: 'collection', TOPIC: 'chu-de',
+  SHOP_ITEM: 'vat-pham', MISSION_TEMPLATE: 'nhiem-vu', BADGE: 'huy-hieu', WORD: 'tu', COLLECTION: 'collection', TOPIC: 'chu-de',
   SCAN_LABEL: 'nhan-scan', LEARNER: 'nguoi-hoc', NOTIFICATION: 'thong-bao',
 };
 
@@ -99,7 +105,8 @@ const asset = (v: unknown) => String(v).replace(/^.*\//, '').replace(/^([0-9a-f]
 
 const TRIGGER_LABEL: Record<string, string> = {
   QUIZ_COMPLETED: 'Hoàn thành quiz', LEARNING_ACTIVITY_RECORDED: 'Có hoạt động học', TOPIC_ITEM_CREATED: 'Thêm từ mới',
-  SHOP_ITEM_PURCHASED: 'Mua vật phẩm', BOOSTER_USED: 'Kích hoạt booster',
+  SHOP_ITEM_PURCHASED: 'Mua vật phẩm', BOOSTER_USED: 'Kích hoạt booster', SRS_REVIEW_COMPLETED: 'Học hoặc ôn thẻ',
+  SCAN_WORD_SAVED: 'Lưu từ từ ảnh quét',
 };
 const label = (map: Record<string, string>) => (v: unknown) => map[String(v)] ?? String(v);
 
@@ -110,13 +117,14 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   type: { label: 'Loại', format: (v) => formatShopItemTypeLabel(String(v)) },
   name: { label: 'Tên' },
   description: { label: 'Mô tả' },
+  // Shop upload key; older badge rows hold the emblem name the app used to draw.
   iconKey: { label: 'Ảnh biểu tượng', format: asset },
+  imageKey: { label: 'Ảnh huy hiệu', format: asset },
   purchasable: { label: 'Bán trong Cửa hàng' },
   price: { label: 'Giá', format: unit('Coin') },
   availableFrom: { label: 'Mở bán từ', format: (v) => formatVnDateTime(String(v)) },
   availableUntil: { label: 'Bán đến', format: (v) => formatVnDateTime(String(v)) },
   sortOrder: { label: 'Thứ tự trên kệ' },
-  themeKey: { label: 'Giao diện', format: (v) => formatThemeKeyLabel(String(v)) },
   frameAssetKey: { label: 'Ảnh khung', format: asset },
   boostDurationMinutes: { label: 'Thời lượng', format: unit('phút') },
   maxQuantity: { label: 'Giữ tối đa' },
@@ -167,7 +175,7 @@ export function formatValue(field: string, v: unknown): string {
 
 export interface ChangeLine { field: string; label: string; before: string | null; after: string }
 
-const ASSET_FIELDS = new Set(['iconKey', 'frameAssetKey']);
+const ASSET_FIELDS = new Set(['iconKey', 'frameAssetKey', 'imageKey']);
 const empty = (v: unknown) => v === null || v === undefined;
 
 /**

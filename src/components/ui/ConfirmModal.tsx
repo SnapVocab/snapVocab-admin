@@ -21,6 +21,8 @@ export interface ConfirmModalProps {
   tone?: ConfirmModalTone;
   icon?: ReactNode;
   busy?: boolean;
+  /** Confirm button text while `busy`, e.g. "Đang phát hành…". */
+  busyLabel?: string;
   confirmDisabled?: boolean;
   maxWidth?: 'sm' | 'md' | 'lg';
   disableBackdropDismiss?: boolean;
@@ -62,6 +64,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   tone = 'warning',
   icon,
   busy = false,
+  busyLabel,
   confirmDisabled = false,
   maxWidth = 'md',
   disableBackdropDismiss = false,
@@ -106,7 +109,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={cn(
-          'relative w-full bg-surface border border-border rounded-lg shadow-modal overflow-hidden flex flex-col focus:outline-none animate-in fade-in zoom-in-95 duration-150',
+          'relative w-full max-h-[90vh] bg-surface border border-border rounded-lg shadow-modal overflow-hidden flex flex-col focus:outline-none animate-in fade-in zoom-in-95 duration-150',
           MAX_WIDTH_CLASS[maxWidth]
         )}
       >
@@ -136,7 +139,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </div>
 
         {/* Optional body content */}
-        {children && <div className="px-5 py-2 text-xs text-text space-y-3">{children}</div>}
+        {children && <div className="min-h-0 overflow-y-auto px-5 py-2 text-xs text-text space-y-3">{children}</div>}
 
         {/* Footer actions */}
         <div className="px-5 py-3 bg-surface-subtle/60 border-t border-border flex items-center justify-end gap-2 mt-2">
@@ -155,6 +158,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             size="md"
             disabled={busy || confirmDisabled}
             loading={busy}
+            loadingText={busyLabel}
             onClick={onConfirm}
           >
             {confirmLabel}

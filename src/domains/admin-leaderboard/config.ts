@@ -1,7 +1,6 @@
 /**
- * MOCK scope: GET /api/admin/leaderboards is specified (docs/sa/leaderboard_backend.md) but not built, so dev/demo
- * builds use labelled fixtures. Set VITE_ADMIN_LEADERBOARD_FIXTURES=false to call the real endpoint once it ships.
+ * The backend ships GET /api/admin/leaderboards (docs/sa/leaderboard_backend.md §7), so every build reads the real
+ * API. VITE_ADMIN_LEADERBOARD_FIXTURES=true runs the screen on the labelled sample board instead (demos, no backend).
  */
 // `?.`: import.meta.env is undefined outside Vite (tsx tests).
-const flag = import.meta.env?.VITE_ADMIN_LEADERBOARD_FIXTURES;
-export const leaderboardUsesFixtures = flag ? flag === 'true' : Boolean(import.meta.env?.DEV);
+export const leaderboardUsesFixtures = import.meta.env?.VITE_ADMIN_LEADERBOARD_FIXTURES === 'true';

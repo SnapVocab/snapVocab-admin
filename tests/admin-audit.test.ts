@@ -17,7 +17,7 @@ test('AU1. Cửa hàng and Nhiệm vụ follow the real lifecycle: one version p
     writes.set(key, [...(writes.get(key) ?? []), e.version!]);
   }
   for (const [key, versions] of writes) assert.deepEqual(versions, versions.map((_, i) => i), key);
-  assert.equal(writes.size, 19 + 7, 'every shop item and mission template of the clone');
+  assert.equal(writes.size, 16 + 7, 'every shop item and mission template of the clone (themes removed 2026-11-02)');
 
   const golden = latest(entries, 'SHOP_ITEM', '11');
   assert.deepEqual([golden.at, golden.version, golden.changes], ['2026-10-06T07:33:58Z', 4, [{ field: 'price', before: 900, after: 950 }]]);

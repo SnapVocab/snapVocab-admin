@@ -1,8 +1,9 @@
 import React from 'react';
-import { BookOpen, ChevronRight, Flame, ShoppingBag, Target } from 'lucide-react';
+import { BookOpen, Brain, Camera, ChevronRight, Flame, ShoppingBag, Target } from 'lucide-react';
 import type { MissionCategory, MissionContent, MissionTrigger } from '../../domains/admin-missions/types';
 import { CoinIcon, XpIcon } from '../../components/brand/BrandIcons';
 import { cn } from '../../lib/utils';
+import { useRewardItem } from './RewardItemPicker';
 import { categoryIcons } from './ui';
 
 /**
@@ -10,7 +11,9 @@ import { categoryIcons } from './ui';
  * categories without a tile use its neutral Target fallback.
  */
 const TILES: Partial<Record<MissionCategory, { Icon: typeof Target; bg: string; color: string }>> = {
+  SCAN: { Icon: Camera, bg: '#E3F5D3', color: '#2F6E00' },
   VOCABULARY: { Icon: BookOpen, bg: '#C7ECFC', color: '#0B8FCE' },
+  SRS: { Icon: Brain, bg: '#C7ECFC', color: '#0B8FCE' },
   QUIZ: { Icon: Target, bg: '#EAE2FE', color: '#8253EC' },
   RETENTION: { Icon: Flame, bg: '#FFF3E0', color: '#E57C00' },
   SHOP: { Icon: ShoppingBag, bg: '#FFEFB8', color: '#B37F00' },
@@ -20,7 +23,7 @@ const FALLBACK = { Icon: Target, bg: '#F3F4F6', color: '#565879' };
 /** Mobile CTA per trigger (vi.json missions.action.*). */
 const ACTION: Record<MissionTrigger, string> = {
   TOPIC_ITEM_CREATED: 'Thêm từ', QUIZ_COMPLETED: 'Làm quiz', LEARNING_ACTIVITY_RECORDED: 'Học ngay',
-  SHOP_ITEM_PURCHASED: 'Tới cửa hàng', BOOSTER_USED: 'Kích hoạt booster',
+  SHOP_ITEM_PURCHASED: 'Tới cửa hàng', BOOSTER_USED: 'Kích hoạt booster', SRS_REVIEW_COMPLETED: 'Học ngay', SCAN_WORD_SAVED: 'Quét ảnh',
 };
 
 /** Category tile. `mobile` uses the app's own glyph set; otherwise the admin glyph per category (same colours). */
@@ -34,11 +37,12 @@ export function MissionTile({ category, mobile, size = 'md' }: { category: Missi
   );
 }
 
-export function RewardLine({ coin, xp, size = 16 }: { coin: number | string; xp: number | string; size?: number }) {
+/** `hideZero`: as the learner sees it, the app drops a 0 Coin/XP chip (item-only rewards). */
+export function RewardLine({ coin, xp, size = 16, hideZero }: { coin: number | string; xp: number | string; size?: number; hideZero?: boolean }) {
   return (
     <span className="inline-flex items-center gap-3 whitespace-nowrap font-extrabold tabular-nums">
-      <span className="inline-flex items-center gap-1"><CoinIcon size={size} />{coin}</span>
-      <span className="inline-flex items-center gap-1"><XpIcon size={size + 2} />{xp} XP</span>
+      {!(hideZero && Number(coin) === 0) && <span className="inline-flex items-center gap-1"><CoinIcon size={size} />{coin}</span>}
+      {!(hideZero && Number(xp) === 0) && <span className="inline-flex items-center gap-1"><XpIcon size={size + 2} />{xp} XP</span>}
     </span>
   );
 }
@@ -47,6 +51,8 @@ type CardMission = Pick<MissionContent, 'name' | 'description' | 'category' | 't
 
 /** The mission as a learner sees it on a new day: progress 0/target, reward, CTA (mobile missions screen). */
 export function MissionCard({ mission, compact }: { mission: CardMission; compact?: boolean }) {
+  // The app shows the item's name (daily_mission.md §8.1 reward.itemName), not its code.
+  const { item } = useRewardItem(mission.rewardItemCode);
   return (
     <div className={cn('rounded-2xl border-2 border-neutral-100 bg-white', compact ? 'space-y-2.5 p-3' : 'space-y-3 p-4')}>
       <div className="flex items-center gap-3">
@@ -64,13 +70,13 @@ export function MissionCard({ mission, compact }: { mission: CardMission; compac
         <span className="text-sm font-extrabold text-neutral-600">0/{mission.targetValue || '?'}</span>
       </div>
       <div className={cn('flex items-center gap-2 text-sm', compact && 'text-xs')}>
-        <RewardLine coin={mission.rewardCoin} xp={mission.rewardXp} size={compact ? 14 : 18} />
+        <RewardLine coin={mission.rewardCoin} xp={mission.rewardXp} size={compact ? 14 : 18} hideZero />
         <span className="flex-1" />
         {!compact && (
           <span className="inline-flex items-center text-sm font-extrabold text-primary-dark">{ACTION[mission.triggerEvent]}<ChevronRight size={16} /></span>
         )}
       </div>
-      {mission.rewardItemCode && <p className={cn('break-all text-neutral-500', compact ? 'text-xs' : 'text-sm')}>Vật phẩm: {mission.rewardItemCode}</p>}
+      {mission.rewardItemCode && <p className={cn('break-all text-neutral-500', compact ? 'text-xs' : 'text-sm')}>Vật phẩm: {item?.name ?? mission.rewardItemCode}</p>}
     </div>
   );
 }

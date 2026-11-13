@@ -1,6 +1,6 @@
 export type MissionCategory = 'SCAN' | 'VOCABULARY' | 'FLASHCARD' | 'SRS' | 'QUIZ' | 'RETENTION' | 'SHOP';
-export type MissionTrigger = 'QUIZ_COMPLETED' | 'LEARNING_ACTIVITY_RECORDED' | 'TOPIC_ITEM_CREATED' | 'SHOP_ITEM_PURCHASED' | 'BOOSTER_USED';
-export type MissionEligibility = 'NONE' | 'HAS_IDLE_XP_BOOSTER' | 'HAS_PURCHASABLE_ITEM';
+export type MissionTrigger = 'QUIZ_COMPLETED' | 'LEARNING_ACTIVITY_RECORDED' | 'TOPIC_ITEM_CREATED' | 'SHOP_ITEM_PURCHASED' | 'BOOSTER_USED' | 'SRS_REVIEW_COMPLETED' | 'SCAN_WORD_SAVED';
+export type MissionEligibility = 'NONE' | 'HAS_IDLE_XP_BOOSTER' | 'HAS_PURCHASABLE_ITEM' | 'HAS_STUDY_CARDS_FOR_TARGET';
 export interface MissionContent {
   name: string;
   description: string;

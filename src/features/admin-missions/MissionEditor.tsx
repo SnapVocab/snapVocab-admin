@@ -1,21 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, Copy, Lock, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, SectionLabel, TextLink } from '../../components/ui';
-import { auditUsesFixtures } from '../../domains/admin-audit/config';
-import { historyPath } from '../../domains/admin-audit/mappers';
+import { Badge, Button, SectionLabel } from '../../components/ui';
+import { TargetHistory } from '../activity-log/TargetHistory';
 import { CoinIcon, XpIcon } from '../../components/brand/BrandIcons';
 import { MAX_COIN_PER_DAY, formatVnDateTime } from '../../domains/shop/mappers';
 import { MissionCard, MissionTile } from './MissionCard';
 import { ApiClientError } from '../../lib/api-client';
 import { createMissionTemplate, getMissionTemplate, getMissionTemplates, patchTemplate } from '../../domains/admin-missions/api';
-import { SLOTS, categoryLabels, createPayload, dailyOutlook, eligibilityHints, isCore, eligibilityLabels, emptyForm, formDiff, matchPreset, objective, poolShortage, presets, savePayload, supportedPreset, toForm, validateForm } from '../../domains/admin-missions/mappers';
+import { CLIENTS, SLOTS, categoryLabels, createPayload, dailyOutlook, eligibilityHints, isCore, eligibilityLabels, emptyForm, formDiff, matchPreset, objective, poolShortage, presets, savePayload, supportedPreset, toForm, validateForm } from '../../domains/admin-missions/mappers';
 import { missionKeys, useMissionTemplate, useMissionTemplates } from '../../domains/admin-missions/queries';
 import type { MissionForm, MissionTemplate } from '../../domains/admin-missions/types';
-import { ActiveBadge, ConfirmModal, ErrorBanner, Field } from './components';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { ActiveBadge, ErrorBanner, Field } from './components';
 import { errorMessage, inputClass, isApiError } from './ui';
 import { RewardItemPicker } from './RewardItemPicker';
 import { adminShopKeys } from '../../domains/shop/queries';
+import { ReasonCancelled, useReasonPrompt } from '../activity-log/reason';
 
 interface EditorProps {
   id?: number; onBack: (notice?: string) => void; onSaved: (item: MissionTemplate) => void;
@@ -34,6 +35,8 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
   const [baseline, setBaseline] = useState(() => JSON.stringify(initial ? toForm(initial) : emptyForm()));
   const [errors, setErrors] = useState<Record<string, string>>({}); const [error, setError] = useState('');
   const [busy, setBusy] = useState(false); const flight = useRef(false);
+  // A save that pushes the daily Coin ceiling past the cap: the server asks for a reason, this re-sends with it (FE-AUD-01).
+  const reasonPrompt = useReasonPrompt();
   const [confirm, setConfirm] = useState<'leave' | 'reload' | null>(null);
   const [conflict, setConflict] = useState(false); const [uncertain, setUncertain] = useState(false); const [copied, setCopied] = useState(false);
   const [presetNote, setPresetNote] = useState(''); const [server, setServer] = useState<MissionTemplate | null>(null); const root = useRef<HTMLDivElement>(null);
@@ -59,10 +62,12 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
     const invalid = validateForm(form); setErrors(invalid); if (Object.keys(invalid).length) { setError('Kiểm tra các trường được đánh dấu trước khi lưu.'); focusInvalid(); return; }
     flight.current = true; setBusy(true); setError('');
     try {
-      const item = original ? await patchTemplate(original.id, savePayload(form, original)) : await createMissionTemplate(createPayload(form));
+      const item = await reasonPrompt.run((reason) => original
+        ? patchTemplate(original.id, { ...savePayload(form, original), reason })
+        : createMissionTemplate({ ...createPayload(form), reason }));
       load(item); client.setQueryData(missionKeys.detail(item.id), item); void client.invalidateQueries({ queryKey: missionKeys.list }); onSaved(item);
     } catch (e) {
-      if (missing(e)) return;
+      if (e instanceof ReasonCancelled || missing(e)) return;
       setError(errorMessage(e));
       if (e instanceof ApiClientError) {
         setErrors(e.fieldErrors); setConflict(e.code === 'VERSION_CONFLICT'); focusInvalid();
@@ -119,6 +124,8 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
     ? (original ? list.data.map(i => i.id === original.id ? { ...i, ...content, isActive: true } : i) : [...list.data, { ...content, id: Number.MAX_SAFE_INTEGER, isActive: true }])
     : null;
   const afterView = projected ? dailyOutlook(projected) : null;
+  // The ceiling is the current app's (PD-DM-02); older apps keep the legacy set until they are gone.
+  const afterCurrentTop = projected ? dailyOutlook(projected, [CLIENTS.current]).coin?.[1] ?? 0 : 0;
   const slotIndex = SLOTS.findIndex(s => s.categories.includes(form.category));
   const fallbackSlots = (afterView ?? before)?.slots.flatMap((s, i) => s.fallback ? [i + 1] : []) ?? [];
   const band = (o: { coin: [number, number] | null; xp: [number, number] | null } | null) => o?.coin && o.xp
@@ -164,7 +171,9 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
           {form.triggerEvent === 'QUIZ_COMPLETED' && <p className="rounded-md bg-info-light p-3 text-xs text-text-muted">Mẫu không có điều kiện cấp có thể được giao cho người học chưa đủ từ để làm quiz 5/10/20 câu.</p>}
           {form.triggerEvent === 'TOPIC_ITEM_CREATED' && <p className="rounded-md bg-info-light p-3 text-xs text-text-muted">Chỉ tính từ người học tự thêm vào chủ đề của mình (không tính sao chép hay nhập hàng loạt), có đủ từ và bản dịch để dùng cho quiz, và chưa từng được tính trước đây. Mỗi từ chỉ tăng một nhiệm vụ thêm từ, kể cả khi bộ hôm nay có nhiều nhiệm vụ loại này.</p>}
           {form.triggerEvent === 'BOOSTER_USED' && <p className="text-xs text-text-muted">Đếm lần kích hoạt booster thành công, không đếm lượt mua.</p>}
-          {form.triggerEvent === 'LEARNING_ACTIVITY_RECORDED' && <p className="text-xs text-text-muted">Đếm hoạt động học trong ngày, không phải số ngày streak. Hiện chỉ luồng quiz ghi nhận hoạt động học.</p>}
+          {form.triggerEvent === 'LEARNING_ACTIVITY_RECORDED' && <p className="text-xs text-text-muted">Đếm hoạt động học trong ngày, không phải số ngày streak. Hoạt động học gồm làm quiz, học hoặc ôn thẻ, và lưu từ đã quét.</p>}
+          {form.triggerEvent === 'SRS_REVIEW_COMPLETED' && <p className="text-xs text-text-muted">Đếm số thẻ khác nhau được chấm trong ngày, cả thẻ mới lẫn thẻ đến hạn. Chấm lại cùng một thẻ trong ngày không tính thêm. Chỉ giao cho người dùng bản app có nút cho loại nhiệm vụ này; người dùng app cũ không nhận mẫu này.</p>}
+          {form.triggerEvent === 'SCAN_WORD_SAVED' && <p className="text-xs text-text-muted">Đếm từ người học lưu từ màn kết quả quét vào chủ đề của mình: từ phải có trong kết quả lượt quét đó và đủ bản dịch để dùng cho quiz. Mỗi từ chỉ tính một lần cho mỗi lượt quét. Chỉ giao cho người dùng bản app có nút cho loại nhiệm vụ này; người dùng app cũ không nhận mẫu này.</p>}
         </section>
         <section className="space-y-4 px-5 py-3">
           <SectionLabel>Phần thưởng</SectionLabel>
@@ -199,7 +208,7 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
             <dd>{!list.data ? <span className="text-text-muted">{list.isError ? 'Không tải được catalog để tính.' : 'Đang tính…'}</span>
               : <><span className="tabular-nums">{band(before)}</span>{afterView && band(afterView) !== band(before) && <> → <strong className="tabular-nums">{band(afterView)}</strong></>}<span className="block text-text-muted">{original?.isActive ? 'Sau khi lưu' : 'Nếu bật nhiệm vụ này'}{afterView && band(afterView) === band(before) ? ': không đổi' : ''}</span></>}</dd>
           </dl>
-          {afterView?.coin && afterView.coin[1] > MAX_COIN_PER_DAY && <p role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2 py-1.5 text-warning-dark"><AlertTriangle size={13} className="mt-0.5 shrink-0" /><span>Vượt {MAX_COIN_PER_DAY} Coin/ngày, mức kinh tế đã duyệt; Cửa hàng đang quy giá ra ngày theo mức này. Gợi ý để rà lại, không chặn lưu.</span></p>}
+          {afterCurrentTop > MAX_COIN_PER_DAY && <p role="status" className="flex gap-1.5 rounded-md border border-warning/40 bg-warning-light px-2 py-1.5 text-warning-dark"><AlertTriangle size={13} className="mt-0.5 shrink-0" /><span>Vượt {MAX_COIN_PER_DAY} Coin/ngày, mức kinh tế đã duyệt; Cửa hàng đang quy giá ra ngày theo mức này. Gợi ý để rà lại, không chặn lưu.</span></p>}
           {afterView?.insufficient && !before?.insufficient && <p role="status" className="flex gap-1.5 rounded-md border border-danger/30 bg-danger-light px-2 py-1.5 text-danger-dark"><AlertTriangle size={13} className="mt-0.5 shrink-0" /><span>Sau thay đổi, một số người học không đủ 5 nhiệm vụ. Backend sẽ từ chối khi bật hoặc lưu.</span></p>}
         </div>
         {original && <div className="space-y-2.5 rounded-lg border border-border bg-surface p-4 text-xs">
@@ -209,19 +218,17 @@ function MissionEditorForm({ initial, fresh, refreshFailed, onRefresh, onBack, o
             <dt className="text-text-muted">Sửa gần nhất</dt><dd className="tabular-nums">{formatVnDateTime(original.updatedAt)}, phiên bản {original.version}</dd>
             <dt className="text-text-muted">ID</dt><dd className="tabular-nums">{original.id}</dd>
           </dl>
-          <p className="border-t border-border pt-2 text-text-muted">
-            Chưa có nhật ký ai sửa gì: cần audit log phía máy chủ.
-            {auditUsesFixtures && <> <TextLink to={historyPath({ type: 'MISSION_TEMPLATE', id: String(original.id) })}>Xem nhật ký mẫu</TextLink></>}
-          </p>
+          <TargetHistory target={{ type: 'MISSION_TEMPLATE', id: String(original.id) }} />
         </div>}
       </aside>
     </div>
-    {confirm === 'leave' && <ConfirmModal title="Rời trang chưa lưu?" busy={busy} onClose={closeConfirm} onConfirm={() => onBack()} confirmLabel="Bỏ thay đổi và quay lại"><p>Nội dung đang nhập sẽ bị bỏ.</p></ConfirmModal>}
-    {confirm === 'reload' && server && <ConfirmModal title="So sánh với bản trên server" busy={busy} onClose={closeConfirm} onConfirm={() => { load(server); closeConfirm(); }} confirmLabel="Dùng bản server, bỏ nội dung đang nhập">
+    {confirm === 'leave' && <ConfirmModal title="Rời trang chưa lưu?" maxWidth="lg" busy={busy} onClose={closeConfirm} onConfirm={() => onBack()} confirmLabel="Bỏ thay đổi và quay lại"><p>Nội dung đang nhập sẽ bị bỏ.</p></ConfirmModal>}
+    {confirm === 'reload' && server && <ConfirmModal title="So sánh với bản trên server" maxWidth="lg" busy={busy} onClose={closeConfirm} onConfirm={() => { load(server); closeConfirm(); }} confirmLabel="Dùng bản server, bỏ nội dung đang nhập">
       <p className="text-xs text-text-muted">Bản đang sửa: phiên bản {original?.version} · Server: phiên bản {server.version}{server.isActive !== original?.isActive && ` · trạng thái server: ${server.isActive ? 'Đang bật' : 'Đang tắt'}`}</p>
       {diff.length ? <div className="max-h-72 overflow-auto rounded-lg border border-border"><table className="w-full text-left text-xs"><thead className="bg-surface-subtle text-text-muted"><tr><th className="px-3 py-2">Trường</th><th className="px-3 py-2">Đang nhập</th><th className="px-3 py-2">Server</th></tr></thead><tbody className="divide-y divide-border">{diff.map(d => <tr key={d.key}><td className="px-3 py-2 font-semibold">{d.label}</td><td className="break-words px-3 py-2">{d.draft}</td><td className="break-words px-3 py-2">{d.server}</td></tr>)}</tbody></table></div>
         : <p>Nội dung đang nhập trùng bản trên server; chỉ cập nhật phiên bản.</p>}
       <p className="text-xs text-text-muted">Muốn giữ phần của mình: đóng hộp thoại, chép lại các giá trị cần giữ, rồi dùng bản server và nhập lại.</p>
     </ConfirmModal>}
+    {reasonPrompt.dialog}
   </div>;
 }

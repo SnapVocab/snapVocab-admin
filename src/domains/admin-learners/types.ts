@@ -1,6 +1,7 @@
 /**
- * Proposed admin contract for learners (F-ADM-01…03, admin_product_review_2026-10-19 §3.12, §4.2).
- * NOT implemented on the backend yet: the UI runs on fixtures until it is (see config.ts).
+ * Admin contract for learners (F-ADM-01…03, admin_product_review_2026-10-19 §3.12, §4.2), implemented by the backend
+ * (module vn.ptit.snapvocab.adminusers); fixtures only with VITE_ADMIN_LEARNERS_FIXTURES=true (api.ts).
+ * ROLE_ADMIN accounts are not learners: the API never lists, shows or locks them (404).
  *
  *   GET  /api/admin/users?q=&status=&activity=&sort=&page=&size=  → LearnerListResponse
  *   GET  /api/admin/users/{id}                                     → AdminLearnerDetail
@@ -31,7 +32,7 @@ export interface AdminLearnerRow {
   exp: number;
 }
 
-export type CoinSource = 'MISSION_REWARD' | 'SHOP_PURCHASE' | 'ADMIN_ADJUSTMENT';
+export type CoinSource = 'MISSION_REWARD' | 'BADGE_REWARD' | 'SHOP_PURCHASE' | 'ADMIN_ADJUSTMENT';
 /** Mirrors backend ScanErrorCode. */
 export type ScanErrorCode = 'INVALID_IMAGE' | 'QUOTA_EXCEEDED' | 'AI_QUEUE_FULL' | 'AI_UNAVAILABLE' | 'AI_TIMEOUT' | 'AI_ERROR' | 'INTERRUPTED';
 export type TimelineKind = 'STUDY' | 'QUIZ' | 'SCAN' | 'MISSION' | 'PURCHASE' | 'BADGE' | 'ACCOUNT';
@@ -47,7 +48,7 @@ export interface AdminLearnerDetail extends AdminLearnerRow {
   missions7d: { assigned: number; completed: number; claimed: number };
   badges: { code: string; name: string; earnedAt: string }[];
   wallet: { recent: { at: string; amount: number; source: CoinSource; note: string }[] };
-  items: { code: string; name: string; type: 'THEME' | 'AVATAR_FRAME' | 'XP_BOOSTER'; equipped: boolean; quantity: number }[];
+  items: { code: string; name: string; type: 'AVATAR_FRAME' | 'CARD_FRAME' | 'XP_BOOSTER' | 'STREAK_FREEZE'; equipped: boolean; quantity: number }[];
   scans: {
     today: number;
     dailyLimit: number;

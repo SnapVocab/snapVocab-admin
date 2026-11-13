@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui';
 import { badgesEditable } from '../../domains/admin-badges/config';
 import { useAdminBadge, useAdminBadges } from '../../domains/admin-badges/queries';
@@ -11,6 +11,7 @@ import { BadgeCatalog } from './BadgeCatalog';
 import { BadgeEditor } from './BadgeEditor';
 import { ToggleBadgeDialog } from './ToggleBadgeDialog';
 import { badgeErrorMessage } from './ui';
+import { useToast } from '../../components/ui/Toast';
 
 function Loading({ detail = false }: { detail?: boolean }) {
   return <div role="status" aria-label={detail ? 'Đang tải chi tiết huy hiệu' : 'Đang tải catalog huy hiệu'}
@@ -30,7 +31,7 @@ export function AdminBadgesPage({ sub, onDirtyChange = () => {} }: { sub?: strin
   const { refetch: refetchCatalog } = catalog;
   const detail = useAdminBadge(openId ?? undefined);
   const [notice, setNotice] = useState('');
-  const [toast, setToast] = useState('');
+  const { show: setToast, node: toastNode } = useToast();
   const [toggling, setToggling] = useState<AdminBadge | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
@@ -40,11 +41,6 @@ export function AdminBadgesPage({ sub, onDirtyChange = () => {} }: { sub?: strin
     if (scroller.current) scroller.current.scrollTop = openId === null ? listScroll.current : 0;
     if (openId === null && opener.current?.isConnected) opener.current.focus({ preventScroll: true });
   }, [openId]);
-  useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(''), 3500);
-    return () => window.clearTimeout(t);
-  }, [toast]);
 
   const close = useCallback((message?: string) => {
     navigate('/badges');
@@ -75,7 +71,7 @@ export function AdminBadgesPage({ sub, onDirtyChange = () => {} }: { sub?: strin
   const refreshBoth = () => { void catalog.refetch(); void detail.refetch(); };
 
   return <div ref={scroller} className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
-    {toast && <div role="status" className="fixed right-6 top-6 z-40 flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs font-medium text-text shadow-elevated"><Check size={16} className="text-primary-dark" />{toast}</div>}
+    {toastNode}
     {notice && <p role="status" className="rounded-lg bg-info-light p-3 text-xs text-info-dark">{notice}</p>}
 
     <div hidden={openId !== null} className="space-y-4">

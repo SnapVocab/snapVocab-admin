@@ -127,5 +127,7 @@ test('A8. every tab renders from cached data: findings sit in the data, rows lin
     for (const s of ['CEFR', 'Leitner', 'Gems', 'Streak Freeze', 'League', 'Doanh thu', 'Gemini', 'GPU', 'R2']) assert.ok(!html.includes(s), `${tab}: ${s}`);
     // design.md §3.7: no appended advice boxes, no fake "map label" action, no enum shown as visible text.
     for (const s of ['Nên làm', 'Chẩn đoán', 'Gán nhãn → từ', 'Gán từ', '>AI_QUEUE_FULL<', '>ADMIN_ADJUSTMENT<', '>MISSION_REWARD<', 'NEW ·']) assert.ok(!html.includes(s), `${tab}: ${s}`);
+    // AC-ANL-08: the analytics API is real by default, so no tab says its numbers are samples.
+    assert.ok(!html.includes('Dữ liệu mẫu'), `${tab}: sample-data notice`);
   }
 });

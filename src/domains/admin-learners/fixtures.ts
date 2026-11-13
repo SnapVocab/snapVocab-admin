@@ -111,7 +111,6 @@ function makeDetail(row: AdminLearnerRow): AdminLearnerDetail {
   const items: AdminLearnerDetail['items'] = [];
   if (quizzes > 3 && r() < 0.6) items.push({ code: 'XP_BOOSTER_X2_30M', name: 'Thẻ ×2 Kinh nghiệm · 30 phút', type: 'XP_BOOSTER', equipped: false, quantity: 1 + Math.floor(r() * 3) });
   if (saved > 150 && r() < 0.6) items.push({ code: 'FRAME_BRONZE_LEARNER', name: 'Khung Đồng Mở Lối', type: 'AVATAR_FRAME', equipped: true, quantity: 1 });
-  if (saved > 300 && r() < 0.4) items.push({ code: 'THEME_MIDNIGHT_NEON', name: 'Đêm Neon Huyền Ảo', type: 'THEME', equipped: r() < 0.7, quantity: 1 });
 
   const recentCoins: AdminLearnerDetail['wallet']['recent'] = [];
   if (last !== null) {

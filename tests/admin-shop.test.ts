@@ -15,6 +15,7 @@ import {
   checkAssetHeader,
   priceBand,
   priceHint,
+  priceTier,
   formatFullDays,
 } from '../src/domains/shop/mappers';
 import {
@@ -53,22 +54,6 @@ const MOCK_METADATA: ShopItemTypeMetadataDTO = {
     { name: 'sortOrder', inputType: 'NUMBER', required: false, requiredToPublish: false, editableIn: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] },
   ],
   types: [
-    {
-      type: 'THEME',
-      behavior: 'EQUIP',
-      stackable: false,
-      fixed: {},
-      fields: [
-        {
-          name: 'themeKey',
-          inputType: 'SELECT',
-          required: true,
-          requiredToPublish: true,
-          editableIn: ['DRAFT'],
-          options: ['MIDNIGHT_NEON', 'SUNSET_AMBER', 'FOREST_MINT'],
-        },
-      ],
-    },
     {
       type: 'AVATAR_FRAME',
       behavior: 'EQUIP',
@@ -128,7 +113,7 @@ test('1. API - getShopItemTypes builds correct contract URL', () => {
 test('2. API - getAdminShopItems parameters mapping', () => {
   const params = {
     q: 'NEON',
-    type: 'THEME' as ShopItemType,
+    type: 'AVATAR_FRAME' as ShopItemType,
     status: 'PUBLISHED' as ShopItemStatus,
     page: 0,
     size: 20,
@@ -191,9 +176,10 @@ test('9. API - createShopAssetUploadUrl accepts fileName', () => {
    ========================================================================= */
 
 test('10. List - Format type labels in Vietnamese', () => {
-  assert.equal(formatShopItemTypeLabel('THEME'), 'Giao diện cửa hàng');
   assert.equal(formatShopItemTypeLabel('AVATAR_FRAME'), 'Khung avatar');
   assert.equal(formatShopItemTypeLabel('XP_BOOSTER'), 'XP Booster');
+  assert.equal(formatShopItemTypeLabel('STREAK_FREEZE'), 'Đóng băng chuỗi');
+  assert.equal(formatShopItemTypeLabel('CARD_FRAME'), 'Khung thẻ');
   assert.equal(formatShopItemTypeLabel(undefined), '—');
 });
 
@@ -261,28 +247,11 @@ test('18. Metadata - isFieldEditable: price is editable in DRAFT and PUBLISHED',
   assert.equal(isFieldEditable(priceSpec, 'ARCHIVED'), false);
 });
 
-test('19. Metadata - isFieldEditable: themeKey is editable ONLY in DRAFT', () => {
-  const themeType = MOCK_METADATA.types.find((t) => t.type === 'THEME');
-  const themeKeySpec = themeType?.fields.find((f) => f.name === 'themeKey');
-  assert.equal(isFieldEditable(themeKeySpec, 'DRAFT'), true);
-  assert.equal(isFieldEditable(themeKeySpec, 'PUBLISHED'), false);
-  assert.equal(isFieldEditable(themeKeySpec, 'ARCHIVED'), false);
-});
-
 test('20. Metadata - isFieldEditable: frameAssetKey is editable ONLY in DRAFT', () => {
   const frameType = MOCK_METADATA.types.find((t) => t.type === 'AVATAR_FRAME');
   const frameSpec = frameType?.fields.find((f) => f.name === 'frameAssetKey');
   assert.equal(isFieldEditable(frameSpec, 'DRAFT'), true);
   assert.equal(isFieldEditable(frameSpec, 'PUBLISHED'), false);
-});
-
-test('21. Metadata - THEME options populated from metadata', () => {
-  const themeType = MOCK_METADATA.types.find((t) => t.type === 'THEME');
-  const themeKeySpec = themeType?.fields.find((f) => f.name === 'themeKey');
-  assert.ok(themeKeySpec?.options);
-  assert.ok(themeKeySpec?.options?.includes('MIDNIGHT_NEON'));
-  assert.ok(themeKeySpec?.options?.includes('SUNSET_AMBER'));
-  assert.ok(themeKeySpec?.options?.includes('FOREST_MINT'));
 });
 
 test('22. Metadata - XP_BOOSTER min/max/defaultValue from metadata', () => {
@@ -336,22 +305,22 @@ test('25. Optimistic Locking - VERSION_CONFLICT detected with serverVersion', ()
 
 test('26. Field Locked - FIELD_LOCKED maps locked fields to fieldErrors', () => {
   const error = new ApiClientError('Trường bị khóa', 'FIELD_LOCKED', 409, {
-    fields: ['code', 'themeKey'],
+    fields: ['code', 'frameAssetKey'],
   });
   const mapped = mapBackendErrorsToFields(error);
   assert.ok(mapped.lockedFields?.includes('code'));
-  assert.ok(mapped.lockedFields?.includes('themeKey'));
+  assert.ok(mapped.lockedFields?.includes('frameAssetKey'));
   assert.ok(mapped.fieldErrors.code);
-  assert.ok(mapped.fieldErrors.themeKey);
+  assert.ok(mapped.fieldErrors.frameAssetKey);
 });
 
 test('27. Lifecycle - DRAFT can be published, edited, and deleted', () => {
   const draftItem: AdminShopItemDTO = {
     id: 1,
-    code: 'THEME_RETRO',
-    type: 'THEME',
+    code: 'FRAME_RETRO',
+    type: 'AVATAR_FRAME',
     behavior: 'EQUIP',
-    name: 'Retro Theme',
+    name: 'Retro Frame',
     description: '',
     iconKey: 'icons/retro.png',
     iconUrl: 'http://localhost/icons/retro.png',
@@ -360,7 +329,6 @@ test('27. Lifecycle - DRAFT can be published, edited, and deleted', () => {
     availableFrom: null,
     availableUntil: null,
     sortOrder: 1,
-    themeKey: 'RETRO_NEON',
     frameAssetKey: null,
     frameAssetUrl: null,
     boostDurationMinutes: null,
@@ -428,6 +396,13 @@ test('33. Upload - Oversized icon (> 200 KB) is blocked client-side', () => {
   assert.ok(validation.error?.includes('200 KB'));
 });
 
+test('34b. Upload - card frame allows up to 500 KB', () => {
+  assert.equal(validateAssetFile({ type: 'image/png', size: 450 * 1024 } as File, 'cardFrame').valid, true);
+  const tooBig = validateAssetFile({ type: 'image/png', size: 520 * 1024 } as File, 'cardFrame');
+  assert.equal(tooBig.valid, false);
+  assert.ok(tooBig.error?.includes('500 KB'));
+});
+
 test('34. Upload - Oversized frame (> 300 KB) is blocked client-side', () => {
   const oversizedFrame = { type: 'image/webp', size: 350 * 1024 } as File;
   const validation = validateAssetFile(oversizedFrame, 'frame');
@@ -439,12 +414,12 @@ test('34. Upload - Oversized frame (> 300 KB) is blocked client-side', () => {
    GROUP 6: CANONICAL DOMAIN & LEGACY ELIMINATION (35-38)
    ========================================================================= */
 
-test('35. Domain - ShopItemType strictly restricted to THEME, AVATAR_FRAME, XP_BOOSTER', () => {
-  const canonicalTypes: ShopItemType[] = ['THEME', 'AVATAR_FRAME', 'XP_BOOSTER'];
+test('35. Domain - ShopItemType strictly restricted to AVATAR_FRAME, XP_BOOSTER, STREAK_FREEZE', () => {
+  const canonicalTypes: ShopItemType[] = ['AVATAR_FRAME', 'XP_BOOSTER', 'STREAK_FREEZE'];
   assert.equal(canonicalTypes.length, 3);
 
-  // Legacy types from old mock designs MUST NOT be part of canonical types
-  const legacyTypes = ['CHEST', 'DECK', 'STREAK_SAVER', 'BOOSTER', 'CONSUMABLE'];
+  // Legacy types from old mock designs MUST NOT be part of canonical types (THEME removed 2026-11-02)
+  const legacyTypes = ['CHEST', 'DECK', 'STREAK_SAVER', 'BOOSTER', 'CONSUMABLE', 'THEME'];
   for (const legacy of legacyTypes) {
     assert.equal(canonicalTypes.includes(legacy as any), false, `${legacy} must not be a ShopItemType`);
   }
@@ -493,7 +468,6 @@ test('38. Legacy Elimination - No Gems, Rarity, Stock, Flash Sale or Discount in
     availableFrom: null,
     availableUntil: null,
     sortOrder: 1,
-    themeKey: null,
     frameAssetKey: 'public/shop/frame.png',
     frameAssetUrl: 'http://cdn/frame.png',
     boostDurationMinutes: null,
@@ -528,18 +502,25 @@ test('38. Legacy Elimination - No Gems, Rarity, Stock, Flash Sale or Discount in
    ========================================================================= */
 
 const serverItem = (over: Partial<AdminShopItemDTO>): AdminShopItemDTO => ({
-  id: 7, version: 3, code: 'THEME_NEON', type: 'THEME', behavior: 'EQUIP', name: 'Neon', description: null,
+  id: 7, version: 3, code: 'FRAME_NEON', type: 'AVATAR_FRAME', behavior: 'EQUIP', name: 'Neon', description: null,
   iconKey: 'public/shop/a.png', iconUrl: null, status: 'PUBLISHED', purchasable: true, price: 500,
-  availableFrom: '2026-10-06T10:00:45Z', availableUntil: null, sortOrder: 0, themeKey: 'MIDNIGHT_NEON',
+  availableFrom: '2026-10-06T10:00:45Z', availableUntil: null, sortOrder: 0,
   frameAssetKey: null, frameAssetUrl: null, boostDurationMinutes: null, maxQuantity: null, multiplier: null,
   publishedAt: null, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', ...over,
 });
 
-test('R1. config of another type is null for THEME/AVATAR_FRAME; booster defaults only for boosters', () => {
-  assert.deepEqual(configForType('THEME'), { themeKey: null, frameAssetKey: null, boostDurationMinutes: null, maxQuantity: null });
-  assert.deepEqual(configForType('AVATAR_FRAME', { themeKey: 'MIDNIGHT_NEON', boostDurationMinutes: 30 }),
-    { themeKey: null, frameAssetKey: null, boostDurationMinutes: null, maxQuantity: null });
-  assert.deepEqual(configForType('XP_BOOSTER'), { themeKey: null, frameAssetKey: null, boostDurationMinutes: 30, maxQuantity: 5 });
+test('R1. config of another type is null for AVATAR_FRAME; booster defaults only for boosters', () => {
+  assert.deepEqual(configForType('AVATAR_FRAME', { boostDurationMinutes: 30 }),
+    { frameAssetKey: null, boostDurationMinutes: null, maxQuantity: null });
+  assert.deepEqual(configForType('XP_BOOSTER', { frameAssetKey: 'public/shop/f.png' }),
+    { frameAssetKey: null, boostDurationMinutes: 30, maxQuantity: 5 });
+  // streak_freeze.md PD-SF-03: only maxQuantity, default 2; a booster's duration never leaks in.
+  assert.deepEqual(configForType('STREAK_FREEZE', { boostDurationMinutes: 30 }),
+    { frameAssetKey: null, boostDurationMinutes: null, maxQuantity: 2 });
+  assert.equal(configForType('STREAK_FREEZE', { maxQuantity: 3 }).maxQuantity, 3);
+  // card_frame_plan.md: a card frame keeps its own frame asset, nothing else.
+  assert.deepEqual(configForType('CARD_FRAME', { frameAssetKey: 'public/shop/c.png', maxQuantity: 3 }),
+    { frameAssetKey: 'public/shop/c.png', boostDurationMinutes: null, maxQuantity: null });
 
   const form = itemToForm(serverItem({}));
   assert.equal(form.boostDurationMinutes, null);
@@ -567,7 +548,7 @@ test('R3. VERSION_CONFLICT without currentVersion (flush-time conflict) is still
 
 test('R4. field errors produce a summary naming each field, including fields not on screen', () => {
   const mapped = mapBackendErrorsToFields(new ApiClientError('x', 'INVALID_SHOP_ITEM_CONFIG', 400, {
-    errors: [{ field: 'boostDurationMinutes', code: 'INVALID_SHOP_ITEM_CONFIG', message: 'must be null for THEME' },
+    errors: [{ field: 'boostDurationMinutes', code: 'INVALID_SHOP_ITEM_CONFIG', message: 'must be null for AVATAR_FRAME' },
       { field: 'description', code: 'VALIDATION_ERROR', message: 'at most 500 characters' }],
   }));
   assert.equal(mapped.generalError, 'Kiểm tra lại: Thời lượng, Mô tả.');
@@ -599,6 +580,10 @@ test('R5. asset header: icon square ≥256; frame 512×512 with alpha; magic mus
   assert.equal(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/webp', 'frame'), null);
   assert.match(checkAssetHeader(readImageHeader(webpVp8x(512, 512, true)), 'image/png', 'frame')!, /hợp lệ/);
   assert.equal(readImageHeader(new Uint8Array(40)), null);
+  // Card frame: 1080×1440 with alpha (card_frame_plan.md §3).
+  assert.equal(checkAssetHeader(readImageHeader(png(1080, 1440, 6)), 'image/png', 'cardFrame'), null);
+  assert.match(checkAssetHeader(readImageHeader(png(512, 512, 6)), 'image/png', 'cardFrame')!, /1080×1440/);
+  assert.match(checkAssetHeader(readImageHeader(png(1080, 1440, 2)), 'image/png', 'cardFrame')!, /trong suốt/);
 });
 
 test('G1. price guardrail: band covers only items of the type on sale now; hint flags prices outside it', () => {
@@ -617,7 +602,7 @@ test('G1. price guardrail: band covers only items of the type on sale now; hint 
   assert.deepEqual(priceBand(catalog, 'AVATAR_FRAME', undefined, now), { min: 350, max: 950, median: 600, count: 3 });
   // The item being edited is excluded from its own comparison; even count takes the mean of the middle two.
   assert.deepEqual(priceBand(catalog, 'AVATAR_FRAME', 3, now), { min: 350, max: 950, median: 650, count: 2 });
-  assert.equal(priceBand(catalog, 'THEME', undefined, now), null);
+  assert.equal(priceBand(catalog, 'STREAK_FREEZE', undefined, now), null);
 
   const band = priceBand(catalog, 'AVATAR_FRAME', undefined, now);
   // Tolerance ×1.5 around 350–950: the top or bottom tier itself is not flagged.
@@ -631,6 +616,15 @@ test('G1. price guardrail: band covers only items of the type on sale now; hint 
   // Fewer than 3 items on sale is too thin to call anything unusual.
   assert.equal(priceHint(5000, priceBand(catalog, 'AVATAR_FRAME', 3, now)), null);
 
-  assert.equal(formatFullDays(850), '≈ 10 ngày');
-  assert.equal(formatFullDays(350), '≈ 4,1 ngày');
+  assert.equal(formatFullDays(750), '≈ 10 ngày');
+  assert.equal(formatFullDays(350), '≈ 4,7 ngày');
+});
+
+test('PD-SHX-01 price tiers: 60–250, 300–700, 800–1500; gaps and the ends are out of tier', () => {
+  assert.equal(priceTier(60)?.label, 'Khởi đầu');
+  assert.equal(priceTier(250)?.label, 'Khởi đầu');
+  assert.equal(priceTier(400)?.label, 'Phổ thông');
+  assert.equal(priceTier(1500)?.label, 'Cao cấp');
+  for (const outside of [59, 251, 299, 701, 799, 1501]) assert.equal(priceTier(outside), null, String(outside));
+  assert.equal(priceTier(null), null);
 });

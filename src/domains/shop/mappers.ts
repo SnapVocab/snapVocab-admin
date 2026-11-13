@@ -5,19 +5,18 @@ import { ApiClientError } from '../../lib/api-client';
 export const SHOP_FIELD_LABELS: Record<string, string> = {
   code: 'Mã', name: 'Tên', description: 'Mô tả', type: 'Loại', iconKey: 'Icon', purchasable: 'Cho phép mua',
   price: 'Giá', availableFrom: 'Bắt đầu bán', availableUntil: 'Kết thúc bán', sortOrder: 'Thứ tự',
-  themeKey: 'Bộ giao diện', frameAssetKey: 'Ảnh khung', boostDurationMinutes: 'Thời lượng', maxQuantity: 'Số lượng tối đa',
+  frameAssetKey: 'Ảnh khung', boostDurationMinutes: 'Thời lượng', maxQuantity: 'Số lượng tối đa',
 };
 
 /**
  * Type-specific config for `type`: fields owned by another type are null (the backend rejects anything else);
- * booster defaults (shop.md §2.3) apply to boosters only.
+ * defaults: booster shop.md §2.3, Streak Freeze holds 2 (streak_freeze.md PD-SF-03).
  */
 export function configForType(type: ShopItemType, from: Partial<ShopItemForm> = {}) {
   return {
-    themeKey: type === 'THEME' ? from.themeKey ?? null : null,
-    frameAssetKey: type === 'AVATAR_FRAME' ? from.frameAssetKey ?? null : null,
+    frameAssetKey: type === 'AVATAR_FRAME' || type === 'CARD_FRAME' ? from.frameAssetKey ?? null : null,
     boostDurationMinutes: type === 'XP_BOOSTER' ? from.boostDurationMinutes ?? 30 : null,
-    maxQuantity: type === 'XP_BOOSTER' ? from.maxQuantity ?? 5 : null,
+    maxQuantity: type === 'XP_BOOSTER' ? from.maxQuantity ?? 5 : type === 'STREAK_FREEZE' ? from.maxQuantity ?? 2 : null,
   };
 }
 
@@ -153,10 +152,11 @@ export function deriveSaleState(
 }
 
 /**
- * Most Coin a learner can earn in a day: Daily Mission is the only Coin source and pays at most
- * 85 Coin/day (daily_mission.md, economy approved). Prices read best in "full days" of missions.
+ * Most Coin a learner on the current app can earn in a day: Daily Mission is the only Coin source and pays at most
+ * 75 Coin/day (daily_mission.md PD-DM-02, PO 2026-10-22). Prices read best in "full days" of missions.
+ * Compare it with dailyOutlook(…, [CLIENTS.current]): older apps keep the legacy set (up to 85) until they are gone.
  */
-export const MAX_COIN_PER_DAY = 85;
+export const MAX_COIN_PER_DAY = 75;
 
 const days = (price: number) => (price / MAX_COIN_PER_DAY).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
 
@@ -188,11 +188,22 @@ export function priceBand(
   return { min: prices[0], max: prices[prices.length - 1], median, count: prices.length };
 }
 
+/** Price tiers the PO approved for new items (PD-SHX-01, shop.md §8.6). Admin policy; the server does not check it. */
+export const PRICE_TIERS = [
+  { label: 'Khởi đầu', min: 60, max: 250 },
+  { label: 'Phổ thông', min: 300, max: 700 },
+  { label: 'Cao cấp', min: 800, max: 1500 },
+] as const;
+
+/** The tier `price` falls in; null when it sits in a gap, below 60 or above 1500 (or there is no price). */
+export function priceTier(price: number | null | undefined) {
+  return price == null ? null : PRICE_TIERS.find(t => price >= t.min && price <= t.max) ?? null;
+}
+
 /**
  * Soft guardrail: a price far outside what the same type sells for today. A UI hint only;
- * the server enforces just 1–100,000 Coin.
- * ponytail: fixed ×1.5 tolerance (so the top/bottom tier is not always flagged) and ≥3 items to compare
- * against; the PO sets the real rule.
+ * the server enforces just 1–100,000 Coin. The PO's rule is the tier table above; this one compares by type.
+ * ponytail: fixed ×1.5 tolerance (so the top/bottom tier is not always flagged) and ≥3 items to compare against.
  */
 export const PRICE_HINT_FACTOR = 1.5;
 const PRICE_HINT_MIN_SAMPLE = 3;
@@ -246,9 +257,6 @@ export function mapBackendErrorsToFields(
       case 'SHOP_ITEM_CODE_EXISTS':
         fieldErrors.code = 'Mã code này đã tồn tại trong hệ thống. Vui lòng chọn mã khác.';
         break;
-      case 'INVALID_THEME_KEY':
-        fieldErrors.themeKey = 'Theme Key không hợp lệ hoặc không thuộc danh sách cho phép.';
-        break;
       case 'INVALID_PRICE':
         fieldErrors.price = 'Giá vật phẩm không hợp lệ (phải từ 1 đến 100,000 Coin khi mở bán).';
         break;
@@ -294,12 +302,14 @@ export function mapBackendErrorsToFields(
  */
 export function formatShopItemTypeLabel(type?: ShopItemType | string | null): string {
   switch (type) {
-    case 'THEME':
-      return 'Giao diện cửa hàng';
     case 'AVATAR_FRAME':
       return 'Khung avatar';
+    case 'CARD_FRAME':
+      return 'Khung thẻ';
     case 'XP_BOOSTER':
       return 'XP Booster';
+    case 'STREAK_FREEZE':
+      return 'Đóng băng chuỗi';
     default:
       return type || '—';
   }
@@ -310,32 +320,18 @@ export function formatShopItemStatusLabel(status?: string | null): string {
   return ({ DRAFT: 'Bản nháp', PUBLISHED: 'Đã phát hành', ARCHIVED: 'Đã lưu trữ' } as Record<string, string>)[status ?? ''] ?? (status || '—');
 }
 
-/**
- * Format theme key labels for friendly UI display
- */
-export function formatThemeKeyLabel(themeKey?: string | null): string {
-  switch (themeKey) {
-    case 'MIDNIGHT_NEON':
-      return 'Midnight Neon';
-    case 'SUNSET_AMBER':
-      return 'Sunset Amber';
-    case 'FOREST_MINT':
-      return 'Forest Mint';
-    case 'DEFAULT':
-      return 'Mặc định (Default)';
-    default:
-      return themeKey || '—';
-  }
-}
+/** Upload kinds; limits mirror AdminShopService (ICON/FRAME/CARD_FRAME_MAX_BYTES) and AdminBadgeService.IMAGE_MAX_BYTES. */
+export type AssetKind = 'icon' | 'frame' | 'cardFrame' | 'badge';
+export const ASSET_MAX_KB: Record<AssetKind, number> = { icon: 200, frame: 300, cardFrame: 500, badge: 500 };
 
 /**
  * Client-side validation for file uploads (MIME and size).
  * Icon max: 200 KB (204,800 bytes)
- * Frame max: 300 KB (307,200 bytes)
+ * Frame max: 300 KB (307,200 bytes); card frame max: 500 KB (512,000 bytes)
  */
 export function validateAssetFile(
   file: File,
-  type: 'icon' | 'frame'
+  type: AssetKind
 ): { valid: boolean; error?: string } {
   const allowedMime = ['image/png', 'image/webp'];
   if (!allowedMime.includes(file.type)) {
@@ -345,9 +341,8 @@ export function validateAssetFile(
     };
   }
 
-  const maxBytes = type === 'icon' ? 200 * 1024 : 300 * 1024;
-  if (file.size > maxBytes) {
-    const maxKb = type === 'icon' ? 200 : 300;
+  const maxKb = ASSET_MAX_KB[type];
+  if (file.size > maxKb * 1024) {
     return {
       valid: false,
       error: `Dung lượng file vượt quá giới hạn cho phép (${(file.size / 1024).toFixed(1)} KB > ${maxKb} KB).`,
@@ -395,15 +390,22 @@ export function readImageHeader(b: Uint8Array): ImageHeader | null {
   return null;
 }
 
-/** Pixel rules of shop.md §2.3: icon square ≥ 256×256; frame 512×512 with alpha. Null when the header passes. */
-export function checkAssetHeader(h: ImageHeader | null, mime: string, type: 'icon' | 'frame'): string | null {
+/** Pixel rules of shop.md §2.3 and card_frame_plan.md §3: icon square ≥ 256×256; frame 512×512 and card frame 1080×1440, both with alpha. Null when the header passes. */
+export function checkAssetHeader(h: ImageHeader | null, mime: string, type: AssetKind): string | null {
   if (!h || `image/${h.format}` !== mime) return 'File không phải ảnh PNG/WebP hợp lệ.';
   if (type === 'icon' && (h.width !== h.height || h.width < 256)) {
     return `Icon phải là ảnh vuông, tối thiểu 256×256 (ảnh đang chọn ${h.width}×${h.height}).`;
   }
+  if (type === 'badge' && (h.width !== h.height || h.width < 256)) {
+    return `Ảnh huy hiệu phải là ảnh vuông, tối thiểu 256×256 (ảnh đang chọn ${h.width}×${h.height}).`;
+  }
+  if (type === 'badge' && !h.alpha) return 'Ảnh huy hiệu phải có nền trong suốt (kênh alpha).';
   if (type === 'frame' && (h.width !== 512 || h.height !== 512)) {
     return `Khung phải đúng 512×512 (ảnh đang chọn ${h.width}×${h.height}).`;
   }
-  if (type === 'frame' && !h.alpha) return 'Khung phải có nền trong suốt (kênh alpha).';
+  if (type === 'cardFrame' && (h.width !== 1080 || h.height !== 1440)) {
+    return `Khung thẻ phải đúng 1080×1440 (ảnh đang chọn ${h.width}×${h.height}).`;
+  }
+  if (type !== 'icon' && !h.alpha) return 'Khung phải có nền trong suốt (kênh alpha).';
   return null;
 }

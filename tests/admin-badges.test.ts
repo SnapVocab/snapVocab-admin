@@ -4,8 +4,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
-  appShelves, conditionLabel, contentPatch, filterGroups, groupCatalog, isKnownEmblem, previewShelf, reviewIssues, ruleSentence,
-  statusReason, toForm, validateBadgeForm,
+  appShelves, conditionLabel, contentPatch, filterGroups, groupCatalog, previewShelf, reviewIssues, ruleSentence,
+  rewardLabel, statusReason, toForm, validateBadgeForm,
 } from '../src/domains/admin-badges/catalog';
 import { DATASETS, fixtureBadges, fixturePatchBadge, fixtureRefillEstimate } from '../src/domains/admin-badges/fixtures';
 import { fixtureBadgeHolders } from '../src/domains/admin-learners/fixtures';
@@ -58,13 +58,11 @@ test('Status reason depends on earners; unknown metric and icon degrade instead 
   assert.equal(conditionLabel(byCode('SCAN_10')), '≥ 10');
   assert.equal(ruleSentence(byCode('SCAN_10')), 'SCAN_SAVED ≥ 10');
   assert.equal(ruleSentence(byCode('QUIZ_10')), 'Hoàn thành 10 quiz');
-  assert.equal(isKnownEmblem('rocket'), false);
-  assert.equal(isKnownEmblem('book-open'), true);
 });
 
-test('Cần rà: unknown icon, unmapped metric, and a description that does not state its threshold', () => {
+test('Cần rà: missing image, unmapped metric, and a description that does not state its threshold', () => {
   assert.deepEqual(seed.flatMap(reviewIssues), [], 'the approved seed copy states every threshold');
-  assert.match(reviewIssues(byCode('PERFECT_25')).join(), /“rocket”/);
+  assert.match(reviewIssues(byCode('PERFECT_25')).join(), /Chưa có ảnh huy hiệu/);
   assert.match(reviewIssues(byCode('SCAN_10')).join(), /SCAN_SAVED/);
   const quiz10 = byCode('QUIZ_10');
   assert.match(reviewIssues({ ...quiz10, description: 'Hoàn thành mười quiz' }).join(), /không nêu ngưỡng 10/);
@@ -89,9 +87,29 @@ test('P2 form: server rules checked first; the patch carries only changed fields
   assert.equal(contentPatch(b, toForm(b)), null);
   assert.equal(contentPatch(b, { ...toForm(b), name: `  ${b.name}  ` }), null, 'whitespace alone is not a change');
   assert.deepEqual(contentPatch(b, { ...toForm(b), name: ' Mười Bài Quiz ', sortOrder: '25' }), { version: 3, name: 'Mười Bài Quiz', sortOrder: 25 });
-  assert.deepEqual(Object.keys(validateBadgeForm({ name: ' ', description: 'x'.repeat(256), iconKey: 'rocket', sortOrder: '2.5' })).sort(),
-    ['description', 'iconKey', 'name', 'sortOrder']);
+  assert.deepEqual(Object.keys(validateBadgeForm({ ...toForm(b), name: ' ', description: 'x'.repeat(256), imageKey: null, sortOrder: '2.5' })).sort(),
+    ['description', 'imageKey', 'name', 'sortOrder']);
+  assert.deepEqual(contentPatch(b, { ...toForm(b), imageKey: 'public/badges/new.png' }), { version: 3, imageKey: 'public/badges/new.png' });
   assert.deepEqual(validateBadgeForm(toForm(b)), {});
+});
+
+test('PD-BDG-14 rewards: validated 0–1000, patched only when changed, labelled and reviewed', () => {
+  const b = { ...byCode('QUIZ_10'), version: 3 };
+  assert.deepEqual([b.rewardCoin, b.rewardXp, b.rewardItemCode], [60, 150, null], 'fixtures mirror the seeder tiers');
+  assert.deepEqual(Object.keys(validateBadgeForm({ ...toForm(b), rewardCoin: '-1', rewardXp: '1001' })).sort(), ['rewardCoin', 'rewardXp']);
+  assert.deepEqual(validateBadgeForm({ ...toForm(b), rewardCoin: '0', rewardXp: '1000' }), {});
+  assert.deepEqual(contentPatch(b, { ...toForm(b), rewardCoin: '0', rewardItemCode: 'FRAME_QUIZ' }), { version: 3, rewardCoin: 0, rewardItemCode: 'FRAME_QUIZ' });
+  const last = { ...byCode('QUIZ_50'), rewardItemCode: 'FRAME_QUIZ', rewardItem: { name: 'Khung Chiến Binh', type: 'AVATAR_FRAME', status: 'PUBLISHED', purchasable: false, previewUrl: null } };
+  assert.deepEqual(contentPatch(last, { ...toForm(last), rewardItemCode: null }), { version: 0, rewardItemCode: null });
+  assert.equal(rewardLabel(b), '+60 Coin · +150 XP');
+  assert.equal(rewardLabel(last), '+300 XP · Khung Chiến Binh');
+  assert.equal(rewardLabel({ ...b, rewardCoin: 0, rewardXp: 0 }), 'Không có');
+  assert.deepEqual(reviewIssues(last), []);
+  assert.match(reviewIssues({ ...b, rewardCoin: 0, rewardXp: 0 }).join(), /Chưa có phần thưởng/);
+  assert.match(reviewIssues({ ...last, rewardItem: null }).join(), /Không tìm thấy vật phẩm thưởng FRAME_QUIZ/);
+  assert.match(reviewIssues({ ...last, rewardItem: { ...last.rewardItem, purchasable: true } }).join(), /đang bán ở Cửa hàng/);
+  assert.match(reviewIssues({ ...last, rewardItem: { ...last.rewardItem, status: 'DRAFT' } }).join(), /chưa phát hành/);
+  assert.deepEqual(reviewIssues({ ...last, rewardItem: { ...last.rewardItem, status: 'ARCHIVED' } }), [], 'an archived frame is still granted');
 });
 
 test('AC-CAT-4: a catalog without earner counts has no "Đã đạt" column and no grant total', () => {
@@ -101,7 +119,9 @@ test('AC-CAT-4: a catalog without earner counts has no "Đã đạt" column and 
   assert.equal(page.match(/scope="rowgroup"/g)?.length, 4);
   assert.ok(page.indexOf('Chuỗi ngày học') < page.indexOf('Quiz hoàn thành'));
   assert.doesNotMatch(page, /Dữ liệu mẫu/, 'outside dev the real API needs no sample-data notice');
-  assert.doesNotMatch(page, />Sửa</, 'P1 is read-only');
+  // P2 shipped (PATCH /api/admin/badges/{id}): every row can be edited and switched on/off.
+  assert.match(page, />Sửa</);
+  assert.match(page, />(Bật|Tắt)</);
 });
 
 test('P1 editor view hides absent version and displays a real zero version when provided', () => {
@@ -110,9 +130,12 @@ test('P1 editor view hides absent version and displays a real zero version when 
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /Lưu thay đổi|Bật huy hiệu|Tắt huy hiệu/);
 });
 
-test('AC-PRV-2/3: the editor warns about an unknown icon, a four-milestone shelf, an inactive badge, an unmapped metric', () => {
-  assert.match(editor(byCode('PERFECT_25')), /ứng dụng không có biểu tượng “rocket”/);
-  assert.match(editor(byCode('PERFECT_25')), /ứng dụng chuyển kệ sang dạng cuộn ngang/);
+test('AC-PRV-2/3: the editor warns about a missing image, previews the app card and sheet, an inactive badge, an unmapped metric', () => {
+  assert.match(editor(byCode('PERFECT_25')), /Chưa có ảnh: người học thấy ô trống/);
+  assert.match(editor(byCode('PERFECT_25')), /Thẻ trên lưới Thành tựu[\s\S]*Đã mở khóa[\s\S]*Tiến độ chinh phục/);
+  // PD-BDG-14: the app shows rewards, never a rarity.
+  assert.doesNotMatch(editor(byCode('PERFECT_1')), /Phổ biến|Hiếm|Huyền thoại/);
+  assert.match(editor(byCode('PERFECT_1')), /\+20 Coin[\s\S]*\+50 XP[\s\S]*Phần thưởng khi đạt/);
   assert.match(editor(byCode('WORDS_250')), /Người học chưa đạt hiện không thấy huy hiệu này/);
   assert.doesNotMatch(editor(byCode('QUIZ_10')), /hiện không thấy huy hiệu này/);
   assert.match(editor(byCode('SCAN_10')), /Admin chưa có tên chuỗi, đơn vị và cách đếm cho chỉ số “SCAN_SAVED”/);
@@ -149,9 +172,9 @@ test('MOCK catalog agrees with the Learners samples; PATCH follows the planned s
 
   const stale = await fixturePatchBadge(quiz25.id, { version: 99, isActive: true }).catch(e => e);
   assert.ok(stale instanceof ApiClientError && stale.code === 'VERSION_CONFLICT' && stale.details?.currentVersion === 0);
-  const invalid = await fixturePatchBadge(quiz25.id, { version: 0, iconKey: 'rocket', name: '  ' }).catch(e => e);
+  const invalid = await fixturePatchBadge(quiz25.id, { version: 0, imageKey: 'public/shop/x.png', name: '  ' }).catch(e => e);
   assert.ok(invalid instanceof ApiClientError && invalid.code === 'VALIDATION_ERROR');
-  assert.deepEqual(Object.keys(invalid.fieldErrors).sort(), ['iconKey', 'name']);
+  assert.deepEqual(Object.keys(invalid.fieldErrors).sort(), ['imageKey', 'name']);
   const on = await fixturePatchBadge(quiz25.id, { version: 0, isActive: true });
   assert.deepEqual([on.isActive, on.version, on.earnerCount], [true, 1, 0], 'switching on grants nobody by itself');
   const renamed = await fixturePatchBadge(quiz25.id, { version: 1, name: '  Hai Lăm Quiz ' });
