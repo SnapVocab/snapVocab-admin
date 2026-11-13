@@ -15,7 +15,7 @@ export interface MetricInfo {
 export const METRICS: Record<BadgeMetric, MetricInfo> = {
   LONGEST_STREAK_DAYS: {
     title: 'Chuỗi ngày học', unit: 'ngày',
-    rule: 'Theo chuỗi dài nhất từng đạt; một ngày học là ngày có ít nhất 1 quiz hoàn thành hoặc 1 thẻ được ôn.',
+    rule: 'Theo chuỗi dài nhất từng đạt; một ngày học là ngày có ít nhất 1 quiz hoàn thành, 1 thẻ được ôn hoặc 1 từ đã quét được lưu.',
     sheetNote: 'Tính theo chuỗi dài nhất; mất chuỗi không làm mất tiến độ',
     sentence: n => `Chuỗi ngày học dài nhất đạt ${n} ngày`,
   },

@@ -10,7 +10,7 @@ const fixtures = () => import('./fixtures');
 export const getAdminBadges = () => (badgesUseFixtures ? fixtures().then((f) => f.fixtureBadges()) : apiClient<AdminBadge[]>(base));
 export const getAdminBadge = (id: number) => (badgesUseFixtures ? fixtures().then((f) => f.fixtureBadge(id)) : apiClient<AdminBadge>(`${base}/${id}`));
 
-/** P2 (badges.md §8.4), not built yet: content and on/off are separate requests, each with the version it was read at. */
+/** P2 (badges.md §8.4): content and on/off are separate requests, each with the version it was read at. */
 export const patchAdminBadge = (id: number, body: BadgeContentPatch | BadgeActivePatch) =>
   badgesUseFixtures ? fixtures().then((f) => f.fixturePatchBadge(id, body)) : apiClient<AdminBadge>(`${base}/${id}`, { method: 'PATCH', body });
 

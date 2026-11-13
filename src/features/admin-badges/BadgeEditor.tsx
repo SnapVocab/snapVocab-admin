@@ -42,7 +42,7 @@ interface EditorProps {
   badge: AdminBadge;
   /** Whole catalog with this badge's latest detail merged in: drives the shelf preview and the shelf order. */
   all: AdminBadge[];
-  /** P2 controls (MOCK until PATCH ships, config.ts); false = the P1 read-only view. */
+  /** P2 controls (config.ts `badgesEditable`); false = the P1 read-only view. */
   editable: boolean;
   refreshing: boolean;
   onRefresh: () => void;

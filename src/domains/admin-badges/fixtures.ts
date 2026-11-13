@@ -3,7 +3,7 @@ import { ApiClientError } from '../../lib/api-client';
 import type { AdminBadge, BadgeActivePatch, BadgeContentPatch, BadgeRefillEstimate } from './types';
 
 // SEED mirrors BadgeCatalogSeeder (badges.md §4.1) and is the reference set for tests; EDGE adds the boundary cases the
-// seed lacks. The MOCK catalog at the bottom (config.ts) is what dev/demo builds show while P2 is not built.
+// seed lacks. The MOCK catalog at the bottom is what demo builds show with VITE_ADMIN_BADGES_FIXTURES=true (config.ts).
 
 const AT = '2026-10-07T00:00:00Z';
 /** BadgeCatalogSeeder TIER_REWARD by sort order's last digit; last-tier frames are attached by Admin later. */
@@ -62,7 +62,7 @@ export const DATASETS: Record<DatasetKey, { label: string; items: AdminBadge[] }
 // ── MOCK P2 catalog (config.ts `badgesUseFixtures`) ─────────────────────────────────────────────────────────────────
 // The 12 seed badges plus one milestone a migration added but nobody switched on yet (PD-BDG-13c), so Bật and the
 // refill estimate have something to act on. Earner counts and estimates come from the Learners screen's sample people.
-// ponytail: in-memory, lost on reload; delete with the flag once PATCH and the estimate API ship.
+// ponytail: in-memory, lost on reload; demo-only (PATCH and the estimate API have shipped).
 
 const holders = () => fixtureBadgeHolders();
 const metricOf = (h: ReturnType<typeof fixtureBadgeHolders>[number], metric: string) =>
