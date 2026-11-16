@@ -62,8 +62,8 @@ export function LeaderboardPage() {
       />
       {leaderboardUsesFixtures && (
         <SampleDataNotice>
-          Màn này chờ <code className="font-mono">GET /api/admin/leaderboards</code>. Người học là người học mẫu của màn Người học; XP sinh theo đúng
-          luật cộng XP của ứng dụng (ôn thẻ, quiz, Booster) và tính tới 14:20 Thứ Tư 21/10.
+          Đang chạy dữ liệu mẫu (<code className="font-mono">VITE_ADMIN_LEADERBOARD_FIXTURES=true</code>), không gọi máy chủ. Người học là người học
+          mẫu của màn Người học; XP sinh theo đúng luật cộng XP của ứng dụng (ôn thẻ, quiz, Booster) và tính tới 14:20 Thứ Tư 21/10.
         </SampleDataNotice>
       )}
       {board.isError && <SourceError what="bảng xếp hạng" stale={!!b} detail={leaderboardErrorDetail(board.error)} onRetry={() => void board.refetch()} />}

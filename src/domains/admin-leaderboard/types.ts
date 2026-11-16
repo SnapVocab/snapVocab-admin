@@ -1,6 +1,6 @@
 /**
  * Admin weekly XP leaderboard: docs/sa/leaderboard_backend.md §7 and Phụ lục B (rev 1.1 adds `rankChange`).
- * NOT implemented on the backend yet: dev/demo builds run on labelled fixtures (config.ts).
+ * Built on the backend (feat/leaderboard, rev 1.3); VITE_ADMIN_LEADERBOARD_FIXTURES=true swaps in the sample board.
  *
  *   GET /api/admin/leaderboards?week=CURRENT|PREVIOUS  → AdminLeaderboard
  *

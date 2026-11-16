@@ -55,7 +55,7 @@ export function LearnerDirectory() {
     <div className="space-y-4">
       <PageHeader title="Người học" />
       {learnersUseFixtures && (
-        <SampleDataNotice>Màn này chờ <code className="font-mono">GET /api/admin/users</code>. Khóa, mở khóa và gửi link chỉ đổi dữ liệu mẫu trong phiên này.</SampleDataNotice>
+        <SampleDataNotice>Màn này chờ <code className="font-mono">GET /api/admin/users</code>. Khóa, mở khóa và gửi mã chỉ đổi dữ liệu mẫu trong phiên này.</SampleDataNotice>
       )}
 
       {data && (

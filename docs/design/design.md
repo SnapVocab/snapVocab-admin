@@ -214,7 +214,7 @@ Mục tiêu: admin trông như công cụ một đội vận hành dùng hằng 
 | | Cửa hàng & Vật phẩm (`/shop`, `/shop/:id`) | **NOW** | Đã làm lại (rev 2). Thêm panel Hiệu quả: MOCK |
 | | Huy hiệu (`/badges`, `/badges/:id`) | **NOW** P1 (xem) · MOCK P2 (sửa nội dung, Bật/Tắt, ước tính cấp bù) | **Đã làm lại 2026-10-21** ([admin_badges_ui.md](../../../docs/ui/admin_badges_ui.md) rev 3). Sau cờ `VITE_ADMIN_BADGES_ENABLED`; P2 chạy trên dữ liệu mẫu (`VITE_ADMIN_BADGES_FIXTURES`) tới khi có `PATCH` |
 | | Thông báo | **NOW** (composer, A8) · MOCK (lịch sử) | Chưa có màn |
-| | Bảng xếp hạng (`/leaderboard`) | MOCK (chỉ xem) | **Đã dựng 2026-10-21** ([leaderboard_ui.md](./leaderboard_ui.md)). Chờ `GET /api/admin/leaderboards` ([leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) rev 1.1); phát hành sau màn người học |
+| | Bảng xếp hạng (`/leaderboard`) | NOW (chỉ xem) | **Đã dựng 2026-10-21** ([leaderboard_ui.md](./leaderboard_ui.md)); gọi `GET /api/admin/leaderboards` thật từ 2026-11-10 ([leaderboard_backend.md](../../../docs/sa/leaderboard_backend.md) rev 1.3, backend trên nhánh `feat/leaderboard`, chưa deploy); phát hành sau màn người học |
 | PEOPLE | Người học (`/learners`, `/learners/:id`) | **MOCK** | **Đã dựng 2026-10-19** ([learners_ui.md](./learners_ui.md)) |
 | | Phản hồi (bản gọn) | FUTURE | Chờ OQ-ADS-02. Tab "Thiếu từ" nằm trong AI Scan |
 | SYSTEM | Nhật ký hoạt động (`/activity-log`, `/activity-log/:loại/:id`) | NOW | **Đã làm lại 2026-10-20** ([activity_log_ui.md](./activity_log_ui.md)): dải câu hỏi kiêm bộ lọc, dải phân bố ngày · khu vực · người làm, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng. Chờ `admin_audit_logs` |
@@ -569,7 +569,7 @@ Theo đề xuất trong đánh giá 2026-10-19:
 | Phân tích | 4 tab Học tập · Giữ chân · Kinh tế · Scan; kết luận + hành động mỗi biểu đồ; giữ chân theo % chỉ hiện khi ≥ 200 người học | **Xong** 2026-10-19. Chờ `GET /api/admin/analytics`, OQ-ANL-01…03 |
 | Nhật ký hoạt động | Dải câu hỏi, dải phân bố, bảng nhóm theo ngày, drawer diff, lịch sử từng đối tượng, xuất CSV | **Xong** 2026-10-20; **API thật** 2026-10-22 (FE-AUD-02, nav NOW). Panel "Vòng đời" của Cửa hàng/Nhiệm vụ đọc nhật ký thật (FE-AUD-03). Còn OQ-LOG-01…03; thao tác người học chờ M3 |
 | Huy hiệu (rev 3) | Danh mục theo chuỗi + kệ trên ứng dụng; editor `/badges/:id`; P2 MOCK | **Xong** 2026-10-21. P1 dùng API thật; P2 chờ `PATCH`, cột `version`, API ước tính (OQ-BDGA-01/02) |
-| Bảng xếp hạng | Dải số liệu, phân bố, bảng, "Cần xem", drawer + mô phỏng app | **Xong** 2026-10-21 (MOCK). Chờ backend (leaderboard_backend.md rev 1.1), OQ-LBA-01…03 |
+| Bảng xếp hạng | Dải số liệu, phân bố, bảng, "Cần xem", drawer + mô phỏng app | **Xong** 2026-10-21; nối API thật 2026-11-10, kiểm trên backend local (leaderboard_backend.md rev 1.3). OQ-LBA-01…03 PO chốt 2026-11-10 |
 | Mẫu thẻ | Thư viện vẽ bằng renderer của app, bảng thuộc tính × mẫu, editor với kiểm tra Quiz/hiển thị/dữ liệu | **Xong** 2026-10-21 (đọc NOW, ghi MOCK). Chờ API ghi (templates_ui.md §8), OQ-TPL-01…04 |
 | Backend (theo thứ tự) | Admin users → dictionary → đọc scan + thống kê → bảng ánh xạ nhãn → `admin_audit_logs` → overview → thống kê LiveOps | Theo đánh giá §10F |
 

@@ -1,6 +1,7 @@
 /**
- * Proposed admin contract for learners (F-ADM-01…03, admin_product_review_2026-10-19 §3.12, §4.2).
- * NOT implemented on the backend yet: the UI runs on fixtures until it is (see config.ts).
+ * Admin contract for learners (F-ADM-01…03, admin_product_review_2026-10-19 §3.12, §4.2), implemented by the backend
+ * (module vn.ptit.snapvocab.adminusers); fixtures only with VITE_ADMIN_LEARNERS_FIXTURES=true (api.ts).
+ * ROLE_ADMIN accounts are not learners: the API never lists, shows or locks them (404).
  *
  *   GET  /api/admin/users?q=&status=&activity=&sort=&page=&size=  → LearnerListResponse
  *   GET  /api/admin/users/{id}                                     → AdminLearnerDetail

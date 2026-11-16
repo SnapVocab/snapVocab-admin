@@ -3,11 +3,10 @@ import type { AdminLearnerDetail, LearnerListParams, LearnerListResponse } from 
 import { fixtureDetail, fixtureList, fixturePasswordReset, fixtureSetBan } from './fixtures';
 
 /**
- * MOCK scope: the admin users API does not exist yet, so dev/demo builds use labelled fixtures.
- * Set VITE_ADMIN_LEARNERS_FIXTURES=false to call the proposed endpoints (types.ts) once the backend ships.
+ * Real API by default (backend module vn.ptit.snapvocab.adminusers). VITE_ADMIN_LEARNERS_FIXTURES=true switches to the
+ * labelled sample learners, for demos without a backend.
  */
-const flag = import.meta.env.VITE_ADMIN_LEARNERS_FIXTURES;
-export const learnersUseFixtures = flag ? flag === 'true' : import.meta.env.DEV;
+export const learnersUseFixtures = import.meta.env.VITE_ADMIN_LEARNERS_FIXTURES === 'true';
 
 const base = '/api/admin/users';
 
