@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Award, BarChart3, BookOpen, Camera, FolderTree, History, Layers, LayoutDashboard, Palette, ShoppingBag, Target, Trophy, Users } from 'lucide-react';
+import { Award, BarChart3, BookOpen, Camera, Cpu, FolderTree, History, Layers, LayoutDashboard, Palette, ShoppingBag, Target, Trophy, Users } from 'lucide-react';
 import { adminMissionsEnabled } from '../../domains/admin-missions/config';
 import { adminBadgesEnabled } from '../../domains/admin-badges/config';
 
@@ -35,6 +35,7 @@ const ALL: (NavItem & { enabled?: boolean })[] = [
   { id: 'badges', path: '/badges', label: 'Huy hiệu', section: 'LiveOps', Icon: Award, scope: 'NOW', enabled: adminBadgesEnabled },
   { id: 'leaderboard', path: '/leaderboard', label: 'Bảng xếp hạng', section: 'LiveOps', Icon: Trophy, scope: 'NOW' },
   { id: 'learners', path: '/learners', label: 'Người học', section: 'Người dùng', Icon: Users, scope: 'NOW' },
+  { id: 'ai-providers', path: '/ai-providers', label: 'AI Providers', section: 'Hệ thống', Icon: Cpu, scope: 'NOW' },
   { id: 'activity-log', path: '/activity-log', label: 'Nhật ký hoạt động', section: 'Hệ thống', Icon: History, scope: 'NOW' },
   { id: 'ui-kit', path: '/ui-kit', label: 'UI Kit (dev)', section: 'Hệ thống', Icon: Palette, scope: 'NOW', enabled: import.meta.env.DEV },
 ];
