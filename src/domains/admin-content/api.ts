@@ -38,3 +38,4 @@ export const suggestWords = (q: string, page: number, size: number) =>
 export const lookupWords = (words: string[]) =>
   apiClient<LookupResultDTO[]>('/api/words/lookup', { method: 'POST', body: { words } });
 export const lookupWord = (q: string) => apiClient<LookupResultDTO>('/api/words/lookup', { params: { q } });
+export const getWordById = (id: number) => apiClient<LookupResultDTO>(`/api/words/${id}`);

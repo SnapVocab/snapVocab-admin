@@ -3,7 +3,7 @@
  *   GET/POST /api/collections · GET/PUT/DELETE /api/collections/{id} · GET/POST /api/collections/{id}/topics?parentId=
  *   GET /api/topics/{id}?page=&size= (items) · POST /api/topics/{id}/items · GET /api/topics/{id}/schema
  *   PUT /api/topics/{id}/active-template/{templateId} · GET /api/schemas/{id}
- *   GET /api/words/suggest?q=&page=&size= · POST /api/words/lookup { words } · GET /api/words/lookup?q=
+ *   GET /api/words/suggest?q=&page=&size= · POST /api/words/lookup { words } · GET /api/words/lookup?q= · GET /api/words/{id}
  * Missing on the backend (shown as "cần API" in the UI): topic update/delete, item update/delete,
  * dictionary writes, soft delete, draft/publish (OQ-ADS-08).
  */
@@ -96,6 +96,7 @@ export interface CreateTopic { name: string; translation: string | null; descrip
 
 export interface WordSuggestDTO { id: number; word: string }
 export interface LookupResultDTO {
+  wordId?: number;
   exists: boolean;
   word: string;
   langCode: string;
