@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addTopicItem, createCollection, createTopic, deleteCollection, getSchema, getSystemCollections, getTopicItems,
-  getTopics, getTopicSchema, lookupWord, lookupWords, setActiveTemplate, suggestWords, updateCollection,
+  getTopics, getTopicSchema, getWordById, lookupWord, lookupWords, setActiveTemplate, suggestWords, updateCollection,
 } from './api';
 import type { CreateCollection, CreateTopic, CreateTopicItem, LookupResultDTO, UpdateCollection, WordSuggestDTO } from './types';
 
@@ -14,6 +14,7 @@ export const contentKeys = {
   schema: (schemaId: number) => ['adminContent', 'schema', schemaId] as const,
   words: (q: string, page: number, size: number) => ['adminContent', 'words', q, page, size] as const,
   word: (word: string) => ['adminContent', 'word', word] as const,
+  wordById: (id: number) => ['adminContent', 'wordById', id] as const,
 };
 
 export const useSystemCollections = () => useQuery({ queryKey: contentKeys.collections, queryFn: getSystemCollections });
@@ -92,11 +93,22 @@ export const useWordPage = (q: string, page: number, size: number) =>
     queryFn: async () => {
       const result = await suggestWords(q, page, size);
       const details = result.data.length ? await lookupWords(result.data.map((w: WordSuggestDTO) => w.word)) : [];
-      const byWord = new Map(details.map((d) => [d.word.toLowerCase(), d]));
-      return { meta: result.meta, rows: result.data.map((w): WordRow => ({ ...w, lookup: byWord.get(w.word.toLowerCase()) ?? null })) };
+      const byId = new Map<number, LookupResultDTO>();
+      const byWord = new Map<string, LookupResultDTO>();
+      for (const d of details) {
+        if (d.wordId != null) byId.set(d.wordId, d);
+        byWord.set(d.word.toLowerCase(), d);
+      }
+      return {
+        meta: result.meta,
+        rows: result.data.map((w): WordRow => ({ ...w, lookup: byId.get(w.id) ?? byWord.get(w.word.toLowerCase()) ?? null })),
+      };
     },
     placeholderData: keepPreviousData,
   });
 
 export const useWordLookup = (word: string | null) =>
   useQuery({ queryKey: contentKeys.word(word ?? ''), queryFn: () => lookupWord(word!), enabled: !!word });
+
+export const useWordById = (id: number | null) =>
+  useQuery({ queryKey: contentKeys.wordById(id ?? 0), queryFn: () => getWordById(id!), enabled: id !== null });

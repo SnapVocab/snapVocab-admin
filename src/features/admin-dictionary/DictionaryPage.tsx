@@ -14,10 +14,12 @@ const GAP_DOT: Record<WordGap, string> = { vi: 'bg-danger', ipa: 'bg-warning', m
 /**
  * NOW (read): GET /api/words/suggest (prefix, alphabetical, paged) + POST /api/words/lookup for the page.
  * MOCK (write): editing lives in WordDrawer; soft delete and usage counts need API (F-ADM-04).
- * `rest[0]` = an open word, so the detail survives F5 and can be linked.
+ * `rest[0]` = an open word id (or word text from legacy/analytics links), so the detail survives F5 and can be linked.
  */
 export function DictionaryPage({ rest }: { rest: string[] }) {
-  const openWord = rest[0] ? decodeURIComponent(rest[0]) : null;
+  const param = rest[0] ? decodeURIComponent(rest[0]) : null;
+  const openWordId = param && /^\d+$/.test(param) ? Number(param) : null;
+  const openWord = param && openWordId === null ? param : null;
   const [letter, setLetter] = useState('a');
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
@@ -35,7 +37,7 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
   const count = (g: WordGap) => rows.filter((r) => r.lookup && wordGaps(r.lookup).includes(g)).length;
   const visible = gap === 'ALL' ? rows : rows.filter((r) => r.lookup && wordGaps(r.lookup).includes(gap));
   const pickLetter = (l: string) => { setLetter(l); setSearch(''); setQ(''); setPage(0); setGap('ALL'); };
-  const open = (w: string) => navigate(`/dictionary/${encodeURIComponent(w)}`);
+  const open = (id: number) => navigate(`/dictionary/${id}`);
 
   return (
     <div className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
@@ -95,9 +97,9 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
                   const vi = lookup ? viGloss(lookup) : [];
                   const en = lookup?.meanings.find((m) => m.definitionLang === 'en')?.definition;
                   return (
-                    <tr key={id} onClick={() => open(word)} className="cursor-pointer hover:bg-surface-subtle/60">
+                    <tr key={id} onClick={() => open(id)} className="cursor-pointer hover:bg-surface-subtle/60">
                       <td className="px-4 py-2">
-                        <a href={`/dictionary/${encodeURIComponent(word)}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); open(word); }} className="text-body font-semibold text-text hover:underline">{word}</a>
+                        <a href={`/dictionary/${id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); open(id); }} className="text-body font-semibold text-text hover:underline">{word}</a>
                       </td>
                       <td className="px-3 py-2 font-mono text-text-muted">{lookup?.pronunciations[0]?.ipa ?? '—'}</td>
                       <td className="px-3 py-2 text-text-muted">{pos.length ? pos.slice(0, 3).join(', ') : '—'}</td>
@@ -128,7 +130,14 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
         )}
       </div>
 
-      {openWord && <WordDrawer key={openWord} word={openWord} onClose={() => navigate('/dictionary')} />}
+      {(openWordId !== null || openWord) && (
+        <WordDrawer
+          key={openWordId !== null ? `id:${openWordId}` : `w:${openWord}`}
+          wordId={openWordId}
+          word={openWord}
+          onClose={() => navigate('/dictionary')}
+        />
+      )}
     </div>
   );
 }

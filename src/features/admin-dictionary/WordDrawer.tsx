@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { AlertCircle, Pencil, Plus, Trash2, Undo2 } from 'lucide-react';
 import { Badge, Button, Drawer, Field, SampleDataNotice, SectionLabel, fieldControl } from '../../components/ui';
 import { meaningsByPos, viGloss, WORD_GAP_LABEL, wordGaps } from '../../domains/admin-content/mappers';
-import { useWordLookup } from '../../domains/admin-content/queries';
+import { useWordById, useWordLookup } from '../../domains/admin-content/queries';
 import type { LookupResultDTO } from '../../domains/admin-content/types';
 
 /**
- * MOCK writes (F-ADM-04 has no API yet): an edit is kept in this session only, keyed by word, and every view of it
- * says so. Reads are real (GET /api/words/lookup).
+ * MOCK writes (F-ADM-04 has no API yet): an edit is kept in this session only, keyed by word id/text, and every view of it
+ * says so. Reads are real (GET /api/words/{id}, with GET /api/words/lookup?q= fallback for word-text links).
  */
 const sessionEdits = new Map<string, LookupResultDTO>();
 
@@ -24,17 +24,21 @@ const applyDraft = (r: LookupResultDTO, d: Draft): LookupResultDTO => ({
   meanings: d.meanings.filter((m) => m.definition.trim()).map((m) => ({ definition: m.definition.trim(), definitionLang: m.lang, example: m.example.trim() || null, pos: m.pos.trim() || null, subPos: null, links: null })),
 });
 
-export function WordDrawer({ word, onClose }: { word: string; onClose: () => void }) {
-  const lookup = useWordLookup(word);
+export function WordDrawer({ wordId = null, word = null, onClose }: { wordId?: number | null; word?: string | null; onClose: () => void }) {
+  const byId = useWordById(wordId);
+  const lookup = useWordLookup(wordId === null ? word : null);
+  const query = wordId !== null ? byId : lookup;
   const [, rerender] = useState(0);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const edited = sessionEdits.get(word);
-  const r = edited ?? lookup.data;
+  const editKey = wordId !== null ? String(wordId) : (word ?? '');
+  const fallbackTitle = word ?? (wordId !== null ? `#${wordId}` : '');
+  const edited = sessionEdits.get(editKey);
+  const r = edited ?? query.data;
 
   if (!r) {
     return (
-      <Drawer title={word} onClose={onClose} width="lg">
-        {lookup.isError ? <p role="alert" className="flex items-center gap-2 text-sm text-danger-dark"><AlertCircle size={16} />Không tra được từ này.</p>
+      <Drawer title={fallbackTitle} onClose={onClose} width="lg">
+        {query.isError ? <p role="alert" className="flex items-center gap-2 text-sm text-danger-dark"><AlertCircle size={16} />Không tra được từ này.</p>
           : <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-surface-subtle" />)}</div>}
       </Drawer>
     );
@@ -42,9 +46,9 @@ export function WordDrawer({ word, onClose }: { word: string; onClose: () => voi
 
   if (draft) {
     const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
-    const save = () => { sessionEdits.set(word, applyDraft(r, draft)); setDraft(null); rerender((n) => n + 1); };
+    const save = () => { sessionEdits.set(editKey, applyDraft(r, draft)); setDraft(null); rerender((n) => n + 1); };
     return (
-      <Drawer title={`Sửa "${word}"`} subtitle="Bản sửa mẫu: chỉ giữ trong phiên này" onClose={() => setDraft(null)} width="lg"
+      <Drawer title={`Sửa "${r.word}"`} subtitle="Bản sửa mẫu: chỉ giữ trong phiên này" onClose={() => setDraft(null)} width="lg"
         footer={<><Button onClick={() => setDraft(null)} data-autofocus>Hủy</Button><Button variant="primary" onClick={save}>Lưu bản sửa (mẫu)</Button></>}>
         <SampleDataNotice>Chưa có API ghi từ điển (đề xuất <code className="font-mono">PUT /api/admin/words/{'{id}'}</code>). Lưu ở đây chỉ để kiểm chứng giao diện sửa; không ghi vào máy chủ.</SampleDataNotice>
         <ListEditor title="Phát âm (IPA)" values={draft.ipa} onChange={(v) => set('ipa', v)} placeholder="/ˈæpəl/" mono />
@@ -81,7 +85,7 @@ export function WordDrawer({ word, onClose }: { word: string; onClose: () => voi
       {edited && (
         <p role="note" className="flex items-center justify-between gap-2 rounded-lg border border-info/30 bg-info-light px-3 py-2 text-xs text-info-dark">
           <span>Đang xem <strong>bản sửa mẫu</strong> trong phiên, chưa ghi vào máy chủ.</span>
-          <Button size="sm" icon={<Undo2 />} onClick={() => { sessionEdits.delete(word); rerender((n) => n + 1); }}>Bỏ bản sửa</Button>
+          <Button size="sm" icon={<Undo2 />} onClick={() => { sessionEdits.delete(editKey); rerender((n) => n + 1); }}>Bỏ bản sửa</Button>
         </p>
       )}
       {gaps.length > 0 && <div className="flex flex-wrap gap-1.5">{gaps.map((g) => <Badge key={g} tone="warning">{WORD_GAP_LABEL[g]}</Badge>)}</div>}
