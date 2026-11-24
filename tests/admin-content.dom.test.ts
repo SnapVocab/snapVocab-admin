@@ -157,3 +157,16 @@ test('D1. dictionary browses by letter: suggest for the prefix, one batch lookup
   await waitFor(() => text().includes('bpple'), 'letter b');
   assert.ok(calls.some((c) => c.path === '/api/words/suggest' && c.query.get('q') === 'b'));
 });
+
+test('D2. opening a dictionary word by id calls GET /api/words/{id} instead of lookup?q=', async () => {
+  serve((c) => {
+    if (c.path === '/api/words/suggest') return ok({ data: [{ id: 42, word: 'apple' }], meta: { page: 0, size: 30, total: 1, pages: 1 } });
+    if (c.method === 'POST' && c.path === '/api/words/lookup') return ok([{ ...APPLE, wordId: 42 }]);
+    if (c.method === 'GET' && c.path === '/api/words/42') return ok({ ...APPLE, wordId: 42 });
+    return undefined;
+  });
+  await render(React.createElement(DictionaryPage, { rest: ['42'] }));
+  await waitFor(() => text().includes('quả táo'), 'drawer loaded by id');
+  assert.ok(calls.some((c) => c.method === 'GET' && c.path === '/api/words/42'));
+  assert.equal(calls.some((c) => c.method === 'GET' && c.path === '/api/words/lookup'), false);
+});
