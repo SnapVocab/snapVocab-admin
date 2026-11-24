@@ -22,6 +22,7 @@ const AdminBadgesPage = import.meta.env.VITE_ADMIN_BADGES_ENABLED === 'true'
 const LeaderboardPage = lazy(() => import('./features/admin-leaderboard/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const LearnersPage = lazy(() => import('./features/admin-learners/LearnersPage').then((m) => ({ default: m.LearnersPage })));
 const ActivityLogPage = lazy(() => import('./features/activity-log/ActivityLogPage').then((m) => ({ default: m.ActivityLogPage })));
+const AiProvidersPage = lazy(() => import('./features/admin-ai-providers/AiProvidersPage').then((m) => ({ default: m.AiProvidersPage })));
 // Dev-only reference page for src/components/ui; `DEV` is false in production, so the chunk is never emitted.
 const UiKitPage = import.meta.env.DEV ? lazy(() => import('./features/ui-kit/UiKitPage')) : null;
 
@@ -92,6 +93,7 @@ export function AdminWorkspace() {
       case 'topics': return <TopicsPage rest={rest} />;
       case 'templates': return <TemplatesPage sub={rest[0]} onDirtyChange={setPageDirty} />;
       case 'ai-scan': return <LegacyScreen><AIScanMonitorPage activeNav="ai-monitor" {...legacy} /></LegacyScreen>;
+      case 'ai-providers': return <AiProvidersPage />;
       // Keyed by path: opening another object's history starts from fresh filters.
       case 'activity-log': return <ActivityLogPage key={rest.join('/')} rest={rest} />;
       default: return <DashboardPage />;
