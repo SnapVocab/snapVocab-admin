@@ -85,7 +85,7 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
           <thead className="border-b border-border bg-surface-subtle/60 text-text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Từ</th><th className="px-3 py-2 font-medium">IPA</th><th className="px-3 py-2 font-medium">Từ loại</th>
-              <th className="px-3 py-2 font-medium">Nghĩa tiếng Việt</th><th className="hidden px-3 py-2 font-medium xl:table-cell">Định nghĩa tiếng Anh</th><th className="px-4 py-2 font-medium">Độ phủ</th>
+              <th className="px-3 py-2 font-medium">Nghĩa tiếng Việt</th><th className="hidden px-3 py-2 font-medium lg:table-cell">Ví dụ</th><th className="px-4 py-2 font-medium">Độ phủ</th>
             </tr>
           </thead>
           <tbody className={cn('divide-y divide-border', words.isPlaceholderData && 'opacity-60')}>
@@ -95,7 +95,8 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
                   const gaps = lookup ? wordGaps(lookup) : [];
                   const pos = [...new Set(lookup?.meanings.map((m) => m.pos).filter(Boolean))];
                   const vi = lookup ? viGloss(lookup) : [];
-                  const en = lookup?.meanings.find((m) => m.definitionLang === 'en')?.definition;
+                  const examples = lookup?.meanings.map((m) => m.example?.trim()).filter((ex): ex is string => Boolean(ex)) ?? [];
+                  const firstExample = examples[0];
                   return (
                     <tr key={id} onClick={() => open(id)} className="cursor-pointer hover:bg-surface-subtle/60">
                       <td className="px-4 py-2">
@@ -104,7 +105,14 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
                       <td className="px-3 py-2 font-mono text-text-muted">{lookup?.pronunciations[0]?.ipa ?? '—'}</td>
                       <td className="px-3 py-2 text-text-muted">{pos.length ? pos.slice(0, 3).join(', ') : '—'}</td>
                       <td className="px-3 py-2"><div className="max-w-44 truncate">{vi.length ? vi.join(', ') : <span className="text-text-light">—</span>}</div></td>
-                      <td className="hidden px-3 py-2 text-text-muted xl:table-cell"><div className="max-w-96 truncate" title={en}>{en ?? '—'}</div></td>
+                      <td className="hidden px-3 py-2 text-text-muted lg:table-cell">
+                        {firstExample ? (
+                          <div className="flex max-w-96 items-center gap-1.5" title={examples.join('\n')}>
+                            <span className="truncate italic text-text">“{firstExample}”</span>
+                            {examples.length > 1 && <span className="shrink-0 rounded bg-surface-subtle px-1 font-mono text-2xs text-text-muted">+{examples.length - 1}</span>}
+                          </div>
+                        ) : '—'}
+                      </td>
                       <td className="px-4 py-2">
                         {!lookup ? <span className="text-text-light">Chưa tra được</span> : gaps.length === 0 ? <span className="text-primary-dark">Đủ</span> : (
                           <span className="flex items-center gap-1" title={gaps.map((g) => WORD_GAP_LABEL[g]).join(' · ')}>
