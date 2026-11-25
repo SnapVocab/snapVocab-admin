@@ -109,8 +109,18 @@ export function WordDrawer({ wordId = null, word = null, onClose }: { wordId?: n
         {meaningsByPos(r).map(([pos, ms]) => (
           <div key={pos} className="space-y-1.5">
             <Badge tone="info">{pos}</Badge>
-            <ol className="list-decimal space-y-1.5 pl-5 text-body">
-              {ms.map((m, i) => <li key={i}><span className="mr-1.5 rounded bg-surface-subtle px-1 font-mono text-2xs text-text-muted">{m.definitionLang ?? '?'}</span>{m.definition}{m.example && <span className="mt-0.5 block text-xs text-text-muted">“{m.example}”</span>}</li>)}
+            <ol className="list-decimal space-y-2 pl-5 text-body">
+              {ms.map((m, i) => (
+                <li key={i}>
+                  <span className="mr-1.5 rounded bg-surface-subtle px-1 font-mono text-2xs text-text-muted">{m.definitionLang ?? '?'}</span>
+                  <span>{m.definition}</span>
+                  {m.example?.trim() && (
+                    <span className="mt-1 block rounded border-l-2 border-primary/50 bg-surface-subtle/70 px-2.5 py-1 text-xs italic text-text">
+                      “{m.example.trim()}”
+                    </span>
+                  )}
+                </li>
+              ))}
             </ol>
           </div>
         ))}
