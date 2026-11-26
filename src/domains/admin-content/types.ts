@@ -1,11 +1,13 @@
 /**
- * Contracts of the EXISTING learner/admin endpoints the content screens use (NOW scope):
+ * Contracts of the endpoints the content screens use:
  *   GET/POST /api/collections · GET/PUT/DELETE /api/collections/{id} · GET/POST /api/collections/{id}/topics?parentId=
- *   GET /api/topics/{id}?page=&size= (items) · POST /api/topics/{id}/items · GET /api/topics/{id}/schema
+ *   GET /api/topics/{id}?page=&size= (items) · POST/PUT/DELETE /api/topics/{id}/items[/{itemId}] · GET /api/topics/{id}/schema
  *   PUT /api/topics/{id}/active-template/{templateId} · GET /api/schemas/{id}
  *   GET /api/words/suggest?q=&page=&size= · POST /api/words/lookup { words } · GET /api/words/lookup?q= · GET /api/words/{id}
- * Missing on the backend (shown as "cần API" in the UI): topic update/delete, item update/delete,
- * dictionary writes, soft delete, draft/publish (OQ-ADS-08).
+ *   Admin content v1 (ROLE_ADMIN): PUT/DELETE /api/admin/words/{id} · POST /api/admin/words/{id}/restore ·
+ *   GET /api/admin/words/deleted · PUT/DELETE /api/admin/topics/{id} · POST /api/admin/topics/{id}/hide|restore ·
+ *   GET /api/admin/topics/hidden?collectionId=
+ * Still missing on the backend: draft/publish (OQ-ADS-08).
  */
 
 export interface Page<T> {
@@ -97,11 +99,31 @@ export interface CreateTopic { name: string; translation: string | null; descrip
 export interface WordSuggestDTO { id: number; word: string }
 export interface LookupResultDTO {
   wordId?: number;
+  /** Set when an admin soft-deleted the word: suggest/lookup/scan skip it, GET /api/words/{id} still opens it. */
+  deletedAt?: string | null;
+  /** Optimistic lock sent back with PUT /api/admin/words/{id}. */
+  version?: number;
   exists: boolean;
   word: string;
   langCode: string;
   pronunciations: { ipa: string; region: string | null }[];
-  meanings: { definition: string; definitionLang: string | null; example: string | null; pos: string | null; subPos: string | null; links: string[] | null }[];
+  /** `id` = word_definitions.id (the editor keeps it); `pos` is the label ("Danh từ"), POS_OPTIONS maps codes. */
+  meanings: { id?: number; definition: string; definitionLang: string | null; example: string | null; pos: string | null; subPos: string | null; links: string[] | null }[];
   translations: { langCode: string; translation: string }[];
   relations: { relatedWord: string; relationType: string }[];
+}
+
+/** PUT /api/admin/words/{id}: the whole editable part; meanings with `id` are kept, without are new, absent are removed. */
+export interface UpdateWord {
+  version: number;
+  pronunciations: { ipa: string; region: string | null }[];
+  translations: string[];
+  meanings: { id: number | null; pos: string | null; definitionLang: 'vi' | 'en'; definition: string; example: string | null }[];
+}
+export interface DeletedWordDTO { id: number; word: string; deletedAt: string }
+export interface UpdateTopic { name: string; translation: string | null; description: string | null; descriptionTranslation: string | null }
+/** A hidden system topic (OQ-CNT-01); `learners` counts the topic and its subtopics, `subtopics` those hidden with it. */
+export interface HiddenTopicDTO {
+  id: number; name: string; translation: string | null; parentId: number | null; parentName: string | null;
+  hiddenAt: string; hiddenBy: string | null; reason: string | null; subtopics: number; learners: number;
 }

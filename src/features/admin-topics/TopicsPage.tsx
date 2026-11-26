@@ -1,29 +1,34 @@
 import React, { useState } from 'react';
-import { AlertCircle, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, PageHeader } from '../../components/ui';
-import { useSystemCollections, useTopics } from '../../domains/admin-content/queries';
+import { useHiddenTopics, useSystemCollections, useTopics } from '../../domains/admin-content/queries';
 import type { ItemSummary } from '../../domains/admin-content/mappers';
-import type { CollectionDTO, SchemaAttributeGroupDTO, TopicDTO } from '../../domains/admin-content/types';
+import type { CollectionDTO, SchemaAttributeGroupDTO, TopicDTO, TopicItemData } from '../../domains/admin-content/types';
 import { navigate } from '../../lib/router';
 import { cn } from '../../lib/utils';
 import { TopicTree } from './TopicTree';
 import { TopicDetail } from './TopicDetail';
 import { AddItemDrawer } from './AddItemDrawer';
-import { CollectionDialog, DeleteCollectionDialog, TemplateDialog, TopicDialog } from './dialogs';
+import { CollectionDialog, DeleteCollectionDialog, DeleteTopicDialog, HideTopicDialog, TemplateDialog, TopicDialog } from './dialogs';
+import { HiddenTopicsDrawer } from './HiddenTopicsDrawer';
 import { useToast } from '../../components/ui/Toast';
 
 type Dialog =
   | { kind: 'collection'; collection?: CollectionDTO }
   | { kind: 'deleteCollection' }
   | { kind: 'topic'; parent: TopicDTO | null }
+  | { kind: 'editTopic'; topic: TopicDTO; parent: TopicDTO | null }
+  | { kind: 'hideTopic'; topic: TopicDTO; parent: TopicDTO | null }
+  | { kind: 'hidden' }
+  | { kind: 'deleteTopic'; topic: TopicDTO; itemCount: number | null }
   | { kind: 'template'; topic: TopicDTO }
-  | { kind: 'item'; topic: TopicDTO; groups: SchemaAttributeGroupDTO[]; existing: ItemSummary[] };
+  | { kind: 'item'; topic: TopicDTO; groups: SchemaAttributeGroupDTO[]; existing: ItemSummary[]; item?: TopicItemData };
 
 const num = (s?: string) => (s && /^\d+$/.test(s) ? Number(s) : null);
 
 /**
  * `rest` = route segments after /topics: [collectionId, rootId?, childId?], so F5 and shared links reopen the topic.
- * NOW scope: real collections/topics/items endpoints; edit/delete of topics and items are shown as "cần API".
+ * Real collections/topics/items endpoints, including topic edit/delete (admin API) and item edit/delete.
  */
 export function TopicsPage({ rest }: { rest: string[] }) {
   const collections = useSystemCollections();
@@ -38,6 +43,7 @@ export function TopicsPage({ rest }: { rest: string[] }) {
   const topic = child ?? root;
 
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  const hidden = useHiddenTopics(collection?.id ?? null);
   const { show: flash, node: toastNode } = useToast();
   const go = (c: CollectionDTO | null, r?: TopicDTO | null, ch?: TopicDTO | null) =>
     navigate(['/topics', c?.id, r?.id, ch?.id].filter((x) => x !== undefined && x !== null).join('/'));
@@ -46,7 +52,7 @@ export function TopicsPage({ rest }: { rest: string[] }) {
     <div className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
       {toastNode}
       <PageHeader title="Chủ đề"
-        description="Nội dung hệ thống mà người học duyệt và lưu. Sửa hoặc xóa chủ đề và mục từ chưa có API nên đang bị khóa."
+        description="Nội dung hệ thống mà người học duyệt và lưu. Chủ đề hoặc mục từ đã có người học học thì không xóa được, chỉ sửa."
         actions={<Button icon={<Plus />} onClick={() => setDialog({ kind: 'collection' })}>Tạo collection</Button>} />
 
       {collections.isError && (
@@ -68,6 +74,7 @@ export function TopicsPage({ rest }: { rest: string[] }) {
             ))}
           </div>
           <div className="flex gap-2">
+            <Button size="sm" icon={<EyeOff />} onClick={() => setDialog({ kind: 'hidden' })}>Đã ẩn{hidden.data ? ` (${hidden.data.length})` : ''}</Button>
             <Button size="sm" icon={<Pencil />} onClick={() => setDialog({ kind: 'collection', collection })}>Đổi tên</Button>
             <Button size="sm" variant="danger-outline" icon={<Trash2 />} onClick={() => setDialog({ kind: 'deleteCollection' })}>Xóa</Button>
           </div>
@@ -85,7 +92,11 @@ export function TopicsPage({ rest }: { rest: string[] }) {
               onOpenChild={(c) => go(collection, root, c)}
               onAddItem={(groups, existing) => setDialog({ kind: 'item', topic, groups, existing })}
               onAddChild={() => setDialog({ kind: 'topic', parent: topic })}
-              onChangeTemplate={() => setDialog({ kind: 'template', topic })} />
+              onChangeTemplate={() => setDialog({ kind: 'template', topic })}
+              onEdit={() => setDialog({ kind: 'editTopic', topic, parent: child ? root : null })}
+              onHide={() => setDialog({ kind: 'hideTopic', topic, parent: child ? root : null })}
+              onEditItem={(item, groups, existing) => setDialog({ kind: 'item', topic, groups, existing, item })}
+              onItemDeleted={(w) => flash(`Đã xóa "${w}".`)} />
           ) : (
             <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border-strong text-sm text-text-muted">
               {rootId && (roots.isPending || kids.isPending) ? 'Đang mở chủ đề…' : 'Chọn một chủ đề ở cây bên trái.'}
@@ -106,13 +117,29 @@ export function TopicsPage({ rest }: { rest: string[] }) {
         <TopicDialog collection={collection} parent={dialog.parent} onClose={() => setDialog(null)}
           onDone={(t) => { setDialog(null); flash('Đã tạo chủ đề.'); go(collection, dialog.parent ?? t, dialog.parent ? t : null); }} />
       )}
+      {dialog?.kind === 'editTopic' && collection && (
+        <TopicDialog collection={collection} parent={dialog.parent} topic={dialog.topic} onClose={() => setDialog(null)}
+          onDone={() => { setDialog(null); flash('Đã lưu chủ đề.'); }} />
+      )}
+      {dialog?.kind === 'hideTopic' && collection && (
+        <HideTopicDialog collection={collection} topic={dialog.topic} onClose={() => setDialog(null)}
+          onDone={() => { const p = dialog.parent; setDialog(null); flash(`Đã ẩn chủ đề ${dialog.topic.name}. Khôi phục ở mục Đã ẩn.`); go(collection, p); }} />
+      )}
+      {dialog?.kind === 'hidden' && collection && (
+        <HiddenTopicsDrawer collection={collection} query={hidden} onClose={() => setDialog(null)} onRestored={(name) => flash(`Đã khôi phục ${name}.`)}
+          onPurge={(t) => setDialog({ kind: 'deleteTopic', topic: t, itemCount: null })} />
+      )}
+      {dialog?.kind === 'deleteTopic' && collection && (
+        <DeleteTopicDialog collection={collection} topic={dialog.topic} itemCount={dialog.itemCount} onClose={() => setDialog({ kind: 'hidden' })}
+          onDone={() => { setDialog({ kind: 'hidden' }); flash(`Đã xóa vĩnh viễn ${dialog.topic.name}.`); }} />
+      )}
       {dialog?.kind === 'template' && collection && (
         <TemplateDialog topic={dialog.topic} collectionId={collection.id} onClose={() => setDialog(null)}
           onDone={() => { setDialog(null); flash('Đã đổi mẫu thẻ.'); }} />
       )}
       {dialog?.kind === 'item' && (
-        <AddItemDrawer topic={dialog.topic} groups={dialog.groups} existing={dialog.existing} onClose={() => setDialog(null)}
-          onDone={(w) => { setDialog(null); flash(`Đã thêm "${w}".`); }} />
+        <AddItemDrawer topic={dialog.topic} groups={dialog.groups} existing={dialog.existing} item={dialog.item} onClose={() => setDialog(null)}
+          onDone={(w) => { setDialog(null); flash(dialog.item ? `Đã lưu "${w}".` : `Đã thêm "${w}".`); }} />
       )}
     </div>
   );

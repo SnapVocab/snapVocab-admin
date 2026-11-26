@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FIXTURE_NOW, fixtureAuditCsv, fixtureAuditLog } from '../src/domains/admin-audit/fixtures';
 import { fixtureBans } from '../src/domains/admin-learners/fixtures';
-import { changeLines, dayHeading, formatValue, groupByDay, hasKind, historyPath, KINDS, parseHistoryPath, targetPath, vnDay } from '../src/domains/admin-audit/mappers';
+import { changeLines, dayHeading, fieldLabel, formatValue, groupByDay, hasKind, historyPath, KINDS, parseHistoryPath, targetPath, vnDay } from '../src/domains/admin-audit/mappers';
 import type { AuditEntry, AuditLogParams } from '../src/domains/admin-audit/types';
 
 const all = async (p: AuditLogParams = {}) => (await fixtureAuditLog({ days: 90, size: 1000, ...p })).data;
@@ -133,4 +133,14 @@ test('AU6. CSV export: every filtered row, Vietnamese labels, readable changes',
   assert.ok(lines[0].startsWith('﻿"Thời điểm (giờ Việt Nam)","Người làm","Khu vực"'));
   assert.match(csv, /"06\/10\/2026 14:33:50","admin@snapvocab\.com","Cửa hàng","Sửa","Vật phẩm","Hoa Anh Đào Mùa Xuân","FRAME_CHERRY_BLOSSOM","12","Giá: 600 Coin → 2\.400 Coin"/);
   assert.match(csv, /"Hệ thống","Cửa hàng","Tạo bản nháp"/);
+});
+
+test('AU7. admin content v1 rows read as text: object values, item edits, word soft delete', () => {
+  assert.equal(fieldLabel('item yours'), 'Mục từ yours');
+  assert.equal(formatValue('item yours', { 'main[1].translation': 'của bạn' }), 'main[1].translation: của bạn');
+  assert.equal(formatValue('topic', { name: 'Animals', items: 35 }), 'Tên: Animals · Số mục từ: 35');
+  assert.equal(formatValue('status', 'DELETED'), 'Đã xóa mềm');
+  assert.equal(formatValue('defaultTemplate', 'Thẻ Chuẩn (#1)'), 'Thẻ Chuẩn (#1)');
+  assert.equal(fieldLabel('meanings'), 'Định nghĩa');
+  assert.ok(!formatValue('item x', { a: { b: 1 } }).includes('[object Object]'));
 });

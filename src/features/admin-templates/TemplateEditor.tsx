@@ -38,7 +38,7 @@ interface EditorProps {
   /** Learner forks: copies an edit here does not reach. */
   forks: number;
   preview: PreviewState;
-  /** Write controls (MOCK until the write API ships, config.ts); false = read-only. */
+  /** Write controls (config.ts); false = read-only. */
   editable: boolean;
   refreshing: boolean;
   onRefresh: () => void;

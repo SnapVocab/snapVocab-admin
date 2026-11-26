@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { AlertTriangle, BookOpen, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, BookOpen, Plus, Save, Trash2 } from 'lucide-react';
 import { Button, Drawer, Field, SectionLabel, fieldControl } from '../../components/ui';
 import { lookupWord } from '../../domains/admin-content/api';
-import { duplicateOf, emptyDraft, fillFromLookup, toCreatePayload, validateDraft, type ItemDraft, type ItemSummary } from '../../domains/admin-content/mappers';
-import { useAddItem } from '../../domains/admin-content/queries';
-import type { SchemaAttributeDTO, SchemaAttributeGroupDTO, TopicDTO } from '../../domains/admin-content/types';
+import {
+  contentErrorText, draftFromItem, duplicateOf, emptyDraft, fillFromLookup, toCreatePayload, validateDraft, type ItemDraft, type ItemSummary,
+} from '../../domains/admin-content/mappers';
+import { useAddItem, useUpdateItem } from '../../domains/admin-content/queries';
+import type { SchemaAttributeDTO, SchemaAttributeGroupDTO, TopicDTO, TopicItemData } from '../../domains/admin-content/types';
 
 /** Long-text attributes of DEFAULT_ENGLISH get a textarea; everything else a single line. */
 const LONG = new Set(['meaning', 'definition', 'definition_translation', 'content', 'example']);
@@ -15,20 +17,28 @@ interface Props {
   topic: TopicDTO;
   groups: SchemaAttributeGroupDTO[];
   existing: ItemSummary[];
+  /** Edit this item instead of adding one (PUT, same body; the item id and learners' SRS cards stay). */
+  item?: TopicItemData;
   onClose: () => void;
   onDone: (word: string) => void;
 }
 
-/** POST /api/topics/{id}/items with a form generated from the topic schema (TopicService.addTopicItem). */
-export function AddItemDrawer({ topic, groups, existing, onClose, onDone }: Props) {
+/**
+ * POST /api/topics/{id}/items with a form generated from the topic schema (TopicService.addTopicItem), or, with
+ * `item`, PUT /api/topics/{id}/items/{itemId} prefilled from the item (draftFromItem moves off-group values home).
+ */
+export function AddItemDrawer({ topic, groups, existing, item, onClose, onDone }: Props) {
   const add = useAddItem(topic.id);
-  const [draft, setDraft] = useState<ItemDraft>(() => emptyDraft(groups));
+  const update = useUpdateItem(topic.id, item?.topicItemId ?? 0);
+  const save = item ? update : add;
+  const [initial] = useState(() => (item ? draftFromItem(groups, item) : { draft: emptyDraft(groups), moved: [], dropped: [] }));
+  const [draft, setDraft] = useState<ItemDraft>(() => structuredClone(initial.draft));
   const [showErrors, setShowErrors] = useState(false);
   const [lookup, setLookup] = useState<{ busy: boolean; note: string | null }>({ busy: false, note: null });
   const errors = validateDraft(groups, draft);
   const word = draft.main?.[0]?.word ?? '';
-  const dup = duplicateOf(existing, word);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(emptyDraft(groups));
+  const dup = duplicateOf(existing.filter((s) => s.id !== item?.topicItemId), word);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial.draft);
 
   const setValue = (group: string, row: number, attr: string, value: string) =>
     setDraft((d) => ({ ...d, [group]: d[group].map((r, i) => (i === row ? { ...r, [attr]: value } : r)) }));
@@ -52,21 +62,34 @@ export function AddItemDrawer({ topic, groups, existing, onClose, onDone }: Prop
   const submit = () => {
     setShowErrors(true);
     if (Object.keys(errors).length) return;
-    add.mutate(toCreatePayload(groups, draft), { onSuccess: () => onDone(word.trim()) });
+    save.mutate(toCreatePayload(groups, draft), { onSuccess: () => onDone(word.trim()) });
   };
-  const close = () => { if (!dirty || window.confirm('Bỏ mục từ đang nhập?')) onClose(); };
+  const close = () => { if (!dirty || window.confirm(item ? 'Bỏ các thay đổi chưa lưu?' : 'Bỏ mục từ đang nhập?')) onClose(); };
 
   return (
     <Drawer
-      title={`Thêm mục từ vào ${topic.name}`}
-      subtitle="Người học thấy mục này ngay sau khi lưu (chưa có Nháp/Phát hành)."
-      busy={add.isPending}
+      title={item ? `Sửa mục từ "${word || '—'}"` : `Thêm mục từ vào ${topic.name}`}
+      subtitle={item ? 'Lưu thay toàn bộ giá trị của mục; người học thấy bản mới ngay, tiến độ ôn giữ nguyên.' : 'Người học thấy mục này ngay sau khi lưu (chưa có Nháp/Phát hành).'}
+      busy={save.isPending}
       onClose={close}
       footer={<>
-        <Button onClick={close} disabled={add.isPending} data-autofocus>Hủy</Button>
-        <Button variant="primary" icon={<Plus />} loading={add.isPending} loadingText="Đang lưu…" onClick={submit}>Thêm vào chủ đề</Button>
+        <Button onClick={close} disabled={save.isPending} data-autofocus>Hủy</Button>
+        {item
+          ? <Button variant="primary" icon={<Save />} loading={save.isPending} loadingText="Đang lưu…" onClick={submit}>Lưu mục từ</Button>
+          : <Button variant="primary" icon={<Plus />} loading={save.isPending} loadingText="Đang lưu…" onClick={submit}>Thêm vào chủ đề</Button>}
       </>}
     >
+      {initial.moved.length > 0 && (
+        <p role="note" className="rounded-lg border border-info/30 bg-info-light px-3 py-2 text-xs text-info-dark">
+          Dữ liệu lệch nhóm sẽ được lưu về đúng thuộc tính của schema: {initial.moved.join(', ')}.
+        </p>
+      )}
+      {initial.dropped.length > 0 && (
+        <p role="alert" className="flex items-start gap-1.5 rounded-lg border border-warning/40 bg-warning-light px-3 py-2 text-xs text-warning-dark">
+          <AlertTriangle size={14} className="mt-px shrink-0" />
+          <span>Các giá trị sau không có thuộc tính nào trong schema để chứa và sẽ mất khi lưu: {initial.dropped.join(', ')}.</span>
+        </p>
+      )}
       {groups.map((g) => (
         <section key={g.groupId} className="space-y-3">
           <SectionLabel>{g.label ?? g.name}</SectionLabel>
@@ -102,7 +125,7 @@ export function AddItemDrawer({ topic, groups, existing, onClose, onDone }: Prop
           {g.multiple && <Button size="sm" icon={<Plus />} onClick={() => addRow(g)}>Thêm {(g.label ?? g.name).toLowerCase()}</Button>}
         </section>
       ))}
-      {add.isError && <p role="alert" className="rounded-lg bg-danger-light p-3 text-xs text-danger-dark">Không thêm được: {add.error.message}</p>}
+      {save.isError && <p role="alert" className="rounded-lg bg-danger-light p-3 text-xs text-danger-dark">{item ? 'Không lưu được' : 'Không thêm được'}: {contentErrorText(save.error)}</p>}
     </Drawer>
   );
 }

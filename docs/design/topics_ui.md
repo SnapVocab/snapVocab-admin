@@ -1,6 +1,6 @@
 # Admin · Chủ đề — Đặc tả màn hình
 
-> **Rev 1 · 2026-10-19 · Scope: NOW** (API thật), có phần cần API mới.
+> **Rev 2 · 2026-11-25 · Scope: NOW** (API thật). Rev 2 thêm sửa/xóa chủ đề hệ thống và sửa/xóa mục từ (backend admin content v1).
 > Nền tảng: [design.md](./design.md) rev 3.
 > Yêu cầu sản phẩm: F-ADM-05, FR-14.05/06 (Must), F-FLASH-04.
 > Đánh giá: [admin_product_review_2026-10-19.md](../../../docs/reviews/admin_product_review_2026-10-19.md) §3.4.
@@ -27,6 +27,11 @@ Người vận hành dựng và duy trì **nội dung hệ thống** mà ngườ
 | Schema của chủ đề | `GET /api/topics/{id}/schema` |
 | Danh sách mẫu thẻ | `GET /api/schemas/{schemaId}` |
 | Thêm mục từ | `POST /api/topics/{id}/items`, body đúng hình dạng nhóm: object cho nhóm đơn, mảng cho nhóm lặp |
+| Sửa chủ đề hệ thống | `PUT /api/admin/topics/{id}` `{ name, translation, description, descriptionTranslation }` (chủ đề của người học trả 404) |
+| Ẩn chủ đề hệ thống (xóa mềm, OQ-CNT-01, PO chốt 2026-11-26) | `POST /api/admin/topics/{id}/hide` `{ reason }` (bắt buộc). Ẩn cả nhánh con cùng một mốc thời gian. Người học: mất khỏi danh mục, không mở được chủ đề, không học từ mới, không Quiz, không tạo truyện AI; **thẻ đã học vẫn được ôn theo lịch**, tiến độ/streak/XP giữ nguyên. Giữ vĩnh viễn, không tự xóa |
+| Khôi phục / danh sách Đã ẩn | `POST /api/admin/topics/{id}/restore`; `GET /api/admin/topics/hidden?collectionId=` (lý do, người ẩn, số người học). Khôi phục chủ đề cha trả lại các chủ đề con ẩn cùng nó; chủ đề con có cha đang ẩn: 409 `TOPIC_PARENT_HIDDEN` |
+| Xóa vĩnh viễn (từ mục Đã ẩn) | `DELETE /api/admin/topics/{id}` `{ reason }` (10–500, bắt buộc). Chỉ xóa khi không còn chủ đề con (409 `TOPIC_HAS_CHILDREN`) và chưa người học nào có thẻ ôn, thẻ trong ngày, Quiz hay truyện AI trên chủ đề (409 `TOPIC_HAS_LEARNING_DATA { learners }`); không có đường ép xóa |
+| Sửa / xóa mục từ | `PUT` / `DELETE /api/topics/{id}/items/{itemId}`. Sửa giữ id mục, thẻ ôn của người học còn nguyên. Xóa mục của chủ đề hệ thống mà người học đã học: 409 `TOPIC_ITEM_HAS_LEARNING_DATA { learners }` (WI-04) |
 | Đổi mẫu thẻ | `PUT /api/topics/{id}/active-template/{templateId}`. Chỉ đổi trường Quiz đọc: app vẽ thẻ học bằng mẫu mặc định của schema ([templates_ui.md](./templates_ui.md) §1, OQ-TPL-01) |
 | Điền sẵn từ từ điển | `GET /api/words/lookup?q=` |
 
@@ -34,7 +39,8 @@ Người vận hành dựng và duy trì **nội dung hệ thống** mà ngườ
 
 | ID | Thiếu | Ghi chú |
 | :--- | :--- | :--- |
-| TD-ADS-15 | `PUT`/`DELETE /api/topics/{id}`; `PUT`/`DELETE /api/topics/{id}/items/{itemId}` | Service cũng chưa có phương thức |
+| ~~TD-ADS-15~~ | Đã có (rev 2, 2026-11-25): sửa/xóa chủ đề qua `/api/admin/topics/{id}`, sửa/xóa mục từ qua API chung | — |
+| ~~OQ-CNT-01~~ | Ẩn (xóa mềm) chủ đề | PO chốt 2026-11-26: ẩn, giữ vĩnh viễn, ôn tiếp thẻ đã học, ẩn theo nhánh. Đã dựng |
 | TD-ADS-16 | Xóa collection đang là **xóa cứng có cascade** (`CascadeType.ALL`, orphanRemoval) xuống chủ đề và mục từ | Spec yêu cầu xóa mềm. UI chỉ cho xóa collection **rỗng** |
 | OQ-ADS-08 | Trường trạng thái Nháp/Phát hành cho Collection/Topic | Badge hiện "Đang hiển thị với người học" là đúng sự thật: mọi chủ đề đều hiện ngay |
 | — | Số mục từ của mỗi chủ đề trong cây | Hiện phải mở chủ đề mới biết |
@@ -72,7 +78,7 @@ Người vận hành dựng và duy trì **nội dung hệ thống** mà ngườ
 | Ghi chú lệch schema | Khi có: nêu số mục, thuộc tính lệch và việc cần backend làm |
 | Toolbar | Tìm (từ hoặc bản dịch, không dấu) · lọc cấp độ · "x/y mục" · phân bố cấp độ |
 | Bảng | Từ (+ badge Trùng) · Phiên âm · Bản dịch · Giải nghĩa (từ 2xl) · Cấp độ · Ví dụ · Độ phủ (chấm theo loại thiếu) |
-| Inspector (drawer) | Mọi giá trị theo nhóm và nhãn của schema, kèm giá trị ngoài schema. [Sửa mục] [Xóa mục] vô hiệu (cần API) |
+| Inspector (drawer) | Mọi giá trị theo nhóm và nhãn của schema, kèm giá trị ngoài schema. [Sửa mục] mở form điền sẵn (giá trị lệch nhóm, VD `main.meaning`, được chuyển về đúng thuộc tính và báo trước khi lưu); [Xóa mục] hỏi lại, hiện lý do nếu máy chủ từ chối |
 
 ### 4.4. Hộp thoại và form
 
@@ -104,7 +110,8 @@ Mapping khi điền từ từ điển:
 | AC-TOP-04 | Tạo chủ đề gốc gửi đúng body; xóa collection còn chủ đề bị chặn | T4 |
 | AC-TOP-05 | Độ phủ, trùng, lệch schema tính đúng trên dữ liệu thật (`main.meaning`) | `admin-content.test.ts` C1, C5 |
 | AC-TOP-06 | Điền từ điển không ghi đè ô người vận hành đã nhập; nghĩa Việt đi vào `definition_translation` | C3, C6 |
-| AC-TOP-07 | Mọi hành động chưa có API đều vô hiệu và nêu endpoint cần có | Kiểm tay |
+| AC-TOP-07 | Sửa chủ đề gửi `PUT /api/admin/topics/{id}`; xóa cần lý do ≥ 10 ký tự và hiện số người học khi bị từ chối | `admin-content.dom.test.ts` T5 |
+| AC-TOP-08 | Sửa mục điền sẵn từ dữ liệu thật, chuyển `main.meaning` → `meaning.meaning`; xóa mục đã học hiện lý do 409 | T6, T7, `admin-content.test.ts` C7 |
 
 ## 6. Chưa làm
 

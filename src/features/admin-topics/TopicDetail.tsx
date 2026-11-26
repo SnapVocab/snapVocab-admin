@@ -1,20 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, AlertTriangle, ChevronRight, FolderPlus, Layers, Pencil, Plus, Search, Trash2 } from 'lucide-react';
-import { Badge, Button, Drawer, SectionLabel, StatCell, StripCell, SummaryStrip, toolbarControl } from '../../components/ui';
-import { coverage, duplicateWords, GAP_LABEL, itemGaps, itemSummary, offSchemaFields, type Gap, type ItemSummary } from '../../domains/admin-content/mappers';
-import { useTopicItems, useTopics, useTopicSchema } from '../../domains/admin-content/queries';
+import { AlertCircle, AlertTriangle, ChevronRight, EyeOff, FolderPlus, Layers, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Badge, Button, ConfirmModal, Drawer, SectionLabel, StatCell, StripCell, SummaryStrip, toolbarControl } from '../../components/ui';
+import { contentErrorText, coverage, duplicateWords, GAP_LABEL, itemGaps, itemSummary, offSchemaFields, type Gap, type ItemSummary } from '../../domains/admin-content/mappers';
+import { useDeleteItem, useTopicItems, useTopics, useTopicSchema } from '../../domains/admin-content/queries';
 import type { AttrValues, CollectionDTO, SchemaAttributeGroupDTO, TopicDTO, TopicItemData } from '../../domains/admin-content/types';
 import { formatDate } from '../../domains/admin-learners/mappers';
 import { cn, foldVi } from '../../lib/utils';
 
-/** Actions the UI is designed for but the backend does not expose yet (design.md §4.1). */
-const NEEDS_API = {
-  editTopic: 'Cần API PUT /api/topics/{id} (máy chủ chưa có)',
-  deleteTopic: 'Cần API xóa mềm chủ đề (máy chủ chưa có)',
-  draft: 'Cần trường trạng thái Nháp/Phát hành ở máy chủ',
-  editItem: 'Cần API PUT /api/topics/{topicId}/items/{itemId} (máy chủ chưa có)',
-  deleteItem: 'Cần API DELETE mục từ (máy chủ chưa có)',
-};
+/** Still not on the backend (OQ-ADS-08): every topic shows to learners as soon as it exists. */
+const NO_DRAFT = 'Chưa có trạng thái Nháp/Phát hành: chủ đề hiện cho người học ngay khi tạo';
 const GAP_DOT: Record<Gap, string> = { meaning: 'bg-danger', translation: 'bg-warning', phonetic: 'bg-neutral-400', example: 'bg-info' };
 type Filter = Gap | 'COMPLETE' | 'DUP' | 'OFF' | 'ALL';
 /** Short strip labels so all eight numbers fit beside the tree; full wording stays in GAP_LABEL (tooltips, rows). */
@@ -28,9 +22,13 @@ interface Props {
   onAddItem: (groups: SchemaAttributeGroupDTO[], existing: ItemSummary[]) => void;
   onAddChild: () => void;
   onChangeTemplate: () => void;
+  onEdit: () => void;
+  onHide: () => void;
+  onEditItem: (item: TopicItemData, groups: SchemaAttributeGroupDTO[], existing: ItemSummary[]) => void;
+  onItemDeleted: (word: string) => void;
 }
 
-export function TopicDetail({ collection, topic, parent, onOpenChild, onAddItem, onAddChild, onChangeTemplate }: Props) {
+export function TopicDetail({ collection, topic, parent, onOpenChild, onAddItem, onAddChild, onChangeTemplate, onEdit, onHide, onEditItem, onItemDeleted }: Props) {
   const items = useTopicItems(topic.id);
   const schema = useTopicSchema(topic.id);
   const children = useTopics(collection.id, topic.id, !!topic.hasChildren);
@@ -78,7 +76,7 @@ export function TopicDetail({ collection, topic, parent, onOpenChild, onAddItem,
             <h2 className="text-xl font-semibold tracking-tight">{topic.name}{topic.translation && <span className="ml-2 text-base font-normal text-text-muted">{topic.translation}</span>}</h2>
             {(topic.description || topic.descriptionTranslation) && <p className="mt-1 max-w-3xl text-body text-text-muted">{topic.descriptionTranslation ?? topic.description}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-              <span className="text-text-muted" title={NEEDS_API.draft}>Người học đang thấy chủ đề này</span>
+              <span className="text-text-muted" title={NO_DRAFT}>Người học đang thấy chủ đề này</span>
               <button type="button" onClick={onChangeTemplate} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 font-medium text-text hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info">
                 <Layers size={12} />Mẫu thẻ: {topic.activeTemplateName ?? 'chưa gán'} <span className="ml-1 text-text-muted underline">Đổi</span>
               </button>
@@ -86,8 +84,8 @@ export function TopicDetail({ collection, topic, parent, onOpenChild, onAddItem,
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" icon={<Pencil />} disabled title={NEEDS_API.editTopic}>Sửa</Button>
-            <Button size="sm" variant="danger-outline" icon={<Trash2 />} disabled title={NEEDS_API.deleteTopic}>Xóa</Button>
+            <Button size="sm" icon={<Pencil />} onClick={onEdit}>Sửa</Button>
+            <Button size="sm" variant="danger-outline" icon={<EyeOff />} onClick={onHide}>Ẩn</Button>
             {isRoot && <Button size="sm" icon={<FolderPlus />} onClick={onAddChild}>Thêm chủ đề con</Button>}
             <Button size="sm" variant="primary" icon={<Plus />} disabled={!groups.length} onClick={() => onAddItem(groups, rows.map((r) => r.s))}>Thêm mục từ</Button>
           </div>
@@ -138,7 +136,7 @@ export function TopicDetail({ collection, topic, parent, onOpenChild, onAddItem,
               <AlertTriangle size={14} className="mt-px shrink-0" />
               <span>
                 {offCount} mục lưu giá trị ở thuộc tính không có trong schema {schema.data?.schemaName} ({offFields.join(', ')}). App vẫn nhận qua API, nhưng form và kiểm tra theo schema không thấy.
-                Cần backend chuyển dữ liệu về đúng thuộc tính (VD <code className="font-mono">main.meaning</code> → <code className="font-mono">meaning.meaning</code>).
+                [Sửa mục] lưu từng mục về đúng thuộc tính (VD <code className="font-mono">main.meaning</code> → <code className="font-mono">meaning.meaning</code>); chuyển cả loạt cần migration dữ liệu.
               </span>
             </p>
           )}
@@ -201,19 +199,27 @@ export function TopicDetail({ collection, topic, parent, onOpenChild, onAddItem,
         </>
       )}
 
-      {inspect && <ItemInspector item={inspect} groups={groups} onClose={() => setInspect(null)} />}
+      {inspect && (
+        <ItemInspector item={inspect} groups={groups} topicId={topic.id} system={collection.type === 'SYSTEM'} onClose={() => setInspect(null)}
+          onEdit={() => { const it = inspect; setInspect(null); onEditItem(it, groups, rows.map((r) => r.s)); }}
+          onDeleted={(word) => { setInspect(null); onItemDeleted(word); }} />
+      )}
     </div>
   );
 }
 
-/** Every value of the item, grouped and labelled by the topic schema. Read-only until item update/delete exist. */
-function ItemInspector({ item, groups, onClose }: { item: TopicItemData; groups: SchemaAttributeGroupDTO[]; onClose: () => void }) {
+/** Every value of the item, grouped and labelled by the topic schema; edit opens the item form, delete asks first. */
+function ItemInspector({ item, groups, topicId, system, onClose, onEdit, onDeleted }: {
+  item: TopicItemData; groups: SchemaAttributeGroupDTO[]; topicId: number; system: boolean; onClose: () => void; onEdit: () => void; onDeleted: (word: string) => void;
+}) {
   const s = itemSummary(item);
+  const del = useDeleteItem(topicId);
+  const [confirm, setConfirm] = useState(false);
   return (
     <Drawer title={s.word} subtitle={`Mục #${s.id} · thêm ${formatDate(s.createdAt)}`} onClose={onClose}
       footer={<>
-        <Button icon={<Trash2 />} variant="danger-outline" disabled title={NEEDS_API.deleteItem}>Xóa mục</Button>
-        <Button icon={<Pencil />} disabled title={NEEDS_API.editItem}>Sửa mục</Button>
+        <Button icon={<Trash2 />} variant="danger-outline" onClick={() => { del.reset(); setConfirm(true); }}>Xóa mục</Button>
+        <Button icon={<Pencil />} disabled={!groups.length} onClick={onEdit}>Sửa mục</Button>
       </>}>
       {groups.map((g) => {
         const value = item[g.name];
@@ -240,7 +246,17 @@ function ItemInspector({ item, groups, onClose }: { item: TopicItemData; groups:
           </section>
         );
       })}
-      <p className="text-xs text-text-muted">Sửa và xóa mục từ cần API mới; hiện mục chỉ thêm được.</p>
+      {confirm && (
+        <ConfirmModal title={`Xóa mục "${s.word}"?`} tone="danger" confirmLabel="Xóa mục" busy={del.isPending}
+          onClose={() => setConfirm(false)} onConfirm={() => del.mutate(s.id, { onSuccess: () => { setConfirm(false); onDeleted(s.word); } })}>
+          <p className="text-text-muted">
+            {system
+              ? 'Mục bị xóa khỏi chủ đề hệ thống. Nếu đã có người học học mục này, máy chủ từ chối để giữ lịch sử học của họ; khi đó hãy sửa nội dung thay vì xóa.'
+              : 'Mục bị xóa khỏi chủ đề, kèm thẻ ôn của chủ đề này.'}
+          </p>
+          {del.isError && <p role="alert" className="text-danger-dark">{contentErrorText(del.error)}</p>}
+        </ConfirmModal>
+      )}
     </Drawer>
   );
 }

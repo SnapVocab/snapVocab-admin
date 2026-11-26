@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  coverage, duplicateOf, duplicateWords, emptyDraft, offSchemaFields, fillFromLookup, itemGaps, itemSummary, meaningsByPos, nameError, toCreatePayload,
-  validateDraft, viGloss, wordGaps,
+  contentErrorText, coverage, draftFromItem, duplicateOf, duplicateWords, emptyDraft, offSchemaFields, fillFromLookup, itemGaps, itemSummary,
+  meaningsByPos, nameError, posCode, toCreatePayload, toUpdateWord, toWordDraft, validateDraft, viGloss, wordDraftErrors, wordGaps,
 } from '../src/domains/admin-content/mappers';
+import { ApiClientError } from '../src/lib/api-client';
 import type { LookupResultDTO, SchemaAttributeGroupDTO, TopicItemData } from '../src/domains/admin-content/types';
 
 /** DEFAULT_ENGLISH as stored in the local DB clone (schema 278). */
@@ -114,4 +115,66 @@ test('C6. the source dictionary is English–Vietnamese: Vietnamese definitions 
   assert.equal(draft.main[0].definition_translation, 'Rút ngắn, cô gọn');
   assert.equal(draft.meaning[0].meaning, '', 'no English definition: the English field stays empty');
   assert.deepEqual(filledFields, ['Phiên âm', 'Bản dịch', 'Dịch định nghĩa']);
+});
+
+test('C7. edit draft from a real item moves main.meaning home to meaning.meaning, so PUT does not drop it', () => {
+  const real: TopicItemData = {
+    topicItemId: 5, createdAt: '2026-09-10T00:00:00Z',
+    main: { word: 'such', translation: 'như vậy', meaning: 'used to refer to something', level: 'C2' },
+    examples: [{ content: 'Such a day.', translation: 'Một ngày như vậy.' }],
+  };
+  const { draft, moved, dropped } = draftFromItem(SCHEMA, real);
+  assert.equal(draft.meaning[0].meaning, 'used to refer to something');
+  assert.deepEqual(moved, ['main.meaning → meaning.meaning']);
+  assert.deepEqual(dropped, []);
+  assert.deepEqual(draft.examples, [{ content: 'Such a day.', translation: 'Một ngày như vậy.' }]);
+  const body = toCreatePayload(SCHEMA, draft);
+  assert.deepEqual(body.meaning, { meaning: 'used to refer to something' });
+  assert.equal((body.main as Record<string, string>).meaning, undefined, 'main has no meaning attribute in the schema');
+  assert.equal((body.main as Record<string, string>).word, 'such');
+
+  // A value in its own group wins; a key no single group defines is reported, not silently kept.
+  const both = draftFromItem(SCHEMA, { ...real, meaning: { meaning: 'own' }, main: { ...real.main as object, mystery: 'x' } });
+  assert.equal(both.draft.meaning[0].meaning, 'own');
+  assert.deepEqual(both.dropped.sort(), ['main.meaning', 'main.mystery']);
+});
+
+test('C8. word edit draft keeps meaning ids, turns POS labels into stored codes, drops blank rows', () => {
+  const r: LookupResultDTO = {
+    wordId: 42, version: 3, exists: true, word: 'apple', langCode: 'en',
+    pronunciations: [{ ipa: '/ˈæp.əl/', region: 'US' }, { ipa: '/ˈæp.l̩/', region: null }],
+    meanings: [{ id: 7, definition: 'quả táo', definitionLang: 'vi', example: null, pos: 'Danh từ', subPos: null, links: null },
+      { id: 8, definition: 'to apple', definitionLang: 'en', example: 'x', pos: 'V', subPos: null, links: null }],
+    translations: [{ langCode: 'vi', translation: 'táo' }, { langCode: 'fr', translation: 'pomme' }], relations: [],
+  };
+  const d = toWordDraft(r);
+  assert.deepEqual(d.meanings.map((m) => [m.id, m.pos]), [[7, 'N'], [8, 'V']]);
+  assert.deepEqual(d.vi, ['táo'], 'other languages are not edited here');
+  d.ipa.push({ ipa: '  ', region: '' });
+  d.vi.push('táo tây ', '');
+  d.meanings.push({ id: null, pos: '', lang: 'vi', definition: ' trái táo ', example: '' });
+  const body = toUpdateWord(d, r.version!);
+  assert.equal(body.version, 3);
+  assert.deepEqual(body.pronunciations, [{ ipa: '/ˈæp.əl/', region: 'US' }, { ipa: '/ˈæp.l̩/', region: null }]);
+  assert.deepEqual(body.translations, ['táo', 'táo tây']);
+  assert.deepEqual(body.meanings[2], { id: null, pos: null, definitionLang: 'vi', definition: 'trái táo', example: null });
+  assert.equal(posCode('Không rõ'), null);
+});
+
+test('C9. word draft errors: same IPA + region twice, blank definition', () => {
+  const errors = wordDraftErrors({
+    ipa: [{ ipa: '/a/', region: 'US' }, { ipa: '/a/', region: 'US ' }, { ipa: '/a/', region: 'UK' }],
+    vi: [],
+    meanings: [{ id: null, pos: '', lang: 'en', definition: '  ', example: '' }],
+  });
+  assert.deepEqual(Object.keys(errors).sort(), ['ipa.1', 'meanings.0']);
+});
+
+test('C10. content API errors read in Vietnamese with their numbers', () => {
+  const err = (code: string, status: number, details?: object) => new ApiClientError('x', code, status, details as never);
+  assert.match(contentErrorText(err('TOPIC_HAS_LEARNING_DATA', 409, { learners: 3 })), /^3 người học đã học chủ đề này/);
+  assert.match(contentErrorText(err('TOPIC_ITEM_HAS_LEARNING_DATA', 409, { learners: 1 })), /vẫn sửa được nội dung/);
+  assert.match(contentErrorText(err('TOPIC_HAS_CHILDREN', 409, { children: 2 })), /còn 2 chủ đề con/);
+  assert.match(contentErrorText(err('VERSION_CONFLICT', 409, { currentVersion: 4 }), 'Từ này'), /^Từ này vừa được sửa ở phiên khác/);
+  assert.match(contentErrorText(err('WHATEVER', 403)), /ROLE_ADMIN/);
 });

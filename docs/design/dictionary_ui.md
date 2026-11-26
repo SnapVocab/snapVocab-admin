@@ -1,6 +1,7 @@
 # Admin · Từ điển — Đặc tả màn hình
 
-> **Rev 1 · 2026-10-19 · Scope:** NOW (tra cứu) · MOCK (sửa) · FUTURE (ảnh hưởng, xóa mềm).
+> **Rev 2 · 2026-11-25 · Scope:** NOW (tra cứu, sửa, xóa mềm, khôi phục — backend admin content v1) · FUTURE (đếm mức dùng).
+> Rev 1 (2026-10-19) để sửa ở dạng MOCK trong phiên; bản này nối API thật, bỏ `sessionEdits`.
 > Nền tảng: [design.md](./design.md) rev 3.
 > Yêu cầu sản phẩm: F-ADM-04 (Must), F-DICT-01/03/04, F-DICT-06.
 > Đánh giá: [admin_product_review_2026-10-19.md](../../../docs/reviews/admin_product_review_2026-10-19.md) §3.3.
@@ -31,8 +32,8 @@ Từ DB clone, 2026-10-19:
 | Một trang từ (30 từ) | `GET /api/words/suggest?q=&page=&size=30` | NOW |
 | Chi tiết cả trang | `POST /api/words/lookup { words }`, một lần cho cả trang (≤ 100 từ) | NOW |
 | Chi tiết một từ | `GET /api/words/lookup?q=` | NOW |
-| Sửa từ | Đề xuất `PUT /api/admin/words/{id}`: phát âm, bản dịch vi, định nghĩa (từ loại, ngôn ngữ, ví dụ) | MOCK |
-| Xóa mềm, khôi phục | Đề xuất `DELETE /api/admin/words/{id}` (xóa mềm), không làm gãy mục từ đang tham chiếu | FUTURE |
+| Sửa từ | `PUT /api/admin/words/{id}` `{ version, pronunciations[{ipa,region}], translations[] (vi), meanings[{id?, pos (mã), definitionLang, definition, example}] }`. Định nghĩa có `id` được giữ, không có `id` là mới, vắng mặt là gỡ khỏi từ. Định nghĩa dùng chung với từ khác thì máy chủ tách bản sao (47.021 định nghĩa dùng chung trên prod). 409 `VERSION_CONFLICT`, 409 `WORD_DELETED` | NOW |
+| Xóa mềm, khôi phục | `DELETE /api/admin/words/{id}` `{ reason? }` (cột `words.deleted_at`), `POST /api/admin/words/{id}/restore`, `GET /api/admin/words/deleted?q=&page=&size=`. Từ đã xóa không còn trong suggest, lookup theo chữ và scan; `GET /api/words/{id}` và "Từ của tôi" vẫn thấy; người học không lưu mới được | NOW |
 | Mức dùng của từ (số mục từ, số người học đã lưu, nhãn scan ánh xạ) | Đề xuất `GET /api/admin/words/{id}/usage` | FUTURE |
 | Hàng "cần chú ý" trên toàn bộ từ điển | Đề xuất truy vấn server theo loại thiếu | FUTURE |
 
@@ -54,7 +55,8 @@ Từ DB clone, 2026-10-19:
 | Chế độ | Nội dung |
 | :--- | :--- |
 | Xem | Các loại thiếu · Phát âm (IPA + vùng) · Nghĩa tiếng Việt (ghi nguồn khi lấy từ định nghĩa) · Định nghĩa theo từ loại (tag `vi`/`en`, ví dụ) · Quan hệ · Bản dịch ngôn ngữ khác · khung **"Ảnh hưởng khi sửa"** (FUTURE: mô tả sẽ hiện gì) · [Xóa mềm] vô hiệu · [Sửa từ] |
-| Sửa (MOCK) | `SampleDataNotice` nêu endpoint đề xuất. Danh sách sửa được: IPA, bản dịch vi, định nghĩa (từ loại, ngôn ngữ, định nghĩa, ví dụ). "Lưu bản sửa (mẫu)" chỉ giữ trong phiên; khi xem lại có banner "Đang xem bản sửa mẫu…" và nút [Bỏ bản sửa] |
+| Sửa | IPA (kèm vùng), bản dịch vi, định nghĩa (từ loại chọn theo mã, ngôn ngữ, định nghĩa, ví dụ). Lưu gửi `version`; xung đột thì hiện lỗi và nút [Tải bản mới]. Chữ của từ không sửa được (mục từ, scan, từ đã lưu tìm từ theo chữ) |
+| Xóa mềm / Khôi phục | Hộp xác nhận nêu hệ quả, lý do không bắt buộc (10–500 ký tự nếu có). Từ đã xóa: banner "Đã xóa mềm", chỉ còn nút [Khôi phục]. Nút [Đã xóa mềm] trên trang mở danh sách từ đã xóa |
 
 ## 5. Tiêu chí nghiệm thu
 
@@ -62,5 +64,6 @@ Từ DB clone, 2026-10-19:
 | :--- | :--- | :--- |
 | AC-DIC-01 | Mặc định gọi suggest với `q=a`; một lần lookup hàng loạt cho cả trang; bấm chữ "b" thì gọi `q=b` | `admin-content.dom.test.ts` D1 |
 | AC-DIC-02 | Nghĩa Việt lấy từ bản dịch `vi`, nếu không có thì từ định nghĩa `vi`; "Thiếu nghĩa Việt" chỉ khi cả hai đều không có | `admin-content.test.ts` C4, C6 |
-| AC-DIC-03 | Bản sửa mẫu không bao giờ hiện như dữ liệu máy chủ (banner, nút bỏ) | Kiểm tay |
+| AC-DIC-03 | Sửa gửi `PUT` với id định nghĩa, mã từ loại và `version`; 409 hiện "Tải bản mới" | `admin-content.dom.test.ts` D3, `AdminContentHttpTest` |
+| AC-DIC-05 | Xóa mềm gửi lý do; từ đã xóa chỉ cho khôi phục; danh sách "Đã xóa mềm" | D4, `AdminContentHttpTest` |
 | AC-DIC-04 | F5 tại `/dictionary/{word}` mở lại đúng từ | Kiểm tay |

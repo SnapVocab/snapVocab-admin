@@ -1,7 +1,7 @@
 # Admin · Mẫu thẻ — Đặc tả màn hình
 
-> **Rev 1 · 2026-10-21 · Scope: NOW (đọc) + MOCK (ghi). Đã dựng, chờ PO duyệt.**
-> Đọc dùng API thật: schema, mẫu, cây chủ đề, mục từ. Ghi (sửa mẫu, đặt mặc định) chưa có API nên chạy trên bản nháp trong trình duyệt, sau cờ `VITE_ADMIN_TEMPLATES_FIXTURES`; contract đề xuất ở §8.
+> **Rev 2 · 2026-11-25 · Scope: NOW (đọc và ghi).** Backend admin content v1 có `PUT /api/admin/templates/{id}` và `POST /api/admin/templates/{id}/default` đúng §8; cờ `VITE_ADMIN_TEMPLATES_FIXTURES` chỉ bật lớp dữ liệu mẫu khi đặt `true` rõ ràng.
+> Rev 1 (2026-10-21): đọc thật, ghi MOCK.
 > Nền tảng: [design.md](./design.md) rev 4 (§3.7 ngôn ngữ giao diện, §5.2 dải số liệu, §5.5 editor, §6 preview). Đánh giá sản phẩm: [admin_product_review_2026-10-19.md](../../../docs/reviews/admin_product_review_2026-10-19.md) §3.5.
 > Thay bản mock cũ "Card Templates Studio" (`features/templates`, `domains/templates`). Route đã chuyển sang màn mới; file cũ còn trên đĩa, chờ đồng ý xóa (TD-TPL-05).
 
@@ -60,7 +60,7 @@ JSON có cờ Lombok ở hai tên (`isDefault`/`default`, `isSystem`/`system`); 
 
 ### 2.2. Đề xuất (MOCK tới khi có)
 
-`PUT /api/admin/templates/{id}` và `POST /api/admin/templates/{id}/default` (§8). Cờ `VITE_ADMIN_TEMPLATES_FIXTURES` mặc định bật ở dev: lưu và đặt mặc định ghi vào một lớp trong bộ nhớ (`domains/admin-templates/fixtures.ts`, tải động) đè lên dữ liệu thật, mất khi tải lại. Bản release (cờ tắt) chỉ xem: không có nút Sửa, Lưu, Đặt làm mặc định.
+Đã có thật (2026-11-25): `PUT /api/admin/templates/{id}` và `POST /api/admin/templates/{id}/default` (§8), chỉ cho schema hệ thống (bản tách của người học: 404). `GET /api/schemas` trả thêm `version`. Cờ `VITE_ADMIN_TEMPLATES_FIXTURES=true` vẫn bật được lớp bản nháp trong bộ nhớ cho demo không có backend mới.
 
 ## 3. Phát hiện từ dữ liệu thật (DB clone 2026-10-21)
 
@@ -208,9 +208,16 @@ Body `{ "version": 3 }`. Trong một transaction: bỏ cờ mặc định của 
 | 400 | `VALIDATION_ERROR` | Độ dài, vị trí, thuộc tính khác schema; `errors[].field` dạng `elements[3].field.fieldLabel` |
 | 404 | `TEMPLATE_NOT_FOUND` | Không có mẫu |
 
+### 8.4b. Khác biệt khi dựng (2026-11-25)
+
+- Không tìm thấy mẫu hoặc mẫu thuộc schema của người học: 404 chung (không có mã `TEMPLATE_NOT_FOUND`).
+- Kiểm tra Quiz tính cả binding ẩn mà DTO không trả (TD-TPL-03): máy chủ có thể báo `AMBIGUOUS` dù màn thấy ổn; thông báo nêu rõ.
+- Đặt mặc định cho mẫu không có trường hiển thị ở một mặt bị từ chối (400 `VALIDATION_ERROR`, `details.field = "elements"`): trên prod 2026-11-09, LISTENING và REVERSE chỉ có binding ẩn, đặt làm mặc định sẽ làm mọi thẻ học trống.
+- Sửa mẫu giữ id phần tử có `id`; binding ẩn được đánh số sau phần tử hiển thị.
+
 ### 8.5. Migration
 
-`templates.version BIGINT NOT NULL DEFAULT 0`. Màn đọc `version` nếu có và không bao giờ tự đặt số phiên bản (hiện `null`).
+`templates.version BIGINT NOT NULL DEFAULT 0`, trong `migration/migration_admin_content_v1.sql` (cùng `words.deleted_at`, `words.version`, CHECK nhật ký mới; có script rollback).
 
 ## 9. Câu hỏi mở cho PO
 

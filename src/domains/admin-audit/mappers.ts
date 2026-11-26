@@ -22,9 +22,12 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   SHOP_ITEM_CREATED: 'Tạo bản nháp', SHOP_ITEM_UPDATED: 'Sửa', SHOP_ITEM_PUBLISHED: 'Phát hành', SHOP_ITEM_ARCHIVED: 'Ngừng bán vĩnh viễn', SHOP_ITEM_DELETED: 'Xóa bản nháp',
   MISSION_TEMPLATE_CREATED: 'Tạo mẫu', MISSION_TEMPLATE_UPDATED: 'Sửa', MISSION_TEMPLATE_ENABLED: 'Bật', MISSION_TEMPLATE_DISABLED: 'Tắt',
   BADGE_UPDATED: 'Sửa', BADGE_ENABLED: 'Bật', BADGE_DISABLED: 'Tắt',
-  WORD_UPDATED: 'Sửa',
+  WORD_UPDATED: 'Sửa', WORD_DELETED: 'Xóa mềm', WORD_RESTORED: 'Khôi phục',
   COLLECTION_CREATED: 'Tạo collection', COLLECTION_UPDATED: 'Sửa collection', COLLECTION_DELETED: 'Xóa collection',
-  TOPIC_CREATED: 'Tạo chủ đề', TOPIC_ITEM_ADDED: 'Thêm mục từ', TOPIC_TEMPLATE_CHANGED: 'Đổi mẫu thẻ', TOPIC_SCHEMA_CHANGED: 'Đổi schema',
+  TOPIC_CREATED: 'Tạo chủ đề', TOPIC_UPDATED: 'Sửa chủ đề', TOPIC_DELETED: 'Xóa vĩnh viễn chủ đề', TOPIC_HIDDEN: 'Ẩn chủ đề', TOPIC_RESTORED: 'Khôi phục chủ đề',
+  TOPIC_ITEM_ADDED: 'Thêm mục từ', TOPIC_ITEM_UPDATED: 'Sửa mục từ', TOPIC_ITEM_DELETED: 'Xóa mục từ',
+  TOPIC_TEMPLATE_CHANGED: 'Đổi mẫu thẻ', TOPIC_SCHEMA_CHANGED: 'Đổi schema',
+  CARD_TEMPLATE_UPDATED: 'Sửa mẫu thẻ', CARD_TEMPLATE_DEFAULT_CHANGED: 'Đặt làm mẫu mặc định',
   SCAN_LABEL_MAPPED: 'Gán từ cho nhãn',
   LEARNER_BANNED: 'Khóa tài khoản', LEARNER_UNBANNED: 'Mở khóa tài khoản', LEARNER_PASSWORD_RESET_SENT: 'Gửi mã đặt lại mật khẩu',
   SYSTEM_NOTIFICATION_SENT: 'Gửi thông báo hệ thống',
@@ -32,7 +35,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
 
 export const TARGET_LABEL: Record<AuditTargetType, string> = {
   SHOP_ITEM: 'Vật phẩm', MISSION_TEMPLATE: 'Mẫu nhiệm vụ', BADGE: 'Huy hiệu', WORD: 'Từ', COLLECTION: 'Collection', TOPIC: 'Chủ đề',
-  SCAN_LABEL: 'Nhãn scan', LEARNER: 'Người học', NOTIFICATION: 'Thông báo',
+  SCAN_LABEL: 'Nhãn scan', LEARNER: 'Người học', NOTIFICATION: 'Thông báo', CARD_TEMPLATE: 'Mẫu thẻ',
 };
 
 export const KINDS: AuditKind[] = ['PRICE_REWARD', 'LIFECYCLE', 'LEARNER_ACCOUNT', 'GUARDRAIL'];
@@ -45,7 +48,8 @@ const LIFECYCLE_ACTIONS = new Set<AuditAction>([
   'SHOP_ITEM_CREATED', 'SHOP_ITEM_PUBLISHED', 'SHOP_ITEM_ARCHIVED', 'SHOP_ITEM_DELETED',
   'MISSION_TEMPLATE_CREATED', 'MISSION_TEMPLATE_ENABLED', 'MISSION_TEMPLATE_DISABLED',
   'BADGE_ENABLED', 'BADGE_DISABLED',
-  'COLLECTION_CREATED', 'COLLECTION_DELETED', 'TOPIC_CREATED',
+  'COLLECTION_CREATED', 'COLLECTION_DELETED', 'TOPIC_CREATED', 'TOPIC_DELETED', 'TOPIC_HIDDEN', 'TOPIC_RESTORED',
+  'WORD_DELETED', 'WORD_RESTORED', 'CARD_TEMPLATE_DEFAULT_CHANGED',
 ]);
 
 /** Which strip question an entry answers. The backend applies the same rules to `kind=` (admin_audit_log_backend.md §5.3). */
@@ -79,13 +83,14 @@ export function targetPath(t: AuditTarget): string | null {
     case 'TOPIC': return `/topics/${[...(t.parents ?? []), t.id].join('/')}`;
     case 'LEARNER': return `/learners/${t.id}`;
     case 'SCAN_LABEL': return '/ai-scan';
+    case 'CARD_TEMPLATE': return `/templates/${t.id}`;
     default: return null;
   }
 }
 
 const SEGMENT: Record<AuditTargetType, string> = {
   SHOP_ITEM: 'vat-pham', MISSION_TEMPLATE: 'nhiem-vu', BADGE: 'huy-hieu', WORD: 'tu', COLLECTION: 'collection', TOPIC: 'chu-de',
-  SCAN_LABEL: 'nhan-scan', LEARNER: 'nguoi-hoc', NOTIFICATION: 'thong-bao',
+  SCAN_LABEL: 'nhan-scan', LEARNER: 'nguoi-hoc', NOTIFICATION: 'thong-bao', CARD_TEMPLATE: 'mau-the',
 };
 
 /** One object's history: /activity-log/vat-pham/11 (editors' "Vòng đời" panels link here). */
@@ -128,7 +133,8 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   frameAssetKey: { label: 'Ảnh khung', format: asset },
   boostDurationMinutes: { label: 'Thời lượng', format: unit('phút') },
   maxQuantity: { label: 'Giữ tối đa' },
-  status: { label: 'Trạng thái', format: (v) => formatShopItemStatusLabel(String(v)) },
+  // Shop item lifecycle, or a dictionary word's soft delete (ACTIVE / DELETED)
+  status: { label: 'Trạng thái', format: (v) => WORD_STATUS[String(v)] ?? formatShopItemStatusLabel(String(v)) },
   // Nhiệm vụ (AdminMissionTemplateService.Form)
   category: { label: 'Nhóm', format: label(categoryLabels) },
   triggerEvent: { label: 'Sự kiện tính', format: label(TRIGGER_LABEL) },
@@ -147,10 +153,19 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   topicCount: { label: 'Số chủ đề' },
   itemCount: { label: 'Số mục từ' },
   item: { label: 'Mục từ' },
+  items: { label: 'Số mục từ' },
+  topic: { label: 'Chủ đề' },
   template: { label: 'Mẫu thẻ' },
+  // Mẫu thẻ (AdminTemplateService): each side as one line per element
+  front: { label: 'Mặt trước' },
+  back: { label: 'Mặt sau' },
+  defaultTemplate: { label: 'Mẫu mặc định' },
   schema: { label: 'Schema' },
   // Từ điển, AI Scan
   ipa: { label: 'Phát âm (IPA)' },
+  pronunciations: { label: 'Phát âm (IPA)' },
+  translations: { label: 'Bản dịch tiếng Việt' },
+  meanings: { label: 'Định nghĩa' },
   definitionVi: { label: 'Định nghĩa tiếng Việt' },
   word: { label: 'Từ trong từ điển' },
   // Người học
@@ -163,12 +178,18 @@ const FIELDS: Record<string, { label: string; format?: (v: unknown) => string }>
   recipientCount: { label: 'Người nhận', format: unit('người học') },
 };
 
-export const fieldLabel = (field: string) => FIELDS[field]?.label ?? field;
+const WORD_STATUS: Record<string, string> = { ACTIVE: 'Đang dùng', DELETED: 'Đã xóa mềm', VISIBLE: 'Đang hiện', HIDDEN: 'Đã ẩn' };
+
+/** "item yours" (TopicService item edit) reads "Mục từ yours"; other keys come from FIELDS or stay raw. */
+export const fieldLabel = (field: string) =>
+  FIELDS[field]?.label ?? (field.startsWith('item ') ? `Mục từ ${field.slice(5)}` : field);
 
 export function formatValue(field: string, v: unknown): string {
   if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return '—';
   if (Array.isArray(v)) return v.map((x) => formatValue(field, x)).join(', ');
   if (typeof v === 'boolean' && field !== 'isActive') return v ? 'Có' : 'Không';
+  // An object value (an item's changed values, a deleted topic) reads as "key: value · key: value".
+  if (typeof v === 'object') return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${fieldLabel(k)}: ${formatValue(k, x)}`).join(' · ');
   const format = FIELDS[field]?.format;
   return format ? format(v) : num(v);
 }

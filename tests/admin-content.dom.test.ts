@@ -49,7 +49,7 @@ const contentApi = (extra: (c: Call) => Response | undefined = () => undefined) 
   if (c.path === '/api/topics/71' && c.method === 'GET') return ok(ITEMS);
   if (c.path === '/api/topics/70' && c.method === 'GET') return ok(page([]));
   if (c.path.endsWith('/schema')) return ok(SCHEMA);
-  return extra(c);
+  return extra(c) ?? (c.path === '/api/admin/topics/hidden' ? ok([]) : undefined);
 };
 
 let root: Root | undefined; let client: QueryClient | undefined;
@@ -90,7 +90,8 @@ test('T1. deep link /topics/1/70/71 loads the real tree, items and schema; cover
   assert.ok(text().includes('Vocabulary') && text().includes('Adverb') && text().includes('Mẫu thẻ: Classic'));
   assert.ok(text().includes('Đủ dữ liệu'));
   assert.match(text(), /Cấp độ: A1 1B1 1/);
-  assert.equal(button('Sửa').disabled, true, 'topic edit needs an API');
+  assert.equal(button('Sửa').disabled, false, 'topic edit is live (PUT /api/admin/topics/{id})');
+  assert.equal(button('Xóa').disabled, false, 'topic delete is live (DELETE /api/admin/topics/{id})');
 });
 
 test('T2. add item: dictionary prefill, then POST /api/topics/71/items with the schema-shaped body', async () => {
@@ -169,4 +170,154 @@ test('D2. opening a dictionary word by id calls GET /api/words/{id} instead of l
   await waitFor(() => text().includes('quả táo'), 'drawer loaded by id');
   assert.ok(calls.some((c) => c.method === 'GET' && c.path === '/api/words/42'));
   assert.equal(calls.some((c) => c.method === 'GET' && c.path === '/api/words/lookup'), false);
+});
+
+test('T5. topic edit sends PUT /api/admin/topics/71; Ẩn (soft delete) needs a 10+ char reason and POSTs /hide', async () => {
+  serve(contentApi((c) => {
+    if (c.method === 'PUT' && c.path === '/api/admin/topics/71') return ok({ ...CHILD, ...(c.body as object) });
+    if (c.method === 'POST' && c.path === '/api/admin/topics/71/hide') {
+      return ok({ id: 71, name: 'Degree', translation: null, parentId: 70, parentName: 'Adverb', hiddenAt: '2026-11-26T03:00:00Z', hiddenBy: 'a@b', reason: (c.body as { reason: string }).reason, subtopics: 0, learners: 2 });
+    }
+    return undefined;
+  }));
+  await render(React.createElement(TopicsPage, { rest: ['1', '70', '71'] }));
+  await waitFor(() => text().includes('quite'), 'items');
+
+  await click(button('Sửa'));
+  await type(inputLabelled('Tên tiếng Việt'), 'Mức độ');
+  await click(button('Lưu'));
+  await waitFor(() => calls.some((c) => c.method === 'PUT'), 'PUT');
+  assert.deepEqual(calls.find((c) => c.method === 'PUT')!.body, { name: 'Degree', translation: 'Mức độ', description: null, descriptionTranslation: null });
+
+  await waitFor(() => !text().includes('Sửa chủ đề Degree'), 'edit dialog closed');
+  // The topic header no longer offers a hard delete: Ẩn is the delete (OQ-CNT-01); purge lives in "Đã ẩn".
+  assert.equal([...document.querySelectorAll('header button')].some((b) => b.textContent?.trim() === 'Xóa'), false);
+  await click(button('Ẩn'));
+  assert.ok(text().includes('Thẻ người học đã học vẫn được ôn theo lịch'));
+  await click(button('Ẩn chủ đề'));
+  assert.equal(calls.some((c) => c.path.endsWith('/hide')), false, 'no reason, no request');
+  assert.ok(text().includes('Tối thiểu 10 ký tự.'));
+  await type(document.querySelector('textarea')!, 'Trùng với chủ đề Adverb khác.');
+  await click(button('Ẩn chủ đề'));
+  await waitFor(() => text().includes('Đã ẩn chủ đề Degree'), 'hidden toast');
+  assert.deepEqual(calls.find((c) => c.path === '/api/admin/topics/71/hide')!.body, { reason: 'Trùng với chủ đề Adverb khác.' });
+});
+
+test('T8. "Đã ẩn" lists hidden topics: restore POSTs /restore; purge is offered only when nobody studied it', async () => {
+  let hidden = [
+    { id: 71, name: 'Degree', translation: 'Mức độ', parentId: 70, parentName: 'Adverb', hiddenAt: '2026-11-26T03:00:00Z', hiddenBy: 'qa@snapvocab.local', reason: 'Trùng với chủ đề khác.', subtopics: 0, learners: 2 },
+    { id: 72, name: 'Manner', translation: null, parentId: 70, parentName: 'Adverb', hiddenAt: '2026-11-25T03:00:00Z', hiddenBy: null, reason: 'Tạo nhầm, chưa ai học.', subtopics: 0, learners: 0 },
+  ];
+  serve(contentApi((c) => {
+    if (c.path === '/api/admin/topics/hidden') return ok(hidden);
+    if (c.method === 'POST' && c.path === '/api/admin/topics/71/restore') { hidden = hidden.filter((h) => h.id !== 71); return ok(CHILD); }
+    return undefined;
+  }));
+  await render(React.createElement(TopicsPage, { rest: ['1', '70', '71'] }));
+  await waitFor(() => button('Đã ẩn (2)'), 'hidden count');
+  await click(button('Đã ẩn (2)'));
+  assert.ok(text().includes('Lý do: Trùng với chủ đề khác.') && text().includes('2 người học có dữ liệu'));
+  const purges = [...document.querySelectorAll('button')].filter((b) => b.textContent?.trim() === 'Xóa vĩnh viễn') as HTMLButtonElement[];
+  assert.deepEqual(purges.map((b) => b.disabled), [true, false], 'studied: hide only; never studied: purge allowed');
+  await click([...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Khôi phục') as HTMLElement);
+  await waitFor(() => calls.some((c) => c.path === '/api/admin/topics/71/restore'), 'restore');
+  await waitFor(() => button('Đã ẩn (1)'), 'list refreshed');
+});
+
+test('T6. editing an item prefills it (main.meaning moved home) and PUTs the schema-shaped body', async () => {
+  const items = page([{ topicItemId: 3, createdAt: '2026-09-10T00:00:00Z', main: { word: 'such', translation: 'như vậy', meaning: 'of the type mentioned' }, examples: [{ content: 'Such a day.' }] }]);
+  serve((c) => {
+    if (c.method === 'GET' && c.path === '/api/topics/71') return ok(items);
+    if (c.method === 'PUT' && c.path === '/api/topics/71/items/3') return ok({ topicItemId: 3, createdAt: '', ...(c.body as object) });
+    return contentApi()(c);
+  });
+  await render(React.createElement(TopicsPage, { rest: ['1', '70', '71'] }));
+  await waitFor(() => text().includes('such'), 'items');
+  const row = [...document.querySelectorAll('tbody tr')].find((tr) => tr.textContent?.includes('such')) as HTMLElement;
+  await click(row);
+  await click(button('Sửa mục'));
+  assert.ok(text().includes('main.meaning → meaning.meaning'), 'the move is announced');
+  await type(inputLabelled('translation'), 'như thế');
+  await click(button('Lưu mục từ'));
+  await waitFor(() => calls.some((c) => c.method === 'PUT'), 'PUT');
+  assert.deepEqual(calls.find((c) => c.method === 'PUT')!.body, {
+    main: { word: 'such', translation: 'như thế' },
+    meaning: { meaning: 'of the type mentioned' },
+    examples: [{ content: 'Such a day.' }],
+  });
+});
+
+test('T7. deleting a studied system item shows why the server refused', async () => {
+  serve(contentApi((c) => {
+    if (c.method === 'DELETE' && c.path === '/api/topics/71/items/1') {
+      return new Response(JSON.stringify({ statusCode: 409, error: 'TOPIC_ITEM_HAS_LEARNING_DATA', data: { learners: 1 } }), { status: 409, headers: { 'content-type': 'application/json' } });
+    }
+    return undefined;
+  }));
+  await render(React.createElement(TopicsPage, { rest: ['1', '70', '71'] }));
+  await waitFor(() => text().includes('very'), 'items');
+  await click([...document.querySelectorAll('tbody tr')].find((tr) => tr.textContent?.includes('very')) as HTMLElement);
+  await click(button('Xóa mục'));
+  const confirm = [...document.querySelectorAll('button')].filter((b) => b.textContent?.trim() === 'Xóa mục').pop()!;
+  await click(confirm);
+  await waitFor(() => text().includes('1 người học đã học mục từ này'), '409 shown');
+});
+
+const WORD = { ...APPLE, wordId: 42, version: 2, meanings: [{ ...APPLE.meanings[0], id: 7, pos: 'Danh từ' }] };
+
+test('D3. editing a word PUTs ids, POS codes and the version; a version conflict offers to reload', async () => {
+  let conflict = false;
+  serve((c) => {
+    if (c.method === 'GET' && c.path === '/api/words/42') return ok(WORD);
+    if (c.method === 'PUT' && c.path === '/api/admin/words/42') {
+      if (conflict) return new Response(JSON.stringify({ statusCode: 409, error: 'VERSION_CONFLICT', data: { currentVersion: 3 } }), { status: 409, headers: { 'content-type': 'application/json' } });
+      return ok({ ...WORD, version: 3 });
+    }
+    if (c.path === '/api/words/suggest') return ok({ data: [], meta: { page: 0, size: 30, total: 0, pages: 0 } });
+    return undefined;
+  });
+  await render(React.createElement(DictionaryPage, { rest: ['42'] }));
+  await waitFor(() => text().includes('quả táo'), 'drawer');
+  await click(button('Sửa từ'));
+  await type(document.querySelector('input[aria-label="Bản dịch tiếng Việt 1"]') as HTMLInputElement, 'trái táo');
+  await click(button('Lưu'));
+  await waitFor(() => calls.some((c) => c.method === 'PUT'), 'PUT');
+  assert.deepEqual(calls.find((c) => c.method === 'PUT')!.body, {
+    version: 2,
+    pronunciations: [{ ipa: '/ˈæpəl/', region: 'US' }],
+    translations: ['trái táo'],
+    meanings: [{ id: 7, pos: 'N', definitionLang: 'en', definition: 'A round fruit.', example: 'An apple a day.' }],
+  });
+
+  conflict = true;
+  await waitFor(() => button('Sửa từ'), 'back to view');
+  await click(button('Sửa từ'));
+  await click(button('Lưu'));
+  await waitFor(() => text().includes('Từ này vừa được sửa ở phiên khác'), 'conflict shown');
+  assert.ok(button('Tải bản mới'));
+});
+
+test('D4. soft delete sends the reason; a deleted word offers restore instead of edit', async () => {
+  let deleted = false;
+  serve((c) => {
+    if (c.method === 'GET' && c.path === '/api/words/42') return ok({ ...WORD, deletedAt: deleted ? '2026-11-25T10:00:00Z' : null });
+    if (c.method === 'DELETE' && c.path === '/api/admin/words/42') { deleted = true; return ok({ ...WORD, deletedAt: '2026-11-25T10:00:00Z' }); }
+    if (c.method === 'POST' && c.path === '/api/admin/words/42/restore') { deleted = false; return ok(WORD); }
+    if (c.path === '/api/words/suggest') return ok({ data: [], meta: { page: 0, size: 30, total: 0, pages: 0 } });
+    return undefined;
+  });
+  await render(React.createElement(DictionaryPage, { rest: ['42'] }));
+  await waitFor(() => text().includes('quả táo'), 'drawer');
+  await click(button('Xóa mềm'));
+  await type(document.querySelector('textarea') as HTMLTextAreaElement, 'Nhập trùng từ khác.');
+  const confirm = [...document.querySelectorAll('button')].filter((b) => b.textContent?.trim() === 'Xóa mềm').pop()!;
+  await click(confirm);
+  await waitFor(() => text().includes('Đã xóa mềm'), 'deleted state');
+  assert.deepEqual(calls.find((c) => c.method === 'DELETE')!.body, { reason: 'Nhập trùng từ khác.' });
+  assert.equal(button('Sửa từ'), undefined, 'no edit while deleted');
+  await click(button('Khôi phục'));
+  const restore = [...document.querySelectorAll('button')].filter((b) => b.textContent?.trim() === 'Khôi phục').pop()!;
+  await click(restore);
+  await waitFor(() => button('Sửa từ'), 'restored');
+  assert.ok(calls.some((c) => c.method === 'POST' && c.path === '/api/admin/words/42/restore'));
 });

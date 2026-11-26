@@ -97,7 +97,7 @@ test('DT1 library: real templates drawn on a real word, Quiz usage, the LISTENIN
   assert.ok(!calls.some((c) => c.path.startsWith('/api/admin')), 'no admin API needed to read');
 });
 
-test('DT2 deep link opens the read-only editor with checks and data counts on the preview topic', async () => {
+test('DT2 deep link opens the editor with checks and data counts on the preview topic; nothing is written until a save', async () => {
   serve();
   act(() => navigate('/templates/2'));
   await render(React.createElement(Routed));
@@ -106,7 +106,8 @@ test('DT2 deep link opens the read-only editor with checks and data counts on th
   assert.match(text(), /Quiz Trắc nghiệm phản xạ.*Quiz Ghép đôi từ vựng.*Quiz Điền từ vào chỗ trống/);
   assert.match(text(), /Nghe phát âm.*lộ luôn đáp án/);
   assert.match(text(), /Định nghĩa tiếng Anh: 3 mục có dữ liệu nằm ngoài meaning\.meaning/);
-  assert.ok(!button('Lưu thay đổi'), 'release build is read-only');
+  assert.equal(button('Lưu thay đổi').disabled, true, 'writes are real now; nothing to save before an edit');
+  assert.ok(calls.every((c) => c.method === 'GET'), 'opening the editor writes nothing');
   assert.match(text(), /Ứng dụng đang vẽ thẻ học bằng “Thẻ Chuẩn \(Chữ -> Nghĩa\)”/);
 });
 

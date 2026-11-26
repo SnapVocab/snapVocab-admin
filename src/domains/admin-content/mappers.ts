@@ -1,4 +1,5 @@
-import type { AttrValues, CreateTopicItem, LookupResultDTO, SchemaAttributeGroupDTO, TopicItemData } from './types';
+import type { AttrValues, CreateTopicItem, LookupResultDTO, SchemaAttributeGroupDTO, TopicItemData, UpdateWord } from './types';
+import { ApiClientError } from '../../lib/api-client';
 
 /**
  * Field names of the system schema DEFAULT_ENGLISH (main / meaning / examples). Other schemas still render
@@ -136,6 +137,43 @@ export function toCreatePayload(groups: SchemaAttributeGroupDTO[], draft: ItemDr
 }
 
 /**
+ * Edit form for an existing item: every value the API returned, placed in its schema group. A value the API returned
+ * under the wrong group (15,663 system items keep meaning.meaning inside the main group, so it reads as main.meaning)
+ * is moved to the one group that defines that attribute, because PUT rebuilds groups from the schema and would drop it.
+ * `moved` lists those moves; `dropped` lists values no schema group can hold (the operator is warned before saving).
+ */
+export function draftFromItem(groups: SchemaAttributeGroupDTO[], item: TopicItemData): { draft: ItemDraft; moved: string[]; dropped: string[] } {
+  const draft = emptyDraft(groups);
+  const moved: string[] = [];
+  const dropped: string[] = [];
+  const home = (attr: string) => groups.filter((g) => !g.multiple && g.attributes.some((a) => a.name === attr));
+  const rowsOf = (g: SchemaAttributeGroupDTO) => (g.multiple ? asRows(item[g.name]) : [asGroup(item[g.name])]);
+  // Pass 1: values already in their own group. Pass 2 then moves strays only into a still-empty field.
+  for (const g of groups) {
+    const rows = rowsOf(g);
+    if (g.multiple) draft[g.name] = rows.map((r) => Object.fromEntries(g.attributes.map((a) => [a.name, r[a.name] ?? ''])));
+    else g.attributes.forEach((a) => { if (filled(rows[0][a.name])) draft[g.name][0][a.name] = rows[0][a.name] as string; });
+  }
+  for (const g of groups) {
+    const known = new Set(g.attributes.map((a) => a.name));
+    const rows = rowsOf(g);
+    for (const r of rows) {
+      for (const [k, v] of Object.entries(r)) {
+        if (known.has(k) || !filled(v)) continue;
+        const target = home(k);
+        if (target.length === 1 && !g.multiple && !filled(draft[target[0].name][0][k])) {
+          draft[target[0].name][0][k] = v as string;
+          moved.push(`${g.name}.${k} → ${target[0].name}.${k}`);
+        } else {
+          dropped.push(`${g.name}.${k}`);
+        }
+      }
+    }
+  }
+  return { draft, moved, dropped };
+}
+
+/**
  * Prefill empty fields of DEFAULT_ENGLISH from a dictionary lookup; never overwrites what the operator typed.
  * Returns the new draft and the labels of the fields it filled.
  */
@@ -208,4 +246,90 @@ export function nameError(name: string): string | null {
   if (n < 2) return 'Tối thiểu 2 ký tự.';
   if (n > 100) return 'Tối đa 100 ký tự.';
   return null;
+}
+
+// ---- Dictionary edit form ----------------------------------------------------------------------------------------
+
+/** Part-of-speech codes stored in definitions.pos and their labels (backend PosLabel); the lookup returns labels. */
+export const POS_OPTIONS: { code: string; label: string }[] = [
+  { code: 'N', label: 'Danh từ' }, { code: 'V', label: 'Động từ' }, { code: 'A', label: 'Tính từ' }, { code: 'D', label: 'Phó từ' },
+  { code: 'R', label: 'Trạng từ' }, { code: 'P', label: 'Đại từ' }, { code: 'E', label: 'Giới từ' }, { code: 'C', label: 'Liên từ' },
+  { code: 'I', label: 'Tình thái từ' }, { code: 'M', label: 'Lượng từ' }, { code: 'O', label: 'Thán từ' }, { code: 'S', label: 'Từ đặc biệt' },
+  { code: 'X', label: 'Từ phụ trợ / khác' }, { code: 'Z', label: 'Hậu tố' },
+];
+
+/** Label (or a code the backend could not label) back to the stored code; unknown text gives null. */
+export function posCode(posOrLabel: string | null | undefined): string | null {
+  if (!filled(posOrLabel)) return null;
+  const v = (posOrLabel as string).trim();
+  return POS_OPTIONS.find((p) => p.label === v || p.code === v)?.code ?? null;
+}
+
+export interface WordDraft {
+  ipa: { ipa: string; region: string }[];
+  vi: string[];
+  meanings: { id: number | null; pos: string; lang: 'vi' | 'en'; definition: string; example: string }[];
+}
+
+export function toWordDraft(r: LookupResultDTO): WordDraft {
+  return {
+    ipa: r.pronunciations.map((p) => ({ ipa: p.ipa, region: p.region ?? '' })),
+    vi: r.translations.filter((t) => t.langCode === 'vi').map((t) => t.translation),
+    meanings: r.meanings.map((m) => ({ id: m.id ?? null, pos: posCode(m.pos) ?? '', lang: m.definitionLang === 'en' ? 'en' : 'vi', definition: m.definition, example: m.example ?? '' })),
+  };
+}
+
+/** Field errors keyed "ipa.i" / "vi.i" / "meanings.i"; the same rules the server enforces (AdminWordService, DTO limits). */
+export function wordDraftErrors(d: WordDraft): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const seen = new Set<string>();
+  d.ipa.forEach((p, i) => {
+    if (!filled(p.ipa)) return;
+    const key = `${p.ipa.trim()}|${p.region.trim()}`;
+    if (seen.has(key)) errors[`ipa.${i}`] = 'Trùng phát âm (cùng IPA và vùng).';
+    else if (p.ipa.trim().length > 512) errors[`ipa.${i}`] = 'Tối đa 512 ký tự.';
+    seen.add(key);
+  });
+  d.vi.forEach((v, i) => { if (v.trim().length > 1024) errors[`vi.${i}`] = 'Tối đa 1024 ký tự.'; });
+  d.meanings.forEach((m, i) => {
+    if (!filled(m.definition)) errors[`meanings.${i}`] = 'Nhập định nghĩa hoặc xóa dòng này.';
+    else if (m.definition.trim().length > 4000 || m.example.trim().length > 4000) errors[`meanings.${i}`] = 'Tối đa 4000 ký tự.';
+  });
+  return errors;
+}
+
+/** Blank IPA and translation rows are dropped; a meaning row always needs its definition (wordDraftErrors). */
+export function toUpdateWord(d: WordDraft, version: number): UpdateWord {
+  return {
+    version,
+    pronunciations: d.ipa.filter((p) => filled(p.ipa)).map((p) => ({ ipa: p.ipa.trim(), region: p.region.trim() || null })),
+    translations: d.vi.filter(filled).map((v) => v.trim()),
+    meanings: d.meanings.map((m) => ({ id: m.id, pos: m.pos || null, definitionLang: m.lang, definition: m.definition.trim(), example: m.example.trim() || null })),
+  };
+}
+
+/**
+ * Vietnamese text for the content API errors; anything else falls back to the client's own message. `what` names the
+ * object in the version-conflict sentence ("Từ này", "Mẫu này").
+ */
+export function contentErrorText(e: unknown, what = 'Dữ liệu này'): string {
+  if (!(e instanceof ApiClientError)) return e instanceof Error ? e.message : 'Thao tác thất bại.';
+  const d = (e.details ?? {}) as Record<string, unknown>;
+  switch (e.code) {
+    case 'VERSION_CONFLICT': return `${what} vừa được sửa ở phiên khác. Tải lại để xem bản mới rồi sửa tiếp.`;
+    case 'WORD_DELETED': return 'Từ đang ở trạng thái đã xóa mềm. Khôi phục trước khi sửa.';
+    case 'WORD_NOT_DELETED': return 'Từ không ở trạng thái đã xóa.';
+    case 'TOPIC_HAS_CHILDREN': return `Chủ đề còn ${d.children ?? 'một số'} chủ đề con. Xóa các chủ đề con trước.`;
+    case 'TOPIC_ALREADY_HIDDEN': return 'Chủ đề đã được ẩn ở phiên khác.';
+    case 'TOPIC_NOT_HIDDEN': return 'Chủ đề đang hiện, không cần khôi phục.';
+    case 'TOPIC_PARENT_HIDDEN': return 'Chủ đề cha đang bị ẩn. Khôi phục chủ đề cha, chủ đề con sẽ hiện lại cùng nó.';
+    case 'TOPIC_HAS_LEARNING_DATA': return `${d.learners ?? 'Một số'} người học đã học chủ đề này (thẻ ôn, Quiz hoặc truyện AI). Không xóa để giữ lịch sử học của họ.`;
+    case 'TOPIC_ITEM_HAS_LEARNING_DATA': return `${d.learners ?? 'Một số'} người học đã học mục từ này. Không xóa để giữ lịch sử học của họ; vẫn sửa được nội dung.`;
+    case 'TEMPLATE_BINDING_INVALID': return `Quiz không đọc được mẫu (${d.mode ?? '?'}: ${d.kind === 'AMBIGUOUS' ? 'vai trò bị gán trùng' : 'thiếu vai trò'} ${d.role ?? ''}).`;
+    case 'VALIDATION_ERROR': return d.field ? `Dữ liệu không hợp lệ ở ${String(d.field)}.` : e.message;
+    default:
+      if (e.statusCode === 403) return 'Tài khoản không có quyền quản trị (ROLE_ADMIN).';
+      if (e.statusCode === 404) return 'Không tìm thấy (có thể đã bị xóa ở phiên khác).';
+      return e.message;
+  }
 }

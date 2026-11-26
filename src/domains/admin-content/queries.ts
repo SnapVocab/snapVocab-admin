@@ -1,9 +1,12 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  addTopicItem, createCollection, createTopic, deleteCollection, getSchema, getSystemCollections, getTopicItems,
-  getTopics, getTopicSchema, getWordById, lookupWord, lookupWords, setActiveTemplate, suggestWords, updateCollection,
+  addTopicItem, createCollection, createTopic, deleteCollection, deleteTopic, deleteTopicItem, deleteWord, getDeletedWords, getHiddenTopics, hideTopic, restoreTopic,
+  getSchema, getSystemCollections, getTopicItems, getTopics, getTopicSchema, getWordById, lookupWord, lookupWords,
+  restoreWord, setActiveTemplate, suggestWords, updateCollection, updateTopic, updateTopicItem, updateWord,
 } from './api';
-import type { CreateCollection, CreateTopic, CreateTopicItem, LookupResultDTO, UpdateCollection, WordSuggestDTO } from './types';
+import type {
+  CreateCollection, CreateTopic, CreateTopicItem, LookupResultDTO, UpdateCollection, UpdateTopic, UpdateWord, WordSuggestDTO,
+} from './types';
 
 export const contentKeys = {
   collections: ['adminContent', 'collections'] as const,
@@ -15,6 +18,8 @@ export const contentKeys = {
   words: (q: string, page: number, size: number) => ['adminContent', 'words', q, page, size] as const,
   word: (word: string) => ['adminContent', 'word', word] as const,
   wordById: (id: number) => ['adminContent', 'wordById', id] as const,
+  deletedWords: (q: string, page: number) => ['adminContent', 'deletedWords', q, page] as const,
+  hiddenTopics: (collectionId: number) => ['adminContent', 'hiddenTopics', collectionId] as const,
 };
 
 export const useSystemCollections = () => useQuery({ queryKey: contentKeys.collections, queryFn: getSystemCollections });
@@ -112,3 +117,78 @@ export const useWordLookup = (word: string | null) =>
 
 export const useWordById = (id: number | null) =>
   useQuery({ queryKey: contentKeys.wordById(id ?? 0), queryFn: () => getWordById(id!), enabled: id !== null });
+
+/** Every dictionary view that can show the word: the letter pages, both detail queries and the deleted list. */
+function invalidateWords(client: ReturnType<typeof useQueryClient>) {
+  for (const key of ['words', 'word', 'wordById', 'deletedWords']) void client.invalidateQueries({ queryKey: ['adminContent', key] });
+}
+
+export function useUpdateWord(id: number) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (body: UpdateWord) => updateWord(id, body), onSuccess: () => invalidateWords(client) });
+}
+
+export function useDeleteWord(id: number) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (reason: string | null) => deleteWord(id, reason), onSuccess: () => invalidateWords(client) });
+}
+
+export function useRestoreWord(id: number) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: () => restoreWord(id), onSuccess: () => invalidateWords(client) });
+}
+
+export const useDeletedWords = (q: string, page: number, size: number, enabled: boolean) =>
+  useQuery({ queryKey: contentKeys.deletedWords(q, page), queryFn: () => getDeletedWords(q, page, size), enabled, placeholderData: keepPreviousData });
+
+/** A rename shows in the tree, the parent's child grid and the header, all read from the collection's topic lists. */
+export function useUpdateTopic(id: number, collectionId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateTopic) => updateTopic(id, body),
+    onSuccess: () => client.invalidateQueries({ queryKey: contentKeys.allTopics(collectionId) }),
+  });
+}
+
+export function useDeleteTopic(id: number, collectionId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => deleteTopic(id, reason),
+    onSuccess: () => invalidateTopics(client, collectionId),
+  });
+}
+
+/** The tree, child grids and the "Đã ẩn" list all change when a topic is hidden, restored or purged. */
+function invalidateTopics(client: ReturnType<typeof useQueryClient>, collectionId: number) {
+  void client.invalidateQueries({ queryKey: contentKeys.allTopics(collectionId) });
+  void client.invalidateQueries({ queryKey: contentKeys.hiddenTopics(collectionId) });
+}
+
+export const useHiddenTopics = (collectionId: number | null) =>
+  useQuery({ queryKey: contentKeys.hiddenTopics(collectionId ?? 0), queryFn: () => getHiddenTopics(collectionId!), enabled: collectionId !== null });
+
+export function useHideTopic(id: number, collectionId: number) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (reason: string) => hideTopic(id, reason), onSuccess: () => invalidateTopics(client, collectionId) });
+}
+
+export function useRestoreTopic(collectionId: number) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (id: number) => restoreTopic(id), onSuccess: () => invalidateTopics(client, collectionId) });
+}
+
+export function useUpdateItem(topicId: number, itemId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateTopicItem) => updateTopicItem(topicId, itemId, body),
+    onSuccess: () => client.invalidateQueries({ queryKey: contentKeys.items(topicId) }),
+  });
+}
+
+export function useDeleteItem(topicId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: number) => deleteTopicItem(topicId, itemId),
+    onSuccess: () => client.invalidateQueries({ queryKey: contentKeys.items(topicId) }),
+  });
+}

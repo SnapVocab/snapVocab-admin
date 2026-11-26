@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, RotateCw, Search } from 'lucide-react';
-import { Button, PageHeader, StripCell, StripNote, SummaryStrip, toolbarControl } from '../../components/ui';
+import { AlertCircle, Archive, ChevronLeft, ChevronRight, RotateCw, Search } from 'lucide-react';
+import { Button, PageHeader, StripCell, StripNote, SummaryStrip, toolbarControl, useToast } from '../../components/ui';
 import { viGloss, WORD_GAP_LABEL, wordGaps, type WordGap } from '../../domains/admin-content/mappers';
-import { useWordPage } from '../../domains/admin-content/queries';
+import { useDeletedWords, useWordPage } from '../../domains/admin-content/queries';
+import { formatDate } from '../../domains/admin-learners/mappers';
 import { navigate } from '../../lib/router';
 import { cn } from '../../lib/utils';
 import { WordDrawer } from './WordDrawer';
@@ -12,8 +13,8 @@ const PAGE_SIZE = 30;
 const GAP_DOT: Record<WordGap, string> = { vi: 'bg-danger', ipa: 'bg-warning', meaning: 'bg-danger', example: 'bg-info' };
 
 /**
- * NOW (read): GET /api/words/suggest (prefix, alphabetical, paged) + POST /api/words/lookup for the page.
- * MOCK (write): editing lives in WordDrawer; soft delete and usage counts need API (F-ADM-04).
+ * Read: GET /api/words/suggest (prefix, alphabetical, paged) + POST /api/words/lookup for the page; soft-deleted words
+ * come from GET /api/admin/words/deleted ("Đã xóa mềm"). Writes (edit, soft delete, restore) live in WordDrawer.
  * `rest[0]` = an open word id (or word text from legacy/analytics links), so the detail survives F5 and can be linked.
  */
 export function DictionaryPage({ rest }: { rest: string[] }) {
@@ -25,6 +26,8 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
   const [gap, setGap] = useState<WordGap | 'ALL'>('ALL');
+  const [showDeleted, setShowDeleted] = useState(false);
+  const { show: flash, node: toastNode } = useToast();
   useEffect(() => {
     const t = window.setTimeout(() => { setQ(search.trim()); setPage(0); setGap('ALL'); }, 300);
     return () => window.clearTimeout(t);
@@ -33,6 +36,7 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
   // The suggest endpoint requires a prefix, so browsing is by letter; typing narrows it.
   const prefix = q || letter;
   const words = useWordPage(prefix, page, PAGE_SIZE);
+  const deleted = useDeletedWords(q, page, PAGE_SIZE, showDeleted);
   const rows = words.data?.rows ?? [];
   const count = (g: WordGap) => rows.filter((r) => r.lookup && wordGaps(r.lookup).includes(g)).length;
   const visible = gap === 'ALL' ? rows : rows.filter((r) => r.lookup && wordGaps(r.lookup).includes(gap));
@@ -41,6 +45,7 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
 
   return (
     <div className="h-full min-w-0 space-y-4 overflow-y-auto bg-background p-4 text-text sm:p-6">
+      {toastNode}
       <PageHeader title="Từ điển"
         description="Từ điển gốc Anh–Việt. Cột “Nghĩa tiếng Việt” lấy bản dịch tiếng Việt, nếu không có thì lấy định nghĩa tiếng Việt." />
 
@@ -49,8 +54,14 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
           <Search size={14} className="absolute left-3 top-3 text-text-muted" />
           <input type="search" aria-label="Tìm từ theo tiền tố" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm từ (bắt đầu bằng…)" className={`${toolbarControl} w-full pl-9`} />
         </div>
-        <Button icon={<RotateCw />} label="Làm mới" loading={words.isFetching} onClick={() => void words.refetch()} />
+        <Button icon={<RotateCw />} label="Làm mới" loading={showDeleted ? deleted.isFetching : words.isFetching} onClick={() => void (showDeleted ? deleted.refetch() : words.refetch())} />
+        <Button icon={<Archive />} aria-pressed={showDeleted} variant={showDeleted ? 'primary' : undefined} onClick={() => { setShowDeleted((v) => !v); setPage(0); setGap('ALL'); }}>
+          Đã xóa mềm
+        </Button>
       </div>
+      {showDeleted ? (
+        <DeletedWords query={deleted} q={q} page={page} onPage={setPage} onOpen={open} />
+      ) : <>
       <nav aria-label="Duyệt theo chữ cái" className="flex flex-wrap gap-1">
         {LETTERS.map((l) => (
           <button key={l} type="button" aria-pressed={!q && letter === l} onClick={() => pickLetter(l)}
@@ -138,13 +149,58 @@ export function DictionaryPage({ rest }: { rest: string[] }) {
         )}
       </div>
 
+      </>}
+
       {(openWordId !== null || openWord) && (
         <WordDrawer
           key={openWordId !== null ? `id:${openWordId}` : `w:${openWord}`}
           wordId={openWordId}
           word={openWord}
           onClose={() => navigate('/dictionary')}
+          onChanged={flash}
         />
+      )}
+    </div>
+  );
+}
+
+/** Soft-deleted words, newest deletion first; the search box narrows by prefix. Open one to restore it. */
+function DeletedWords({ query, q, page, onPage, onOpen }: {
+  query: ReturnType<typeof useDeletedWords>; q: string; page: number; onPage: (p: number) => void; onOpen: (id: number) => void;
+}) {
+  const data = query.data;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      {query.isError && (
+        <div role="alert" className="flex items-center justify-between border-b border-danger/30 bg-danger-light px-4 py-3 text-body text-danger-dark">
+          <span className="flex items-center gap-2"><AlertCircle size={16} />Không tải được danh sách từ đã xóa.</span>
+          <Button size="sm" onClick={() => void query.refetch()}>Thử lại</Button>
+        </div>
+      )}
+      <table className="w-full text-left text-xs">
+        <thead className="border-b border-border bg-surface-subtle/60 text-text-muted">
+          <tr><th className="px-4 py-2 font-medium">Từ</th><th className="px-3 py-2 font-medium">Xóa mềm lúc</th></tr>
+        </thead>
+        <tbody className={cn('divide-y divide-border', query.isPlaceholderData && 'opacity-60')}>
+          {query.isPending
+            ? Array.from({ length: 4 }, (_, i) => <tr key={i}><td colSpan={2} className="px-4 py-2.5"><div className="h-6 animate-pulse rounded bg-surface-subtle" /></td></tr>)
+            : data?.data.map((w) => (
+              <tr key={w.id} onClick={() => onOpen(w.id)} className="cursor-pointer hover:bg-surface-subtle/60">
+                <td className="px-4 py-2"><a href={`/dictionary/${w.id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(w.id); }} className="text-body font-semibold text-text hover:underline">{w.word}</a></td>
+                <td className="px-3 py-2 text-text-muted">{formatDate(w.deletedAt)}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+      {data && data.data.length === 0 && <p className="p-10 text-center text-sm text-text-muted">{q ? `Không có từ đã xóa nào bắt đầu bằng “${q}”.` : 'Chưa có từ nào bị xóa mềm.'}</p>}
+      {data && data.meta.pages > 1 && (
+        <div className="flex items-center justify-between gap-3 border-t border-border bg-surface-subtle px-4 py-3 text-xs text-text-muted">
+          <span>Trang <strong className="text-text">{page + 1}</strong> / {data.meta.pages} · {data.meta.total} từ</span>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" icon={<ChevronLeft />} disabled={page === 0} onClick={() => onPage(page - 1)}>Trước</Button>
+            <Button size="sm" disabled={page + 1 >= data.meta.pages} onClick={() => onPage(page + 1)}>Sau <ChevronRight size={14} /></Button>
+          </div>
+        </div>
       )}
     </div>
   );

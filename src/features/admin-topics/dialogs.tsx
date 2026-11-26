@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { ConfirmModal, Field, fieldControl } from '../../components/ui';
-import { nameError } from '../../domains/admin-content/mappers';
-import { useCreateCollection, useCreateTopic, useDeleteCollection, useSchema, useSetTemplate, useTopicSchema, useUpdateCollection } from '../../domains/admin-content/queries';
+import { contentErrorText, nameError } from '../../domains/admin-content/mappers';
+import {
+  useCreateCollection, useCreateTopic, useDeleteCollection, useDeleteTopic, useHideTopic, useSchema, useSetTemplate, useTopicSchema,
+  useUpdateCollection, useUpdateTopic,
+} from '../../domains/admin-content/queries';
 import type { CollectionDTO, TopicDTO } from '../../domains/admin-content/types';
 import { ApiClientError } from '../../lib/api-client';
 
@@ -61,19 +64,30 @@ export function DeleteCollectionDialog({ collection, rootCount, onClose, onDone 
   );
 }
 
-/** New topic under `parent` (or at the root). Schema and card template default to DEFAULT_ENGLISH on the backend. */
-export function TopicDialog({ collection, parent, onClose, onDone }: { collection: CollectionDTO; parent: TopicDTO | null; onClose: () => void; onDone: (t: TopicDTO) => void }) {
+/**
+ * New topic under `parent` (or at the root), or, with `topic`, edit that system topic's texts (PUT /api/admin/topics/{id}).
+ * Schema and card template default to DEFAULT_ENGLISH on create; parent, schema and template do not change on edit.
+ */
+export function TopicDialog({ collection, parent, topic, onClose, onDone }: { collection: CollectionDTO; parent: TopicDTO | null; topic?: TopicDTO; onClose: () => void; onDone: (t: TopicDTO) => void }) {
   const create = useCreateTopic(collection.id);
-  const [form, setForm] = useState({ name: '', translation: '', description: '', descriptionTranslation: '' });
+  const update = useUpdateTopic(topic?.id ?? 0, collection.id);
+  const m = topic ? update : create;
+  const [form, setForm] = useState({ name: topic?.name ?? '', translation: topic?.translation ?? '', description: topic?.description ?? '', descriptionTranslation: topic?.descriptionTranslation ?? '' });
   const [touched, setTouched] = useState(false);
   const error = nameError(form.name);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const blank = (v: string) => v.trim() || null;
+  const submit = () => {
+    setTouched(true);
+    if (error) return;
+    const body = { name: form.name.trim(), translation: blank(form.translation), description: blank(form.description), descriptionTranslation: blank(form.descriptionTranslation) };
+    if (topic) update.mutate(body, { onSuccess: onDone });
+    else create.mutate({ ...body, parentId: parent?.id ?? null }, { onSuccess: onDone });
+  };
   return (
-    <ConfirmModal title={parent ? `Thêm chủ đề con trong ${parent.name}` : `Thêm chủ đề gốc vào ${collection.name}`} tone="primary"
-      confirmLabel="Tạo chủ đề" busy={create.isPending} maxWidth="lg" onClose={onClose}
-      onConfirm={() => { setTouched(true); if (!error) create.mutate({ name: form.name.trim(), translation: blank(form.translation), description: blank(form.description), descriptionTranslation: blank(form.descriptionTranslation), parentId: parent?.id ?? null }, { onSuccess: onDone }); }}
-      description="Dùng schema DEFAULT_ENGLISH và mẫu thẻ mặc định; đổi mẫu thẻ sau khi tạo.">
+    <ConfirmModal title={topic ? `Sửa chủ đề ${topic.name}` : parent ? `Thêm chủ đề con trong ${parent.name}` : `Thêm chủ đề gốc vào ${collection.name}`} tone="primary"
+      confirmLabel={topic ? 'Lưu' : 'Tạo chủ đề'} busy={m.isPending} maxWidth="lg" onClose={onClose} onConfirm={submit}
+      description={topic ? 'Người học thấy tên và mô tả mới ngay. Mục từ, mẫu thẻ và tiến độ học giữ nguyên.' : 'Dùng schema DEFAULT_ENGLISH và mẫu thẻ mặc định; đổi mẫu thẻ sau khi tạo.'}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Tên (tiếng Anh)" required error={touched ? error ?? undefined : undefined}>
           <input className={fieldControl} value={form.name} maxLength={100} onChange={set('name')} onBlur={() => setTouched(true)} />
@@ -82,7 +96,65 @@ export function TopicDialog({ collection, parent, onClose, onDone }: { collectio
         <Field label="Mô tả (tiếng Anh)"><textarea rows={2} className={fieldControl} value={form.description} onChange={set('description')} /></Field>
         <Field label="Mô tả tiếng Việt"><textarea rows={2} className={fieldControl} value={form.descriptionTranslation} onChange={set('descriptionTranslation')} /></Field>
       </div>
-      {create.isError && <p role="alert" className="text-danger-dark">{errorText(create.error)}</p>}
+      {m.isError && <p role="alert" className="text-danger-dark">{contentErrorText(m.error)}</p>}
+    </ConfirmModal>
+  );
+}
+
+/**
+ * POST /api/admin/topics/{id}/hide (OQ-CNT-01, PO 2026-11-26): the soft delete. The topic and its subtopics leave the
+ * catalog, new cards, Quiz and AI stories; learners keep reviewing what they studied. Restorable from "Đã ẩn".
+ */
+export function HideTopicDialog({ collection, topic, onClose, onDone }: { collection: CollectionDTO; topic: TopicDTO; onClose: () => void; onDone: () => void }) {
+  const hide = useHideTopic(topic.id, collection.id);
+  const [reason, setReason] = useState('');
+  const [touched, setTouched] = useState(false);
+  const n = reason.trim().length;
+  const reasonError = n < 10 ? 'Tối thiểu 10 ký tự.' : n > 500 ? 'Tối đa 500 ký tự.' : null;
+  return (
+    <ConfirmModal title={`Ẩn chủ đề ${topic.name}?`} tone="danger" confirmLabel="Ẩn chủ đề" busy={hide.isPending} onClose={onClose}
+      onConfirm={() => { setTouched(true); if (!reasonError) hide.mutate(reason.trim(), { onSuccess: onDone }); }}>
+      <ul className="list-disc space-y-1 pl-4 text-text-muted">
+        <li>Người học không còn thấy chủ đề{topic.hasChildren ? ' và các chủ đề con' : ''} trong danh mục; không học từ mới, không làm Quiz hay tạo truyện AI từ chủ đề này.</li>
+        <li>Thẻ người học đã học vẫn được ôn theo lịch; tiến độ, streak và XP giữ nguyên.</li>
+        <li>Khôi phục bất cứ lúc nào ở mục "Đã ẩn". Không có gì bị xóa.</li>
+      </ul>
+      <Field label="Lý do" required error={touched ? reasonError ?? undefined : undefined} hint="10–500 ký tự, hiện trong mục Đã ẩn và nhật ký hoạt động.">
+        <textarea rows={2} maxLength={500} className={fieldControl} value={reason} onChange={(e) => setReason(e.target.value)} onBlur={() => setTouched(true)} />
+      </Field>
+      {hide.isError && <p role="alert" className="text-danger-dark">{contentErrorText(hide.error)}</p>}
+    </ConfirmModal>
+  );
+}
+
+/**
+ * DELETE /api/admin/topics/{id}: purge, offered from "Đã ẩn". Only a topic without subtopics that no learner studied
+ * (else 409, nothing changes). The topic and all its items go for good; the reason goes to the activity log.
+ */
+export function DeleteTopicDialog({ collection, topic, itemCount, onClose, onDone }: { collection: CollectionDTO; topic: TopicDTO; itemCount: number | null; onClose: () => void; onDone: () => void }) {
+  const del = useDeleteTopic(topic.id, collection.id);
+  const [reason, setReason] = useState('');
+  const [touched, setTouched] = useState(false);
+  const n = reason.trim().length;
+  const reasonError = n < 10 ? 'Tối thiểu 10 ký tự.' : n > 500 ? 'Tối đa 500 ký tự.' : null;
+  const hasChildren = Boolean(topic.hasChildren);
+  return (
+    <ConfirmModal title={`Xóa chủ đề ${topic.name}?`} tone="danger" confirmLabel="Xóa vĩnh viễn" busy={del.isPending}
+      confirmDisabled={hasChildren} onClose={onClose}
+      onConfirm={() => { setTouched(true); if (!reasonError) del.mutate(reason.trim(), { onSuccess: onDone }); }}>
+      {hasChildren ? (
+        <p className="rounded-lg bg-warning-light p-3 text-warning-dark">Chủ đề còn chủ đề con. Xóa các chủ đề con trước.</p>
+      ) : (
+        <ul className="list-disc space-y-1 pl-4 text-text-muted">
+          <li>Xóa chủ đề{itemCount !== null ? ` và ${itemCount} mục từ` : ' và mọi mục từ'} của nó, không hoàn tác được.</li>
+          <li>Nếu đã có người học học chủ đề này (thẻ ôn, Quiz, truyện AI), máy chủ từ chối và không xóa gì.</li>
+          <li>Từ người học đã lưu vào chủ đề riêng của họ là bản sao, không bị ảnh hưởng.</li>
+        </ul>
+      )}
+      <Field label="Lý do" required error={touched ? reasonError ?? undefined : undefined} hint="10–500 ký tự, ghi vào nhật ký hoạt động.">
+        <textarea rows={2} maxLength={500} className={fieldControl} value={reason} onChange={(e) => setReason(e.target.value)} onBlur={() => setTouched(true)} disabled={hasChildren} />
+      </Field>
+      {del.isError && <p role="alert" className="text-danger-dark">{contentErrorText(del.error)}</p>}
     </ConfirmModal>
   );
 }
