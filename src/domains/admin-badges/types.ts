@@ -1,4 +1,4 @@
-/** AdminBadgeDTO (docs/decisions/badges.md §8.4). P1 reads it; P2 (PATCH, refill estimate) is MOCK until built (config.ts). */
+/** AdminBadgeDTO (docs/decisions/badges.md §8.4). P1 reads it; P2 (PATCH, refill estimate) is built in the backend. */
 export type BadgeMetric = 'LONGEST_STREAK_DAYS' | 'QUIZ_COMPLETED' | 'PERFECT_QUIZ' | 'DISTINCT_WORDS_ADDED';
 
 export interface AdminBadge {
@@ -22,7 +22,7 @@ export interface AdminBadge {
   rewardItemCode: string | null;
   /** Server-resolved summary of rewardItemCode; null when there is none or the code no longer resolves. */
   rewardItem: BadgeRewardItem | null;
-  /** Null until the P2 version migration; never display a made-up version. */
+  /** Null on a server without migration_badges_v2.sql; never display a made-up version. */
   version: number | null;
   /** Null when unsupported; an actual count of zero is distinct from missing data. */
   earnerCount: number | null;

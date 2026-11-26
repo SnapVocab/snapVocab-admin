@@ -6,6 +6,7 @@ import { learnersUseFixtures } from '../../domains/admin-learners/api';
 import { FIXTURE_NOW } from '../../domains/admin-learners/fixtures';
 import { banReasonError, formatAgo, formatDate, STATUS_META } from '../../domains/admin-learners/mappers';
 import { usePasswordReset, useLearner, useSetBan } from '../../domains/admin-learners/queries';
+import { useAdminBadges } from '../../domains/admin-badges/queries';
 import type { AdminLearnerDetail, TimelineKind } from '../../domains/admin-learners/types';
 import { formatShopItemTypeLabel } from '../../domains/shop/mappers';
 import { CARD_STATES } from '../../domains/admin-analytics/mappers';
@@ -34,6 +35,7 @@ type Dialog = 'ban' | 'unban' | 'reset' | null;
 
 export function LearnerProfile({ id }: { id: number }) {
   const learner = useLearner(id);
+  const catalog = useAdminBadges();
   const [dialog, setDialog] = useState<Dialog>(null);
   const { show: flash, node: toastNode } = useToast();
   const now = learnersUseFixtures ? FIXTURE_NOW : new Date();
@@ -58,6 +60,11 @@ export function LearnerProfile({ id }: { id: number }) {
   const l: AdminLearnerDetail = learner.data;
   const meta = STATUS_META[l.status];
   const p = l.progress;
+  // Denominator = badges switched on now; earned-but-inactive ones are still listed, not counted (no "13/12").
+  const activeCodes = catalog.data && new Set(catalog.data.filter((b) => b.isActive).map((b) => b.code));
+  const badgeMeta = activeCodes
+    ? `${l.badges.filter((b) => activeCodes.has(b.code)).length}/${activeCodes.size}`
+    : `${l.badges.length} đạt`;
   const peak = Math.max(1, ...l.activity30d);
 
   return (
@@ -169,7 +176,7 @@ export function LearnerProfile({ id }: { id: number }) {
             {l.missions7d.completed > l.missions7d.claimed && <p className="text-xs text-warning-dark">{l.missions7d.completed - l.missions7d.claimed} nhiệm vụ đã hoàn thành nhưng chưa nhận thưởng.</p>}
           </Panel>
 
-          <Panel title="Huy hiệu" meta={`${l.badges.length}/12`}>
+          <Panel title="Huy hiệu" meta={badgeMeta}>
             {l.badges.length ? (
               <ul className="flex flex-wrap gap-1.5">
                 {l.badges.map((b) => <li key={b.code}><Badge tone="reward" title={`Đạt ${formatDate(b.earnedAt)}`}>{b.name}</Badge></li>)}
